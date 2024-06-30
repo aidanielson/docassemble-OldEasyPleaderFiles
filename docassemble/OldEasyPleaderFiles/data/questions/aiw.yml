@@ -1,0 +1,84 @@
+---
+attachment:
+  - variable name: users[i].applicant_intake_worksheet[j]
+    name: ${ users[i] } - Applicant_intake_worksheet
+    filename: ${ users[i] } - Applicant_intake_worksheet
+    pdf template file: Applicant_intake_worksheet.pdf
+    skip undefined: True
+    editable: False
+    fields:
+      - "users1_a_number": ${ users[i].a_number }
+      - "users1_name_first": ${ users[i].name.first }
+      - "users1_name_middle": ${ users[i].name.middle }
+      - "users1_name_last": ${ users[i].name.last }
+      - "users1_aliases1_first": |
+          % if showifdef("users[i].aliases") and len(users[i].aliases.elements) > 0:
+          ${ users[i].aliases.item(0).first }
+          % endif
+      - "users1_aliases1_middle": |
+          % if showifdef("users[i].aliases") and len(users[i].aliases.elements) > 0:
+          ${ users[i].aliases.item(0).middle }
+          % endif
+      - "users1_aliases1_last": |
+          % if showifdef("users[i].aliases") and len(users[i].aliases.elements) > 0:
+          ${ users[i].aliases.item(0).last }
+          % endif
+      - "users1_aliases2_first": |
+          % if showifdef("users[i].aliases") and len(users[i].aliases.elements) > 1:
+          ${ users[i].aliases.item(1).first }
+          % endif
+      - "users1_aliases2_middle": |
+          % if showifdef("users[i].aliases") and len(users[i].aliases.elements) > 1:
+          ${ users[i].aliases.item(1).middle }
+          % endif
+      - "users1_aliases2_last": |
+          % if showifdef("users[i].aliases") and len(users[i].aliases.elements) > 1:
+          ${ users[i].aliases.item(1).last }
+          % endif
+      - "users1_birthdate": ${ users[i].birthdate }
+      - "country_of_citizenship": ${ comma_list(users[i].countries_of_citizenship.elements) }
+      - "country_of_birth": ${ users[i].country_of_birth }
+      - "gender_male": ${ users[i].sex.lower() == "male" }
+      - "gender_female": ${ users[i].sex.lower() == "female" }
+      - "gender_other": ${ users[i].sex.lower() not in ("male", "female") }
+      - "race_asian": ${ users[i].race.get("asian") }
+      - "race_black": ${ users[i].race.get("black") }
+      - "race_caucasian_latino": |
+          % if users[i].race.get("white") and users[i].ethnicity == "hispanic":
+          Yes
+          % elif users[i].race.get("white"):
+          Yes
+          % else:
+          No
+          % endif
+      - "race_native_american": ${ users[i].race.get("native_american") or users[i].race.get("pacific_islander") }
+      - "race_unknown": ${ users[i].race.all_false() or users[i].race.get("other") }
+      - "eye_color_black": ${ users[i].eye_color == "black" }
+      - "eye_color_blue": ${ users[i].eye_color == "blue" }
+      - "eye_color_brown": ${ users[i].eye_color == "brown" }
+      - "eye_color_gray": ${ users[i].eye_color == "gray" }
+      - "eye_color_green": ${ users[i].eye_color == "green" }
+      - "eye_color_hazel": ${ users[i].eye_color == "hazel" }
+      - "eye_color_maroon": ${ users[i].eye_color == "maroon" }
+      - "eye_color_pink": ${ users[i].eye_color == "pink" }
+      - "eye_color_multicolor": ${ users[i].eye_color == "multicolor" }
+      - "eye_color_unknown": ${ users[i].eye_color == "unknown" or users[i].eye_color == "other" }
+      - "hair_bald": ${ users[i].hair_color == "bald" }
+      - "hair_red":  ${ users[i].hair_color == "red" }
+      - "hair_black": ${ users[i].hair_color == "black" }
+      - "hair_sandy": ${ users[i].hair_color == "sandy" }
+      - "hair_blond": ${ users[i].hair_color == "blond" }
+      - "hair_white": ${ users[i].hair_color == "white" }
+      - "hair_blue": ${ users[i].hair_color == "blue" }
+      - "hair_unknown": ${ users[i].hair_color == "unknown" }
+      - "hair_brown": ${ users[i].hair_color == "brown" }
+      - "hair_gray": ${ users[i].hair_color == "gray" }
+      - "hair_green": ${ users[i].hair_color == "green" }
+      - "hair_orange": ${ users[i].hair_color == "orange" }
+      - "hair_pink": ${ users[i].hair_color == "pink" }
+      - "hair_purple": ${ users[i].hair_color == "purple" }
+      - "height_centimeters": ${ users[i].height_cm }
+      - "height_feet": ${ int(users[i].height_cm * 0.0328084) }'
+      - "height_inches": ${ int((users[i].height_cm * 0.0328084 - int(users[i].height_cm * 0.0328084)) * 12) }"
+      - "weight_kilos": ${ users[i].weight_kg }
+      - "weight_pounds": ${ int(users[i].weight_kg * 2.20462) }

@@ -1,0 +1,24 @@
+question: |
+  xxx
+fields:
+  - How many days do they have to respond?: num_of_days
+    datatype: integer
+    choices:
+      - 10
+      - 14
+      - 30
+      - 60
+  - Working (court) days or calendar days?: court_or_calendar_days
+    choices:
+      - working (court) days
+      - calendar days
+---
+mandatory: True
+question: |
+  xxx
+subquestion: |
+  Today's date is: **${ format_date(today(), format='EEEE, MMMM d, yyyy') }**
+  
+  The next business (court/working) day after today is: xxxxx
+  
+  You are giving the other side **${ num_of_days }** **${ court_or_calendar }** to respond, which equates to a deadline of **${ format_date(today() + date_interval(days=num_of_days), format='EEEE, MMMM d, yyyy') }**.

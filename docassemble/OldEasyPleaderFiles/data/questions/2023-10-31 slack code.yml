@@ -1,0 +1,33 @@
+mandatory: True
+question: What is your favorite fruit?
+fields:
+  - Fruit: favorite_fruit
+    choices:
+      - label: Fuji Apple
+        value: fuji_apple
+        group: Apple
+      - label: Red Delicious Apple
+        value: red_delicious_apple
+        group: Apple
+      - label: Peach
+        value: peach
+        group: Other
+      - label: Pear
+        value: pear
+        group: Other
+  - Number of Fruits: fruit_number
+    datatype: integer
+  - Additional Ingredients: additional_ingredients
+  - note: |
+      We're going to  make a [TARGET mytarget]
+check in: fruit_string_builder
+---
+event: fruit_string_builder
+code: |
+  fruit_string = f"a {action_argument('favorite_fruit')} cobbler using {action_argument('fruit_number')} {action_argument('favorite_fruit')}s and {action_argument('additional_ingredients')}."
+  background_response(target='mytarget', content=fruit_string)
+---
+mandatory: True
+event: final_screen
+question: The End.
+  

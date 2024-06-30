@@ -1,0 +1,49 @@
+mandatory: True
+code: |
+  documents.gather()
+  review_doc_upload
+  bates_applied
+  final_screen
+---
+question: Documents
+fields:
+  - What is the document's title?: documents[i].title
+  - Upload the document: documents[i]
+    datatype: files
+list collect: True
+---
+table: documents.table
+rows: documents
+allow reordering: True
+columns:
+  - File name: showifdef(row_item.attr_name('filename'))
+  - Size: row_item.size_in_bytes() / 1024 / 1024
+  - Thumbnail: row_item.show(width="100px")  
+delete buttons: True
+---
+id: review documents
+question: |
+  Review your documents.
+subquestion: |
+  Look at the documents below. If you want to change the order, use the arrows
+  to move an exhibit up or down in the list. Click "delete" or "add another"
+  to change which documents you send to the court.
+  
+  ${ documents.table }
+  
+  ${ documents.add_action() }
+continue button field: review_doc_upload
+
+---
+code: |
+  documents[0].start_number = 1
+  for document in documents:
+    document.bates_number(prefix='P', start=document.start_number)
+    document.start_number += document.num_pages()
+  bates_applied = True
+---
+event: final_screen
+question: Review
+subquestion: |
+  You've uploaded ${ documents }.
+  action_button.html

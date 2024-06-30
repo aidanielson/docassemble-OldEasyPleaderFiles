@@ -1,0 +1,97 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+---
+objects:
+  - dataloader: DataLoader.using(filename="pets.xlsx")
+  - pet: PetsDict.using(object_type=DAObject, there_are_any=True, complete_attribute='complete')
+---
+modules:
+  - .load_data
+---
+mandatory: True
+id: interview order
+code: |
+  pet.gather()
+  download
+---
+code: |
+  pet[i].species
+  pet[i].breed
+  pet[i].label_ids
+  pet[i].selected_labels_df
+  pet[i].complete = True
+---
+question: |
+  Add a pet?
+yesno: pet.there_are_any
+---
+id: add another pet
+question: |
+  Add another pet?
+yesno: pet.there_is_another 
+---
+id: pets names
+question: |
+  Pet's Name
+fields: 
+  - Name: pet.new_item_name
+---
+id: species
+question: |
+  What species is ${ i }?
+fields: 
+  - no label: pet[i].species
+    code: |
+      unique_values(dataloader, search_column="Species")
+---
+id: characteristics
+question: |
+  What characteristics does ${ i } have?
+fields:
+  - no label: pet[i].label_ids
+    datatype: checkboxes
+    code: |
+      rows_with_label(dataloader, display_column="Label", filter_column="Species", filter_value=pet[i].species, filter_column2="Breed", filter_value2=pet[i].breed)
+    none of the above: False
+---
+code: |
+  pet[i].selected_labels_df = dataloader.load_rows(
+    int(val)
+    for val in pet[i].label_ids.true_values()
+  )
+---
+id: breed
+question: |
+  What breed is ${ i }?
+fields: 
+  - no label: pet[i].breed
+    code: |
+      unique_values(dataloader, search_column="Breed", filter_column="Species", filter_value=pet[i].species)
+---
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[pet_attachment], filename="pets.docx", title="All forms to download for your records", enabled=True)
+---
+objects:
+  - pet_attachment: ALDocument.using(enabled=True, title="Pets", filename="Pets")
+---
+attachments:
+  - name: Pets
+    filename: pets.docx     
+    variable name: pet_attachment[i]        
+    skip undefined: True
+    docx template file: pets.docx
+---
+id: download
+event: download
+question: |
+  Your form is ready to download.
+subquestion: |
+  Thank you. Your form is ready to download.
+  
+  
+  ${ al_user_bundle.download_list_html(format="docx") }
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+progress: 100

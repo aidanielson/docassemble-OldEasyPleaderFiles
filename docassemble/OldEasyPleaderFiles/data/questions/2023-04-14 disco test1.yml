@@ -1,0 +1,179 @@
+features:
+  progress bar: False
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ALToolbox:multiselect.yml
+---
+imports:
+  - base64
+---
+modules:
+  - .load_data
+---
+objects:
+  - doc: DAObject
+  - discov: DAObject
+  - dataloader: DataLoader.using(filename="disco_blurbs.xlsx")
+  - methods_served: DAList.using(object_type=DAObject, auto_gather=False, gathered=True)
+  - objection_categories: DADict.using(object_type=DAObject, auto_gather=False, gathered=True )
+  - objection_categories[i].ncr: DADict.using(object_type=DAObject)
+  - objection_categories[i].objections: DADict.using(object_type=DAObject)
+  - al_user_bundle: ALDocumentBundle.using(elements=[disco_attachment], filename="mcltr.docx", title="All forms to download for your records", enabled=True)
+  - disco_attachment: ALDocument.using(enabled=True, title="Disco", filename="mcltr")
+---
+mandatory: True
+id: interview order
+code: |
+  discov.propounder_list
+  # gather all methods propounded
+  methods_choices
+  # for each method, gather all noncompliant responses (ncr)
+  for method in methods_choices.true_values():
+    methods_served[method].set_no
+    #collect all ncrs per selected method
+    for ncr in objection_categories[method].ncr.true_values():
+      # for each nrc, show catergory/label dropdown (CLP mimic)
+      objection_categories[method].objections[ncr].selected
+  doc.sign_date
+  download
+---
+id: discovery propounded general attributes
+question: |
+  Propounder, Responder & Timeline
+fields:
+  - Select propounding party(ies): discov.propounder_list
+    datatype: checkboxes
+    choices:
+      - Michael H. Anderson
+      - Ralph G. Wiggum
+      - Thelonius R. Monk
+    none of the above: False
+  - Select responding party(ies): discov.responder_list
+    datatype: checkboxes
+    choices:
+      - Alexis Waterford
+      - Brent U. Lafferty
+      - Jeremy I. Gilmore
+    none of the above: False
+  - What day did you serve the discovery?: discov.propound_svc_date
+    datatype: date
+  - What day were the responses served?: discov.responses_svc_date
+    datatype: date
+  - Were the responses untimely?: discov.responses_untimely
+    datatype: yesnowide
+---
+code: |
+  discov.propounder = comma_and_list(discov.propounder_list.true_values())
+  discov.responder = comma_and_list(discov.responder_list.true_values())
+---
+#########################################################################
+#############   The Engine   ############################################
+#########################################################################
+---
+id: discovery methods propounded
+question: |
+  Discovery method(s) propounded
+fields:
+  - no label: methods_choices
+    datatype: checkboxes
+    code: |
+      unique_values(dataloader, search_column="Method")
+    none of the above: false
+---
+id: disco propounded request range
+question: |
+  What set and number of ${ i } did you serve, and what did you get back?
+fields:
+  - What is the ${ i } set number you served?: methods_served[i].set_no
+    input type: combobox
+    choices: 
+      - One
+      - Two
+      - Three
+      - Four
+  - Beginning number: methods_served[i].start_range
+    datatype: integer
+  - End number: methods_served[i].end_range
+    datatype: integer
+  - What kind of responses were served to your ${ i }?: methods_served[i].response_type
+    input type: radio
+    choices: 
+      - objections only
+      - a hybrid mix of objections and substantive responses
+      - substantive responses without objection
+---
+id: noncompliant response number
+question: |
+  Noncompliant response number(s) for **${ i }**
+fields: 
+  - no label: objection_categories[i].ncr
+    datatype: checkboxes
+    code: |
+      range(methods_served[i].start_range, methods_served[i].end_range + 1)
+    none of the above: false
+---
+code: |
+  methods_served[i].number_propounded = methods_served[i].end_range - methods_served[i].start_range
+---
+id: explain noncompliant responses
+question: |
+  Noncompliant **${ i }** Responses
+subquestion: |
+  How was Response No. **${ j }** noncompliant?
+fields:
+  - Select: objection_categories[i].objections[j].selected
+    datatype: multiselect
+    code: |
+      [{"label": result["Label"],
+         "group": result["Category"],
+         "value": index
+       }
+       for index, result
+       in dataloader._load_data()[dataloader._load_data()["Method"]==(i)].iterrows()
+      ]
+script: |
+  <script type="text/javascript">
+    /* Need to activate the multiselect JavaScript on each input, after base64 encoding the name
+     of the input (it is "objection_categories[i].objections[j].selected" here)
+     */  
+     $(document).ready(function() {
+       $("#${ base64.b64encode(str('objection_categories[i].objections[j].selected').encode()).decode().replace('=', '') } ").multiselect({enableCaseInsensitiveFiltering: true, inheritClass: true, enableClickableOptGroups: true, enableCollapsibleOptGroups: true, collapseOptGroupsByDefault: true});
+      });
+  </script>
+---
+id: letter date and signature
+question: |
+  Letter Date & Signature
+fields:
+  - What do you want this letter dated?: doc.sign_date
+    input type: radio
+    choices:
+      - Today
+      - Choose Different Date
+      - Leave Blank For Now
+  - Different Date: doc.sign_date_alternate
+    datatype: date
+    show if: 
+      variable: doc.sign_date
+      is: 'Choose Different Date'
+  - Sign the document?: doc.sign_yes
+    datatype: yesnowide
+---
+attachments:
+  - name: Disco
+    filename: disco.docx
+    variable name: disco_attachment[i]
+    skip undefined: True
+    docx template file: mcltr.docx
+---
+id: download
+event: download
+question: |
+  Your form is ready to download.
+subquestion: |
+  Thank you. Your form is ready to download.
+  
+  ${ al_user_bundle.download_list_html(format="docx") }
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }

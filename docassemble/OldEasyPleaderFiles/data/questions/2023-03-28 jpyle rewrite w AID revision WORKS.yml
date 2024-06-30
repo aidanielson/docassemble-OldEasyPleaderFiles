@@ -1,0 +1,41 @@
+objects:
+  - selected_rogs: DAOrderedDict.using(object_type=DAObject, keys=list(sorted(rog_choices.true_values(), key=int)), complete_attribute='complete', gathered=True)
+---
+question: |
+  Interrogatory Number Range
+subquestion: |
+  Enter the interrogatory number range that you propounded.
+fields:
+  - Beginning of range: start
+    datatype: integer
+  - End of range:  end
+    datatype: integer
+---
+question: |
+  Select the responses you consider noncompliant.
+fields:
+  - Select the number(s) of the noncompliant interrogatories: rog_choices
+    datatype: checkboxes
+    code: range(start, end+1)
+---
+question: |
+  Enter attributes of each noncompliant response.
+subquestion: |
+  Enter attributes of noncompliant interrogatory response number ${ i }.
+fields:
+  - Something about the response: selected_rogs[i].something
+  - Something else about the response: selected_rogs[i].something_else
+---
+code: |
+  selected_rogs[i].something
+  selected_rogs[i].something_else
+  selected_rogs[i].complete = True
+---
+mandatory: True
+question: |
+  You indicated that the noncompliant interrogatories are numbers: ${ comma_and_list(selected_rogs.keys()) }.
+subquestion: |
+  % for item, rog in selected_rogs.items():
+  Something about response number ${ item } is ${ rog.something } and something else about it is ${ rog.something_else }.
+  
+  % endfor

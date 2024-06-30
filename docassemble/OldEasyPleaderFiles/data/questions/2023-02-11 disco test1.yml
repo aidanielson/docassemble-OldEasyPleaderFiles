@@ -1,0 +1,93 @@
+mandatory: True
+code: |
+  disco.type
+---
+objects:
+  - disco: DAObject
+---
+question: |
+  What type of discovery are you propounding?
+fields:
+  - Choose specific discovery type: disco.type
+    input type: radio
+    choices:
+      - General Form Interrogatories
+      - Special Interrogatories
+      - Requests for Admission
+      - Requests for Production
+      - Supplemental Discovery
+  - What Set Number?: disco.set_no
+    input type: combobox
+    choices: 
+      - One
+      - Two
+      - Three
+      - Four
+---
+question: |
+  Propounder & Responder
+fields:
+  - Select propounding party(ies): disco.propounder
+    datatype: checkboxes
+    choices:
+      code: |
+        propounder_list
+  - Select responding party(ies): disco.responder
+    datatype: checkboxes
+    choices:
+      code: | 
+        responder_list
+---
+question: |
+  Definitions
+subquestion: |
+  Choose the list of specially defined terms to include in these ${disco.type}.
+fields: 
+  - no label: disco.definitions
+    datatype: checkboxes
+    choices: 
+      code: |
+        definition_list_pulling_short_title_column_from_db
+  - Broad or narrow definition of "YOU"?: definition_you
+    choices:
+    - Broad
+    - Narrow
+  - note: |
+      Ed. Note: The broad definition is commonly used, but some courts find it overbroad in that it requires the RP to go beyond the actual scope of their personal knowledge or inquiry. See yyyy case.
+---
+question: |
+  Options
+fields:
+  - Provide helpful reference to pro per responder?: provide_pro_per_reference
+    datatype: yesnoradio
+    show if: responder_is_pro_per
+  - note: | 
+      Ed. Note: When propounding discovery on unrepresented litigants, it can be useful to the propounder to refer the responder to their local law library and a particular treatise or practice guide in order to dilute their ability to plead ignorance and their pro per status if/when they fail to make any good faith effort at taking advantage of the guidance you offered.
+---
+question: |
+  Interrogatories
+subquestion: |
+  Choose among pattern, built-in interrogatories and custom-drafted interrogatories.
+fields:
+  - Do you know how many you want?: knows_how_many_rogs
+    datatype: yesno
+  - Enter the number of interrogatories you want: user_number_of_rogs
+    show if: knows_how_many
+  - Insert Blanks or Use EasyPleader to Input Interrogatories?: blanks_or_EP_rogs
+    buttons:
+    - Insert Blank Interrogatories: blank_rogs
+    - Use EasyPleader to Draft Interrogatories: EP_rogs
+  - Choose among EasyPleader\'s built-in interrogatories?: EP_built_in_rogs
+    datatype: yesno
+---
+question: |
+  Built_In Pattern Interrogatories
+subquestion: |
+  Choose your desired pattern interrogatories to include.
+fields:
+  Choose Interrogatory Types: interrogatory_type_list
+# [contention interrogatories, "incident" or "collision" questions, basic contract questions, etc.]
+
+
+  
+  

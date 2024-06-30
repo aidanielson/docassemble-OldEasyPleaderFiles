@@ -1,0 +1,183 @@
+objects:
+  - profile: DAGlobal.using(object_type=DAObject, key="user_profile4", scope="user")
+  - xxxxx: DAGlobal.using(key="other_category", scope="user")
+---
+objects:
+  - profile.author: Person
+  - profile.author.firm_address: Address
+  - profile.preferences: DAObject
+  - the_signer: Person
+---
+mandatory: True
+code: |
+  menu_items = [action_menu_item("Edit Profile", "edit_profile")]
+---
+mandatory: True
+code: |
+  profile.author # need to trigger the global before checking with `defined` otherwise it's never defined yet in the interview answers
+  dummy_variable = 'xxx'
+  if not defined("profile.author"):
+    profile.profile_screen_counter = 0
+    edit_profile # this is the user's first visit to the profile pages
+    profile.profile_created = True
+  the_signer.name.text
+  final_screen
+---
+event: edit_profile
+question: |
+  % if not defined("profile.author.name.text"):
+  Create User Profile (you are a new EasyPleader user - this is your first login)
+  % else:
+  Change User Profile (you've been here before)
+  % endif
+subquestion: |
+  The docassemble user (registered Account Holder) is:[BR]
+  (User) ID No. (assigned by DA): **${ user_info().id }**  First Name: **${ user_info().first_name }**  Last Name: **${ user_info().last_name }**[BR]
+  Email: **${ user_info().email }**  Country: **${ user_info().country }**[BR]
+  Subdivision Third: **${ user_info().subdivision_third }**  Organization: **${ user_info().organization }**[BR]
+  Session: **${ user_info().session }**[BR]
+  Filename: **${ user_info().filename }**[BR]
+  Package: **${ user_info().package }**[BR]
+  Question ID: **${ user_info().question_id }**[BR]
+  Current Filename: **${ user_info().current_filename }**[BR]
+  Current Package: **${ user_info().current_package }**[BR]
+  Variable: **${ user_info().variable }**[BR]
+  Current Session: **${ user_info().current_section }**[BR]
+  'user_info()' is: **${ user_info() }**[BR]
+review:
+  - label: Edit
+    fields: 
+      - profile.author.name.text
+      - recompute:
+        - reassign_attorney_caption_block
+    button: |
+      #### Author Info
+      % if defined('profile.author.name.text'):
+      ${ profile.author }
+      
+      ${ profile.author.firm_address.block() }
+      % else:
+      <span class="text-body-secondary">No author info.</span>
+      % endif
+  - label: Edit
+    field: profile.author.default_attorney_caption_block
+    button: |
+      #### Author-Specific Document Content
+      % if defined('profile.author.default_attorney_caption_block'):
+      ${ profile.author.default_attorney_caption_block }
+      % else:
+      <span class="text-body-secondary">No document content set.</span>
+      % endif
+  - label: Edit
+    field: profile.preferences.screen_mode
+    button: |
+      #### User Preferences
+      % if defined('profile.preferences.screen_mode'):
+      Screen Mode: ${ profile.preferences.screen_mode }
+      
+      Explanation Level: ${ profile.preferences.explanation_level }
+      % else:
+      <span class="text-body-secondary">No preferences set.</span>
+      % endif
+resume button label: Save Profile & Proceed
+skip undefined: False
+---
+id: author info
+question: Author Info
+fields:
+  - Author Name: profile.author.name.text
+  - Author Email: profile.author.email
+    datatype: email
+  - Author Phone: profile.author.phone_number
+  - Law Firm Name: profile.author.firm_name
+  - Firm Street Address: profile.author.firm_address.address
+  - Firm Street City: profile.author.firm_address.city
+  - Firm State: profile.author.firm_address.state
+  - Firm Zip Code: profile.author.firm_address.zip
+validation code: |
+  # You could put any "refresh" logic here
+  profile.profile_screen_counter += 1
+---
+id: user preferences
+question: User Preferences
+fields:
+  - What Screen Mode do you want?: profile.preferences.screen_mode
+    choices:
+      - Dark
+      - Light
+    default: Light
+  - What nature/breadth of user-guiding, explanatory content do you want?: profile.preferences.explanation_level
+    choices:
+      - Lengthy, thorough explanation with examples: high
+      - Simple, basic explanation with minimal examples: medium
+      - Bare minimal explanation: low
+---
+id: document signer
+question: Who is signing the document?
+fields:
+  - Full name: the_signer.name.text
+    default: |
+      ${ showifdef("profile.author.name.text") }
+---
+question: User Profile
+fields:
+  - Default Attorney Caption Block: profile.author.default_attorney_caption_block
+    input type: area
+    rows: 8
+    default: |
+      ${ attorney_caption_block_template }
+    label above field: True
+---
+code: |
+  willy = 'lafabooway'
+  reconsider('attorney_caption_block_template')
+  profile.author.default_attorney_caption_block = attorney_caption_block_template
+  reassign_attorney_caption_block = True
+---
+#on change:
+#  profile.profile_screen_counter: |
+#    reconsider
+#    dummy_variable = 'it worked!'
+#    #run_new_code_block
+#    #undefine('run_new_code_block')
+---
+#code: |
+#  #if profile.profile_screen_counter > 0:
+#  undefine('attorney_caption_block_template', 'profile.author.default_attorney_caption_block')
+#  #define('profile.author.default_attorney_caption_block', value('attorney_caption_block_template'))
+#  #profile.author.default_attorney_caption_block = attorney_caption_block_template
+#  magic_variable = 'hello there!'
+#  run_new_code_block = True
+---
+#template: attorney_caption_block_template
+#content: |
+#  ${ profile.author }
+#  
+#  ${ profile.author.firm_address.block() }
+#  
+#  ${ profile.author.phone_number }
+#  
+#  ${ profile.author.email }
+---
+#depends on: profile.profile_screen_counter
+code: |
+  attorney_caption_block_template = f"{ profile.author }\n{ profile.author.firm_name.upper() }\n{ profile.author.firm_address.block() }\n{ profile.author.phone_number }\n{ profile.author.email }"
+---
+event: final_screen
+question: Final Screen
+subquestion: |
+  Author Name: ${ profile.author }
+  
+  'profile.author.firm_name' is: **${ profile.author.firm_name }**
+  
+  'profile.author.email' is: **${ profile.author.email }**
+  
+  'profile.author.default_attorney_caption_block" is:
+  
+  **${ profile.author.default_attorney_caption_block }**
+  
+  'attorney_caption_block_template' is: 
+  
+  **${ attorney_caption_block_template }**
+  
+  The person signing the document is: **${ the_signer }**

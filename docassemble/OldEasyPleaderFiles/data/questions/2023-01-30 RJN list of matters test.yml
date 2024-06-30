@@ -1,0 +1,32 @@
+metadata:
+  title: Excel data
+---
+modules:
+  - .RJN_db_mod
+---
+objects:
+  - RJN_Matter_Type: DAObject
+---
+mandatory: True
+code: |
+  user_approves
+---
+question: |
+  Pick a fruit.
+fields:
+  - Fruit: RJN_matter_type
+    datatype: checkboxes
+    code: get_RJN_matter_types()
+---
+question: |
+  Here is your document.
+subquestion: |
+  Does it meet your approval?
+yesno: user_approves
+attachment:
+  name: Your letter
+  filename: letter
+  docx template file: 2023-01-30_rjn_test.docx
+  valid formats:
+    - pdf
+    - docx

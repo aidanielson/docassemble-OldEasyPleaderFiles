@@ -1,0 +1,40 @@
+---
+objects:
+  - user: DAList.using(object_type=Individual, there_are_any=True)
+  - doc: DADict.using(object_type=DAObject)
+---
+question: |
+  What is your name?
+fields:
+  - First name: user[i].name.first
+  - Last name: user[i].name.last
+---
+question: |
+  What type of document do you have?
+fields:
+  - no label: doc['type']
+---
+question: |
+  What is the number of your document?
+fields:
+  - no label: doc['nr']
+---
+question: |
+  When was your document issued?
+fields:
+  - no label: doc['issue']
+    datatype: date
+---
+mandatory: True
+question: |
+  Report
+subquestion: |
+  Report
+  ======
+  
+  % for p in user:
+    ${ p.name } has these documents:
+    % for k, v in p.doc.items():
+      - ${ k }: ${ v }
+    % endfor
+  % endfor

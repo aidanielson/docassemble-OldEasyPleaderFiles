@@ -1,0 +1,21 @@
+question: xxx
+subquestion: yyyy
+fields:
+  - something: something
+  - something else: something_else
+---
+mandatory: True
+question: xxx
+fields:
+  - yyy: third_thing
+    input type: combobox
+    code: |
+      [something, something_else]
+---
+mandatory: True
+question: xxx
+fields:
+  - yyy: thirhjhd_thing
+    datatype: checkboxes
+    code: |
+      list(set([something, f"{something_else} filed {today()}", third_thing, 'Motion for Commotion', 'Application for Default Judgment', str(today()), 'ldfghh' if third_thing == 'hhh' else '']))

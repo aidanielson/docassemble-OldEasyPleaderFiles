@@ -1,0 +1,12 @@
+objects:
+  - fruit: DAObject
+---
+mandatory: True
+question: xxx
+fields:
+  - fruit: fruit
+---
+mandatory: True
+question: xxx
+subquestion: |
+  the fruit is ${ fruit }.

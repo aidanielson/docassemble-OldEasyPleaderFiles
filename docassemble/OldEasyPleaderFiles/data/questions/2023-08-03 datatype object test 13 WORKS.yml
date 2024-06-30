@@ -1,0 +1,621 @@
+include:
+  docassemble.AssemblyLine:al_package_unstyled.yml
+---
+features: 
+  progress bar: False
+  centered: False
+---
+mandatory: True
+code: |
+  aid_not_author
+  if aid_not_author:
+    author.gather()
+  else:
+    set_aid_author
+  clients.gather()
+  parties.gather()
+  check_everyone
+  oldest_person.gather()
+  check_everyone_2
+  check_combined_all_people
+  opposing_parties
+  final_screen
+---
+objects:
+  author: ALPeopleList.using(object_type=ALIndividual, there_are_any=True, there_is_another=False, complete_attribute=['law_firm', 'address.address'])
+  clients: ALPeopleList.using(object_type=ALIndividual, there_are_any=True, complete_attribute=['party_role', 'address.address', 'process_name_code_block'])
+  parties: ALPeopleList.using(object_type=ALIndividual, there_are_any=True, complete_attribute='complete')
+  parties[i].lawyers: ALPeopleList.using(object_type=ALIndividual, complete_attribute='address.address')
+  lawyer_list: ALPeopleList.using(object_type=ALIndividual, gathered=True)
+  oldest_person: ALPeopleList.using(object_type=ALIndividual, ask_number=True, target_number=1)
+  nonparties: ALPeopleList.using(object_type=ALIndividual)
+  combined_all_people: ALPeopleList.using(auto_gather=False, gathered=True)
+  everyone: DASet.using(auto_gather=False, gathered=True)
+  opposing_parties: ALPeopleList(object_type=ALIndividual, auto_gather=False, gathered=True)
+---
+generic object: ALPeopleList
+code: |
+  x[i].name.first
+  if x[i].lawyers.there_are_any:
+    x[i].lawyers.gather()
+  else:
+    x[i].address.address
+  x[i].complete = True
+---
+id: intro screen
+question: Welcome to EasyPleader
+fields:
+  - AID is **NOT** the Author!: aid_not_author
+    datatype: yesno
+---
+id: set aid as author
+if: not aid_not_author
+code: |
+  author[0].name.first = "Anthony"
+  author[0].name.middle = "I"
+  author[0].name.last = "Danielson"
+  author[0].law_firm = "Danielson Kim Law Group, P.C."
+  author[0].law_firm_role = "managing partner of"
+  author[0].bar_state = "CA"
+  author[0].bar_number = "285576"
+  author[0].address.address = "5170 Golden Foothill Parkway"
+  author[0].address.city = "El Dorado Hills"
+  author[0].address.state = "CA"
+  author[0].address.zip = "95762"
+  author[0].phone = "(916) 520-3977"
+  author[0].fax = "(916) 543-1601"
+  author[0].email = "Anthony@DanielsonKim.com"
+  set_aid_author = True
+---
+variable name: party_role_list
+data:
+  - Plaintiff
+  - Defendant
+  - Petitioner
+  - Respondent
+  - Court-Appointed Receiver
+  - Proposed Court-Appointed Receiver
+  - Claimant
+  - Real-Party-in-Interest
+  - Judgment Creditor
+  - Assignee & Judgment Creditor
+  - Judgment Debtor
+  - Appellant
+  - Appellee
+  - Conservator
+  - Conservatee
+---
+variable name: nonparty_role_list
+data:
+  - Process Server
+  - Court Filing Vendor
+  - Civil Filing Clerk
+  - Fact Witness
+  - Expert Witness
+  - Court Reporter
+  - Interpreter
+  - eService Vendor
+  - Courtroom Deputy
+  - Levying Officer
+  - Judge
+  - Garnishee
+---
+id: gather author name and firm info
+question: "**Your** Name & Firm Info"
+fields:
+  - First Name: author[0].name.first
+  - Middle Name: author[0].name.middle
+    required: False
+  - Last Name: author[0].name.last
+  - Suffix: author[0].name.suffix
+    code: name_suffix()
+    required: False
+  - Law Firm: author[0].law_firm
+  - Role in Law Firm: author[0].law_firm_role
+  - note: e.g., *managing partner of...associate attorney at...shareholder.director of...* 
+  - Bar License State: author[0].bar_state
+    default: 'CA'
+  - Bar License No.: author[0].bar_number
+    datatype: integer
+---
+id: gather parties
+generic object: ALPeopleList
+sets: x[0].name.first
+check in: name_preview
+reconsider:
+  - set_everyone
+question: "${ x[i].ask_name_and_role_template.subject }"
+subquestion: |
+  ${ show_everyone_template.content }
+right: |
+  <div class="da-page-header"><h1 class="h3">Name Preview</h1></div>
+  [TARGET name_preview_text]
+fields:
+  - Party: x[i].party_role
+    datatype: combobox
+    code: party_role_list
+    show if:
+      code: |
+        'nonparties' not in x[i].instanceName
+  - Nonparty Role: x[i].nonparty_role
+    datatype: combobox
+    code: nonparty_role_list
+    show if:
+      code: |
+        'nonparties' in x[i].instanceName
+  - Person or Entity: x[i].person_type
+    choices:
+      - Human: human
+      - Trustee/Other Representative Capacity: person_specific_capacity
+      - Entity (Company/Governmental Org): entity
+      - Something Else: other
+    show if:
+      code: |
+        'nonparties' not in x[i].instanceName
+  - First Name: x[i].name.first
+    show if: 
+      variable: x[i].person_type
+      is: human
+  - Middle Name: x[i].name.middle
+    required: False
+    show if: 
+      variable: x[i].person_type
+      is: human
+  - Last Name: x[i].name.last
+    show if: 
+      variable: x[i].person_type
+      is: human
+  - Suffix: x[i].name.suffix
+    code: name_suffix()
+    show if:
+      variable: x[i].person_type
+      is: human
+    required: False
+  - Representative Name: x[i].name.first
+    show if: 
+      variable: x[i].person_type
+      is: person_specific_capacity
+  - Representing in what capacity?: x[i].capacity
+    input type: combobox
+    choices:
+      - trustee
+      - co-trustee
+      - executive director and designated representative
+      - administrator
+    show if: 
+      variable: x[i].person_type
+      is: person_specific_capacity
+  - Represented Trust/Entity Name: x[i].representee
+    show if: 
+      variable: x[i].person_type
+      is: person_specific_capacity
+  - Entity **Name**: x[i].name.first
+    show if: 
+      variable: x[i].person_type
+      is: entity
+  - Entity **Type**: x[i].entity_type
+    input type: combobox
+    choices:
+      - a California corporation
+      - a California limited liability company
+      - a California professional corporation
+      - a municipal corporation
+    show if: 
+      variable: x[i].person_type
+      is: entity
+  - Employer: x[i].employer_name
+    show if:
+      code: |
+        'nonparties' in x[i].instanceName
+  - Title: x[i].employee_title
+    show if:
+      code: |
+        'nonparties' in x[i].instanceName
+  - Short Name: x[i].short_name
+  - Gender: x[i].gender
+    input type: radio
+    choices:
+      - Male: male
+      - Female: female
+      - Other: other
+    js show if:
+      val('x[i].person_type') == 'human' || val('x[i].person_type') == 'person_specific_capacity'
+  - Is the party represented by counsel?: x[i].lawyers.there_are_any
+    datatype: yesno
+    show if:
+      code: |
+        'parties' in x[i].instanceName
+---
+template: name_preview
+content: |
+  % if action_argument('x[i].person_type') == 'human':
+  ### ${ action_argument('x[i].party_role' if any(word in x[i].instanceName for word in ['clients', 'parties']) else 'x[i].nonparty_role') + ' ' + action_argument('x[i].name.first') } ${ action_argument('x[i].name.middle') or '' } ${ action_argument('x[i].name.last') } (${ action_argument('x[i].short_name') })
+  % elif action_argument('x[i].person_type') == 'person_specific_capacity':
+  ### ${ action_argument('x[i].party_role') + ' ' + action_argument('x[i].name.first') + ', ' + action_argument('x[i].capacity') + ' of ' + action_argument('x[i].representee') } (${ action_argument('x[i].short_name') })
+  % else:
+  ### ${ action_argument('x[i].party_role') + ' ' + action_argument('x[i].name.first') + ', ' + action_argument('x[i].entity_type') } (${ action_argument('x[i].short_name') })
+  % endif
+target: name_preview_text
+---
+id: add another party
+reconsider:
+  - set_everyone
+question: Add party?
+subquestion: |
+  ${ show_everyone_template }
+yesno: parties.there_is_another
+color: warning
+---
+id: gather party lawyers
+generic object: ALPeopleList
+question: |
+  % if 'author' in x.instanceName:
+  **Your** Caption Info
+  % else:
+  ${ value(x[i].instanceName.split(".")[0]) }'s Lawyer's Info
+  % endif
+subquestion: |
+  % if len(x[i].lawyers.complete_elements()) > 0:
+  **${ x[i].lawyers.complete_elements() }**
+  % endif
+fields: 
+  - An ***Existing*** Lawyer: x[i].lawyers[j]
+    datatype: object
+    choices: lawyer_list.complete_elements()
+    disable others: True
+    exclude: x[i].lawyers
+    show if: 
+      code: len(lawyer_list) > 0
+  - First Name: x[i].lawyers[j].name.first
+  - Middle Name: x[i].lawyers[j].name.middle
+    required: False
+  - Last Name: x[i].lawyers[j].name.last
+  - Suffix: x[i].lawyers[j].name.suffix
+    code: name_suffix()
+    required: False
+  - Law Firm: x[i].lawyers[j].law_firm
+validation code: |
+  if x[i].lawyers[j] not in lawyer_list:
+    lawyer_list.append(x[i].lawyers[j])
+    lawyer_list.sort(key=lambda y: y.name.last)
+---
+id: add a party lawyer
+question: Does ${ parties[i] } have another lawyer?
+subquestion: |
+  ${ parties[i].lawyers.complete_elements() }
+yesno: parties[i].lawyers.there_is_another
+---
+id: gather individual address
+generic object: ALIndividual
+question: ${ x }'s Service Address & Contact Info
+fields:
+  - Address: x.address.address
+    address autocomplete: True
+  - Unit/Suite: x.address.unit
+    required: False
+  - City: x.address.city
+  - State: x.address.state
+  - Zip Code: x.address.zip
+  - note: |
+      #### ---Phone, Fax & Email---
+  - Phone No.: x.phone
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+  - Add Second Phone: x.add_second_phone
+    datatype: yesno
+    show if:
+      code: |
+        'author' not in x.instanceName
+  - Second Phone No.: x.second_phone
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    show if: x.add_second_phone
+  - Second Phone Description: x.second_phone_description
+    show if: x.add_second_phone
+  - note: e.g., *cell...work...home...secretary*
+    show if: x.add_second_phone
+  - Fax No.: x.fax
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+    show if:
+      code: |
+        'attorneys' in x.instanceName
+  - Email: x.email
+    datatype: email
+    required: False
+  - Add Second Email: x.add_second_email
+    datatype: yesno
+  - Second Email Address: x.second_email
+    datatype: email
+    show if: x.add_second_email
+  - Second Email Recipient: x.second_email_recipient
+    show if: x.add_second_email
+  - note: e.g., *Admin...Secretary Debbie Thompson...eService*
+    show if: x.add_second_email
+validation code: |
+  for attr in ['phone', 'fax', 'email', 'second_phone', 'second_email']:
+    if not hasattr(x, attr):
+        setattr(x, attr, 'none/unknown')
+    else:
+        if attr in ['phone', 'fax', 'second_phone']:
+            setattr(x, attr, phone_number_formatted(getattr(x, attr)))
+---
+id:  proceeding short reference
+question: What's the short reference for the proceeding/motion/RFO?
+fields:
+  - Short Ref.: proceeding_short_ref
+---
+id: check set of all people
+reconsider:
+  - set_everyone
+question: Results
+subquestion: |
+  'parties' is: **${ parties }**[BR][BR]
+  'parties.complete_elements' is: **${ parties.complete_elements() }**[BR][BR]
+  'lawyer_list' is: **${ lawyer_list }**[BR][BR]
+  'lawyer_list.complete_elements' is: **${ lawyer_list.complete_elements() }**[BR][BR]
+  'everyone' is: **${ everyone }**[BR][BR]
+  People NOT in everyone, but IN one of the lists (parties, lawyer_list, or oldest_person) are:
+  % for party in [parties.complete_elements(), lawyer_list.complete_elements(), oldest_person.complete_elements()]:
+  % if party not in everyone:
+  **${ party }**
+  % endif
+  % endfor
+continue button field: check_everyone
+---
+id: check combined all people
+reconsider:
+  - set_everyone
+question: The variable 'everyone' is
+subquestion: |
+  **'oldest_person' is: ${ oldest_person }**[BR]
+  **'everyone' is: ${ everyone }**[BR]
+continue button field: check_combined_all_people
+---
+id: select oldest party
+reconsider: 
+  - set_everyone
+question: Who is the oldest party?
+subquestion: |
+  Parties: ${ parties.complete_elements() }
+fields:
+  - An ***Existing*** Party: oldest_person[i]
+    datatype: object
+    choices: everyone
+    disable others: True
+  - First Name: oldest_person[i].name.first
+  - Last Name: oldest_person[i].name.last
+  - Role: oldest_person[i].party_role
+#validation code: |
+#  if oldest_person not in parties:
+#    parties.appendObject()
+#    parties[-1].name.first = oldest_person.name.first
+#    parties[-1].name.last = oldest_person.name.last
+#    oldest_person = parties[-1]
+---
+id: check set of all people 2
+reconsider:
+  - set_everyone
+question: The variable 'everyone' is
+subquestion: |
+  OP variable text appears below this line[BR][BR]
+  ${ oldest_person.complete_elements() }[BR][BR]
+  OP variable text appears above this line[BR][BR]
+  'parties' is: **${ parties }**[BR][BR]
+  'parties.complete_elements()' is: ${ parties.complete_elements() }**[BR][BR]
+  'everyone' is: **${ everyone }**
+continue button field: check_everyone_2
+---
+id: select opposing parties
+question: Who are the parties opposing this filing?
+subquestion: |
+    **Parties: ${ parties.complete_elements() }**[BR]**Oldest Person: ${ oldest_person.complete_elements() }**
+fields:
+  - Existing Parties: opposing_parties
+    datatype: object_checkboxes
+    choices: parties.complete_elements() + oldest_person.complete_elements()
+    none of the above: None of these
+#  - First Name: opposing_parties.name
+#    show if:
+#      variable: opposing_parties
+#      is: null
+#  - Last Name: opposing_parties.name.last
+#   show if:
+#     variable: opposing_parties
+#     is: null
+#  - Some Variable: opposing_parties.some_variable
+---
+id: pick a subset of opposing parties
+question: Who is the worst of the opposing parties?
+fields:
+  - Pick the worst one: worst_opponent
+    datatype: object_radio
+    choices: opposing_parties.complete_elements()
+under: |
+  **Parties: ${ parties.complete_elements() }[BR]Oldest Person: ${ oldest_person }[BR]
+  Opponents: ${ opposing_parties }**
+---
+id: pick service method
+generic object: ALPeopleList
+question: How was ${ x[i] } served?
+fields:
+  - Method: x[i].svc_method
+    datatype: checkboxes
+    choices: 
+      - Regular Mail
+      - Email
+      - Fax
+      - Overnight Delivery
+---
+id: set everyone
+code: |
+  everyone = author.complete_elements() + clients.complete_elements() + parties.complete_elements() + lawyer_list.complete_elements() + oldest_person.complete_elements()
+  everyone.sort(key=lambda y: y.name.first)
+  set_everyone = True
+#  if showifdef('parties'):
+#    combined_all_people.extend(parties.complete_elements())
+#  if showifdef('lawyer_list'):
+#    combined_all_people.extend(lawyer_list.complete_elements())
+#  if showifdef('oldest_person'):
+#    combined_all_people.extend(oldest_person.complete_elements())
+#  set_of_all_people.add(combined_all_people)
+#  set_of_all_people.gathered = True
+#  combined_all_people = parties + lawyer_list
+#  all_unique_people.add(combined_all_people)
+---
+id: name code block
+generic object: ALIndividual
+code: |
+  if x.person_type == 'human':
+    x.whole_name = x.name.full()
+  elif x.person_type == 'person_specific_capacity':
+    x.whole_name = x.name.first + ', ' + x.capacity + ' of ' + x.representee
+  else:
+    x.whole_name = x.name.first + ', ' + x.entity_type
+  x.complete_formal_name = x.party_role + ' ' + x.whole_name + ' (' + x.short_name + ')'
+  x.process_name_code_block = True
+---
+id: author caption block
+code: |
+  author_caption_block = f"""{author[0].name.full()}\n{author[0].law_firm}\n{author[0].address.address}\n{author[0].address.city}, {author[0].address.state} {author[0].address.zip}\nPhone: {author[0].phone}\nFax: {author[0].fax}\nEmail: {author[0].email}
+  """
+---
+question: "*Everyone* Test Block"
+fields:
+  - Which party opposed the motion?: xyz
+    datatype: object
+    choices: everyone
+---
+generic object: ALPeopleList
+template: x[i].ask_name_and_role_template
+subject: |
+  % if 'parties' in x[i].instanceName:
+  Other Parties
+  % elif 'clients' in x[i].instanceName:
+  Client(s)
+  % else:
+  Nonparties
+  % endif
+content: |
+  % if 'parties' in x[i].instanceName:
+  % if len(clients.complete_elements()) > 0:
+  Client:
+  % for client in clients.complete_elements():
+  **${ client.party_role } ${ client }**[BR]
+  % endfor
+  % endif
+  % if len(parties.complete_elements()) > 0:
+  Parties entered so far:[BR]
+  % for party in parties.complete_elements():
+  **${ party.party_role } ${ party }**[BR]
+  % endfor
+  % endif
+  % elif 'clients' in x[i].instanceName:
+  Name & Party Role
+  % else:
+  Name & Role
+  % endif
+---
+template: show_everyone_template
+content: |
+  % if len(author.complete_elements()) > 0:
+    **Author:** 
+    % for auth in author.complete_elements():
+    ${ auth } 
+    % endfor
+  [BR]
+  % endif
+  % if len(clients.complete_elements()) > 0:
+    **Clients:** 
+    % for client in clients.complete_elements():
+    ${ client.party_role } ${ client } 
+    % endfor
+  [BR]
+  % endif
+  % if len(parties.complete_elements()) > 0:
+    **Other Parties:** 
+    % for party in parties.complete_elements():
+    ${ party.party_role } ${ party } 
+    % endfor
+  [BR]
+  % endif
+  % if len(lawyer_list.complete_elements()) > 0:
+    **Other Lawyers:** 
+    % for lawyer in lawyer_list.complete_elements():
+    ${ lawyer } 
+    % endfor
+  [BR]
+  % endif
+  % if len(oldest_person.complete_elements()) > 0:
+    **Oldest Person:** 
+    % for person in oldest_person.complete_elements():
+    ${ person.party_role } ${ person } 
+    % endfor
+  [BR]
+  % endif
+  **Everyone:** 
+  % for index, person in enumerate(everyone):
+  ${ index+1 }. ${ person } 
+  % endfor
+  [BR]
+---
+id: final screen
+event: final_screen
+question: |
+  **Party List**[BR]
+  % for party in parties:
+  
+  1. ${ party }[BR]
+  % endfor
+  [BR]
+  **Lawyer List**
+  % for lawyer in lawyer_list:
+  
+  1. ${ lawyer }[BR]
+  % endfor
+  [BR]
+  **Combined Party/Lawyer List**
+  [BR] 
+  % for party in parties:
+  
+  1. ${ party.party_role } ${ party }[BR]
+    % if party.lawyers.there_are_any:
+    is represented by:   
+      % for lawyer in party.lawyers:
+      ${ lawyer.address_block() }[BR]
+      Phone: ${ lawyer.phone }[BR]
+      Fax: ${ lawyer.fax }[BR]
+      % if lawyer.add_second_phone:
+      Alt. Phone: ${ lawyer.second_phone } (${ lawyer.second_phone_description })[BR]
+      % endif
+      Email: ${ lawyer.email }[BR]
+      % if lawyer.add_second_email:
+      Second Email: ${ lawyer.second_email } (${ lawyer.second_email_recipient })[BR]
+      % endif
+      % endfor
+    % else:
+      ${ party.address_block() }
+    % endif
+  [BR]
+  % endfor
+  **Oldest Party**
+  [BR]
+  ${ oldest_person }
+  [BR][BR]
+  **Opposing Parties**
+  [BR]
+  The parties opposing the ${ proceeding_short_ref } is/are 
+  % for rdf in opposing_parties:
+  
+  1. ${ rdf.party_role } ${ rdf }, served via ${ rdf.svc_method.true_values() }[BR]
+  % endfor
+  And the worst of these is ${ worst_opponent}
+  [BR][BR]
+  ***All Human Beings (Party or not) ('everyone')***
+  [BR]
+  % for xcv in everyone:
+  
+  1. ${ xcv }
+  % endfor

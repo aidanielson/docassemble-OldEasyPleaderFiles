@@ -1,0 +1,21 @@
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+---
+objects:
+  - exhibit_attachment: ALExhibitDocument.using(title="Exhibits", filename="exhibits", add_page_numbers=True, include_table_of_contents=True, include_exhibit_cover_pages=True,)
+---
+id: interview order
+mandatory: True
+code: |
+  al_intro_screen
+  if exhibit_attachment.exhibits.has_exhibits:
+    exhibit_attachment.exhibits.gather()
+  final_screen
+---
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[exhibit_attachment], filename="user_bundle.pdf", title="All forms to download for your records")
+---
+event: final_screen
+question: Your Exhibit Bundle is Complete
+subquestion: |
+  ${ action_button_html(al_user_bundle.as_pdf().url_for(), label="Download a copy as a single PDF", icon='download') }

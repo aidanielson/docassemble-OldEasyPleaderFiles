@@ -1,0 +1,95 @@
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+---
+objects:
+  - firm: ALPeopleList
+  - clients: ALPeopleList
+  - litigants: ALPeopleList
+  - nonparties: ALPeopleList
+---
+id: contact info
+generic object: ALPeopleList
+question: |
+  Identify the ${ x }
+fields:
+  - Party Role: x[i].role
+    input type: combobox
+    choices:
+      - Plaintiff
+      - Petitioner
+      - Claimant
+      - Defendant
+      - Respondent
+    show if:
+      code: |
+        x in (clients, litigants)
+  - Is this party an individual or a business/entity?: x[i].human_or_entity
+    input type: radio
+    choices:
+      - Individual
+      - Business/Entity
+    show if:
+      code: |
+        x not in (firm)
+  - Full Name: x[i].name.first
+    show if:
+      variable: x[i].human_or_entity
+      is: 'Individual'
+    note: |
+      Please enter the first, middle initial, and last name. E.g., *Andrew H. Johnson*
+  - Business/Entity **Name**: x[i].name.first
+    show if:
+      variable: x[i].human_or_entity
+      is: 'Business/Entity'
+    note: |
+      e.g., *Intel Corporation...Tesla, Inc....Rodriguez & Sons, LLC*
+  - Business/Entity **Type**: x[i].entity_type
+    show if:
+      variable: x[i].human_or_entity
+      is: 'Business/Entity'
+    note: |
+      e.g., *a California corporation...a Nevada limited liability company...a municipal corporation...an entity of unknown form*
+  - Is this party represented by an attorney?: x[i].repd_by_attorney
+    datatype: yesno
+  - Address: x[i].address.address
+    address autocomplete: True
+  - Unit: x[i].address.unit
+    required: False
+  - City: x[i].address.city
+  - State: x[i].address.state
+  - Zip: x[i].address.zip
+  - Phone: x[i].phone_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Fax: x[i].fax_number
+    validate: |
+      lambda y: y == '' or phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+  - Email Address: x[i].email
+    datatype: email
+list collect: True
+---
+mandatory: True
+id: end screen
+question: |
+  xxx
+subquestion: |
+  Here are the people involved in this case:
+  
+  Users:
+  
+  % for attorney in firm:
+  ${ attorney } who resides at ${ attorney.address.block() }
+  % endfor
+  
+  Clients:
+  
+  % for client in clients:
+  ${ client } who resides at ${ client.address.block() }
+  % endfor
+  
+  Litigants:
+
+  % for litigant in litigants:
+  ${ litigant } who resides at ${ litigant.address.block() }
+  % endfor

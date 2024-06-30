@@ -1,0 +1,59 @@
+mandatory: True
+code: |
+  intro_screen
+  lamd.name
+  final_screen
+---
+question: Property Info
+field: intro_screen
+---
+objects: 
+  - lamd: DAObject
+  - property.site_address: Address
+  - property.owners: Person
+  - property.vesting_instrument: DAObject
+---
+question: Property1
+fields:
+  - What is the property?: lamd.name
+---
+question: |
+  The Property
+fields:
+  - Site Address: property.site_address.address.address
+    address autocomplete: True
+  - Site County: property.site_address.addres.county
+  - Legal Description: property.legal_description
+    input type: area
+    rows: 6
+  - Type of Property: property.type
+    input type: combobox
+    choices:
+      - single-family residence
+      - multi-family residence
+      - commercial property
+      - residential duplex
+      - vacant land
+  - Acreage: property.acreage
+    datatype: number
+  - Estimated Sale Value: property.value
+    datatype: currency
+  - Record Owner: property.owners.name.text
+  - Record Owner Address: property.owners.address.address
+    address autocomplete: True
+  - Vesting Instrument Type: property.vesting_instrument
+    input type: combobox
+    choices:
+      - Grant Deed
+      - Transfer-on-Death Deed
+      - Affidavit of Death of Joint Tenant
+      - Quitclaim Deed
+      - Trust Transfer Deed
+  - Book/Page No.: property.vesting_instrument.book_page_num
+  - Date Recorded: property.vesting_instrument.recording_date
+---
+event: final_screen
+question: |
+  Well, we're all through here...
+buttons:
+  - Restart: restart

@@ -1,0 +1,2524 @@
+---
+objects:
+  - supervisor: ALIndividual
+  - preparer: ALIndividual
+  - interpreter: ALIndividual
+  - users: ALPeopleList.using(ask_number=True, complete_attribute='names_only')
+  - users[i].countries_of_residence: DAList.using(object_type=DAObject, there_is_another=False, complete_attribute='name')
+  - users[i].countries_of_citizenship: DAList.using(auto_gather=False, gathered=True)
+  - users[i].countries_traveled_through: DAList.using(object_type=DAObject, there_are_any=True, there_is_another=False, complete_attribute='entry_date')
+  - users[i].prior_immigration_proceedings: DAList.using(object_type=DAObject, there_is_another=False, complete_attribute='jurisdiction')
+  #- users[i].travel_documents: DAList.using(object_type=DAObject, there_is_another=False, complete_attribute='number')
+  - users[i].travel_documents: DAList.using(there_are_any=True, there_is_another=False)
+  - users[i].alternate_birthdates: DAList
+  #- users[i].spouse: ALIndividual # need?
+  #- users[i].spouse.prior_TPS: DAList.using(object_type=DAObject, there_is_another=False, complete_attribute='start_date') # need?
+  #- users[i].former_spouses: ALPeopleList.using(ask_number=True) # need?
+  #- users[i].children: ALPeopleList.using(ask_number=True) # need?
+---
+id: parent of user i
+question: |
+  Who is ${ users[i] }'s parent?
+subquestion: |
+  Because ${ users[i] } is a minor, the parent's signature will be used in any addenda.
+fields:
+  - Parent: users[i].parent
+    datatype: object_radio
+    choices:
+      - users.complete_elements()
+    exclude:
+      - users[i]
+---
+code: |
+  users[i].alternate_birthdates.there_is_another = False
+---
+id: your address
+question: |
+  ${ users[0] }'s address
+subquestion: |
+  This is your current, physical address. Mailing address will be entered on another screen.
+fields:
+  - Street address: users[0].address.address
+    address autocomplete: True
+  - Address is a: users[0].address.address_type
+    datatype: radio
+    choices:
+      - Apartment: apt
+      - Suite: suite
+      - Floor: floor
+      - Other (including house): other
+  - Apartment/Suite/Floor number: users[0].address.unit
+    required: False
+  - City or Town: users[0].address.city
+  - State: users[0].address.state
+    required: False
+  - ZIP: users[0].address.zip
+  - Daytime Phone Number (optional): users[0].phone_number
+    required: false
+    default: |
+      ${ showifdef("users[i].parent.phone_number") if users[i].age_in_years() < 14 else '' }
+  - Mobile Telephone Number (optional): users[0].mobile_number
+    required: false
+    default: |
+      ${ showifdef("users[i].parent.mobile_number") if users[i].age_in_years() < 14 else '' }
+  - Email address (optional): users[0].email
+    required: false
+    default: |
+      ${ showifdef("users[i].parent.email") if users[i].age_in_years() < 14 else '' }
+---
+code: |
+  address_choices = []
+  address_choices.clear()
+  for user in users.complete_elements():
+    if hasattr(user.address, 'address'):
+      address_choices.append(user.address)
+---
+reconsider:
+  - address_choices
+id: your address
+sets:
+  - users[i].address.address
+  - users[i].address.city
+  - users[i].address.zip
+  - users[i].address.unit
+  - users[i].address.state
+  - users[i].address.country
+question: |
+  ${ users[i] }'s address
+subquestion: |
+  This is a current, physical address. Mailing address will be entered on another screen.
+fields:
+  - ${ users[i] }'s address is: users[i].address
+    datatype: object_radio
+    choices:
+      - address_choices
+    object labeler: |
+      lambda y: y.on_one_line()
+    none of the above: |
+      Somewhere else
+    disable others:
+      - users[i].address.address
+      - users[i].address.city
+      - users[i].address.zip
+      - users[i].address.unit
+      - users[i].address.state
+      - users[i].address.country
+      - users[i].address.address_type
+    default: |
+      users[0].address if i > 0 else None
+  - Street address: users[i].address.address
+    address autocomplete: True
+    # default: ${ showifdef("users[0].address.address ") }
+  - Address is a: users[i].address.address_type
+    datatype: radio
+    choices:
+      - Apartment: apt
+      - Suite: suite
+      - Floor: floor
+      - Other (including house): other
+  - Apartment/Suite/Floor number: users[i].address.unit
+    required: False
+    # default: ${ showifdef("users[0].address.unit ") }
+  - City or Town: users[i].address.city
+    # default: ${ showifdef("users[0].address.city ") }
+  - State: users[i].address.state
+    required: False
+    # default: ${ showifdef("users[0].address.state ") }
+  - ZIP: users[i].address.zip
+    # default: ${ showifdef("users[0].address.zip ") }
+  - Daytime Phone Number (optional): users[i].phone_number
+    required: false
+    default: |
+      ${ showifdef("users[0].phone_number") if i > 0 else ""}
+  - Mobile Telephone Number (optional): users[i].mobile_number
+    required: false
+    default: |
+      ${ showifdef("users[0].mobile_number") if i > 0 else ""}
+  - Email address (optional): users[i].email
+    required: false
+---
+id: your mailing address
+question: |
+  What is ${ users[0] }'s mailing address?
+fields:
+  - ${ users[0] }'s mailing address is: users[0].mailing_address
+    datatype: object_radio
+    choices:
+      - users[0].mailing_address if defined("users[0].mailing_address.address") else users[0].address if defined("users[0].address.address") else None
+    object labeler: |
+      lambda y: y.on_one_line()
+    none of the above: |
+      Somewhere else
+    disable others: True
+    show if:
+      code: |
+        defined("users[0].address.address")
+    default: |
+      users[0].address
+  - ${ users[0].address.address_label }: users[0].mailing_address.address
+    address autocomplete: True
+  - Address is a: users[0].mailing_address.address_type
+    datatype: radio
+    choices:
+      - Apartment: apt
+      - Suite: suite
+      - Floor: floor
+      - Other (including house): other
+  - Apartment/Suite/Floor number: users[0].mailing_address.unit
+    required: False
+  - ${ users[0].address.city_label }: users[0].mailing_address.city
+  - ${ users[0].address.state_label }: users[0].mailing_address.state
+    code: |
+      states_list(country_code=AL_DEFAULT_COUNTRY)
+    default: ${ AL_DEFAULT_STATE }
+  - ${ users[0].address.zip_label }: users[0].mailing_address.zip
+    required: False      
+  - ${ users[0].address.country_label }: users[0].mailing_address.country
+    code: uscis_countries_list()
+---
+id: your mailing address
+question: |
+  What is ${ users[i] }'s mailing address?
+fields:
+  - ${ users[i] }'s mailing address is: users[i].mailing_address
+    datatype: object_radio
+    choices:
+      - users[0].mailing_address if defined("users[0].mailing_address.address") else None
+      - users[i].address if defined("users[i].address.address") else None
+    object labeler: |
+      lambda y: y.on_one_line()
+    none of the above: |
+      Somewhere else
+    disable others: True      
+    show if:
+      code: |
+        defined("users[i].address.address")
+    default: |
+      users[0].mailing_address if i > 0 else None
+  - ${ users[i].address.address_label}: users[i].mailing_address.address
+    address autocomplete: True
+  - Address is a: users[i].mailing_address.address_type
+    datatype: radio
+    choices:
+      - Apartment: apt
+      - Suite: suite
+      - Floor: floor
+      - Other (including house): other
+  - Apartment/Suite/Floor number: users[i].mailing_address.unit
+    required: False
+  - ${ users[i].address.city_label}: users[i].mailing_address.city
+  - ${ users[i].address.state_label}: users[i].mailing_address.state
+    code: |
+      states_list(country_code=AL_DEFAULT_COUNTRY)
+    default: ${ AL_DEFAULT_STATE }
+  - ${ users[i].address.zip_label}: users[i].mailing_address.zip
+    required: False      
+  - ${ users[i].address.country_label}: users[i].mailing_address.country
+    code: countries_list()
+    default: ${ AL_DEFAULT_COUNTRY }
+
+---
+################## AD Code Blurbs ###################
+code: |
+  users[i].prior_immigration_proceedings.there_are_any = users[i].has_been_in_immigration_proceedings == 'Yes_2'
+---
+########################## Countries & Places ##########################
+---
+#id: applicant's birthplace
+#question: |
+#  Applicant's Birthplace
+#fields:
+#  - What City/Town/Village in ${ users[i].country_of_birth } was Applicant born in?: users[i].birthplace_city
+#    maxlength: 38
+#  - What State or Province was Applicant born in?: users[i].state_of_birth
+#    maxlength: 38
+---
+id: countries resided in are there any
+question: |
+  Did Applicant **live** in another country before entering the U.S.?
+fields:
+  - no label: users[i].countries_of_residence.there_are_any # the wording of this question is taken from the sample I-821, page 2, question 15. It seems to me this question will almost always be yes, since a person has to "live" somewhere, but perhaps there's a definitional problem here...
+    datatype: yesnoradio
+---
+id: countries resided in
+question: |
+  Which country or countries have you lived in before entering the U.S.?
+subquestion: |
+  We will ask about each country one at a time.
+
+  % if len(users[i].countries_of_residence.complete_elements()):
+  Countries you **lived in** before entering the U.S.:[BR]
+  
+  % for country in users[i].countries_of_residence.complete_elements():
+  **${ country.name }**
+  % endfor
+  
+  [NEWLINE]
+  % endif
+fields:
+  - Select a Country: users[i].countries_of_residence[j].name
+    code: uscis_countries_list()
+    
+  # - Were you ever a **citizen** of this country?: users[i].countries_of_residence[j].was_ever_citizen
+  #   datatype: yesnoradio
+  # - Are you **still** a citizen of this country **today**?: users[i].countries_of_residence[j].is_still_citizen
+  #   datatype: yesnoradio
+  #   show if: users[i].countries_of_residence[j].was_ever_citizen
+---
+id: countries resided in review screen
+question: |
+  Review the countries you **lived in** before entering the U.S.
+subquestion: |
+  ${ users[i].countries_of_residence.table }
+  ${ users[i].countries_of_residence.add_action(label=bold('Add Another Country'), color='warning') }
+continue button field:  users[i].countries_of_residence_review
+---
+table: users[i].countries_of_residence.table
+rows: users[i].countries_of_residence
+columns:
+  - Country: |
+      row_item
+  # - Citizenship: |
+  #     'never citizen' if not row_item.was_ever_citizen else 'former citizen' if row_item.was_ever_citizen and not row_item.is_still_citizen else 'citizen'
+edit: 
+  - row_item.name
+---
+id: status in other countries
+question: |
+  Countries traveled through before entering the US for ${ users[i] }
+subquestion: |
+  You said that you traveled through these countries before entering the United States:
+
+  % if users[i].traveled_through_central_america:
+  Colombia, Panama, Costa Rica, Nicaragua, Honduras, Guatemala, and Mexico
+  % else:
+  ${ users[i].other_countries_traveled_through }
+  % endif
+fields:
+  - note: |
+      What date did you enter the first country?
+    grid: 4
+  - Month: users[i].date_entered_first_country_month
+    default: |
+      ${ showifdef("users[0].date_entered_first_country_month") if i > 0 else '' }
+    label above field: True
+    grid: 5
+    choices:
+      - January: 01
+      - February: 02
+      - March: 03
+      - April: 04
+      - May: 05
+      - June: 06
+      - July: 07
+      - August: 08
+      - September: 09
+      - October: 10
+      - November: 11
+      - December: 12
+  - Year: users[i].date_entered_first_country_year
+    datatype: integer
+    max: ${ current_datetime().year}
+    label above field: True
+    grid: 3
+    default: |
+      ${ showifdef("users[0].date_entered_first_country_year") if i > 0 else '' }
+  - note: |
+      What date did you leave the **last** country?
+    grid: 4
+  - Month: users[i].date_left_last_country_month
+    default: |
+      ${ showifdef("users[0].date_left_last_country_month") if i > 0 else '' }
+    label above field: True
+    grid: 5
+    choices:
+      - January: 01
+      - February: 02
+      - March: 03
+      - April: 04
+      - May: 05
+      - June: 06
+      - July: 07
+      - August: 08
+      - September: 09
+      - October: 10
+      - November: 11
+      - December: 12
+  - Year: users[i].date_left_last_country_year
+    label above field: True
+    datatype: integer
+    max: ${ current_datetime().year}
+    grid: 3
+    default: |
+      ${ showifdef("users[0].date_left_last_country_year") if i > 0 else '' }
+  - Did you have immigration status in any of the countries you traveled through?: users[i].has_immigration_status_in_countries_traveled_through
+    datatype: yesnoradio
+  - What status do you have, if any, in any of the countries you traveled through?: users[i].immigration_status_in_countries_traveled_through
+    show if: users[i].has_immigration_status_in_countries_traveled_through
+  - Were you ever offered immigration status in any country you traveled through that you did not accept?: users[i].other_country_immigration_status_offered
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].other_country_immigration_status_offered") if i > 0 else ''}
+  - Describe the name of each country, nature of the status, and the dates when it was offered: users[i].other_country_immigration_status_names_and_status
+    datatype: area
+    show if: users[i].other_country_immigration_status_offered
+    default: ${ showifdef("users[0].other_country_immigration_status_names_and_status") if i > 0 else ''}
+  - Why did you not accept the status offered?: users[i].other_country_immigration_status_why_refused
+    datatype: area
+    show if: users[i].other_country_immigration_status_offered
+    default: ${ showifdef("users[0].other_country_immigration_status_why_refused") }
+---
+# id: any more countries of citizenship
+# question: |
+#   Are there any other countries where you are a citizen?
+# subquestion: |
+#   You have already told us about:
+  
+#   % for country in users[i].countries_of_residence.complete_elements():
+#   % if country.was_ever_citizen and country.is_still_citizen:
+#   * ${ country.name }
+#   % endif
+#   % endfor
+#   % for country in users[i].countries_of_citizenship.complete_elements():
+#   * ${ country.name }
+#   % endfor
+# fields:
+#   - no label: users[i].other_countries_of_citizenship.there_are_any
+#     datatype: yesnoradio
+# ---
+# id: other countries of citizenship
+# question: |
+#   Other Countries of Citizenship
+# fields:
+#   - "Country of Citizenship": users[i].other_countries_of_citizenship[j].name
+#     code: |
+#       [next(iter(item.values())) for item in countries_list()]
+# ---
+# id: other countries of citizenship is there another
+# question: |
+#   Are there any other countries where you are a citizen aside from those listed below?
+# subquestion: |
+#   **${ users[i].country_of_birth }**
+#   **${ users[i].other_countries_of_citizenship }**
+# fields: 
+#   - no label: users[i].other_countries_of_citizenship.there_is_another
+#     datatype: yesnoradio
+# ---
+# ########## does this need reworking??
+# code: |
+#   users[i].countries_of_citizenship = DAList(users[i].attr_name("countries_of_citizenship"), auto_gather=False)
+#   for country in users[i].countries_of_residence.complete_elements():
+#     if country.was_ever_citizen and country.is_still_citizen:
+#       users[i].countries_of_citizenship.append(name=country.name)
+#   users[i].countries_of_citizenship.extend(users[i].other_countries_of_citizenship)
+#   users[i].countries_of_citizenship.gathered = True
+# ---
+# id: countries entered or traveled to before US
+# question: |
+#   Which country or countries did you enter/travel through before entering the U.S.?
+# subquestion: |
+#   % if len(users[i].countries_traveled_through.complete_elements()):
+#   **Countries you entered/traveled through before entering the U.S.:**[BR]
+  
+#   Country  |Entry Date  |Departure Date
+#   -------------|------------|------------
+#   % for country in users[i].countries_traveled_through.complete_elements():
+#   ${ country }  |${ country.entry_date }  |${ country.departure_date }
+#   % endfor
+  
+#   [NEWLINE]
+#   % endif
+# fields:
+#   - Select a Country: users[i].countries_traveled_through[j].name
+#     code: |
+#       [next(iter(item.values())) for item in countries_list()]
+#   - Date you entered the country: users[i].countries_traveled_through[j].entry_date
+#     datatype: date
+#     max: ${ today() }
+#   - Date you departed/exited the country: users[i].countries_traveled_through[j].departure_date
+#     datatype: date
+#     max: ${ today() }
+#   - Your immigration status, if any, in the country: users[i].countries_traveled_through[j].immigration_status
+#     datatype: radio
+#     choices:
+#       - citizen
+#       - legal permanent resident
+#       - refugee
+#       - asylee
+#       - visitor
+#       - student
+#       - temporary resident
+#       - I had NO LEGAL IMMIGRATION STATUS
+#   - Were you ever offered any legal immigration status that you did not accept?: users[i].countries_traveled_through[j].immigration_status_offered_not_accepted
+#     datatype: yesnoradio
+#     show if:
+#       variable: users[i].countries_traveled_through[j].immigration_status
+#       is: I had NO LEGAL IMMIGRATION STATUS
+#   - What immigration status did the country offer you?: users[i].countries_traveled_through[j].immigration_status_offered
+#     datatype: radio
+#     choices:
+#       - citizen
+#       - legal permanent resident
+#       - refugee
+#       - asylee
+#       - visitor
+#       - student
+#       - temporary resident
+#       - other
+#     show if: users[i].countries_traveled_through[j].immigration_status_offered_not_accepted
+#   - 'Describe "other" immigration status that you were offered': users[i].countries_traveled_through[j].immigration_status_offered_other
+#     maxlength: 38
+#     show if:
+#       variable: users[i].countries_traveled_through[j].immigration_status_offered
+#       is: other
+#   - Describe why you chose not to accept the immigration status offered to you: users[i].countries_traveled_through[j].immigration_status_offered_not_accepted_reason
+#     input type: area
+#     rows: 2
+#     show if: users[i].countries_traveled_through[j].immigration_status_offered_not_accepted
+# ---
+# id: countries entered or traveled to before US review screen
+# question: |
+#   Review the countries you entered/traveled through before entering the U.S.
+# subquestion: |
+#   ${ users[i].countries_traveled_through.table }
+#   ${ users[i].countries_traveled_through.add_action(label=bold('Add Another Country'), color='warning') }
+# continue button field:  users[i].countries_traveled_through_review
+# ---
+# table: users[i].countries_traveled_through.table
+# rows: users[i].countries_traveled_through
+# columns:
+#   - Country: row_item.name
+#   - Entry Date: row_item.entry_date
+#   - Departure Date: row_item.departure_date
+# edit:
+#   - row_item
+# allow reordering: True
+---
+id: prior immigration proceedings are there any
+question: |
+  Has Applicant been involved in immigration legal proceedings before?
+fields: 
+  - no label: users[i].prior_immigration_proceedings.there_are_any
+    datatype: yesnoradio
+---
+#################### Prior Immigration Proceedings ####################
+id: prior immigration proceedings
+question: |
+  Prior Immigration Proceedings
+subquestion: |
+  % if len(users[i].prior_immigration_proceedings.complete_elements()):
+  % if len(users[i].prior_immigration_proceedings.complete_elements()) == 1:
+  The prior immigration proceeding you told us about is:
+  % else:
+  The prior immmigration proceedings you told us about are: 
+  % endif
+  
+  Jurisdiction  |Start Date  |End Date
+  -------------|------------|------------
+  % for proceeding in users[i].prior_immigration_proceedings.complete_elements():
+  ${ proceeding.jurisdiction }  |${ proceeding.start_date }  |${ proceeding.end_date }
+  % endfor
+  
+  [NEWLINE]
+  % endif
+fields:
+  - Proceeding: users[i].prior_immigration_proceedings[j].name
+    input type: hidden
+    default: ${ int(users[i].prior_immigration_proceedings[j].instanceName.split('[')[-1].split(']')[0]) + 1 }
+  - Jurisdiction: users[i].prior_immigration_proceedings[j].jurisdiction
+    datatype: radio
+    choices:
+      - Immigration Court (before an Immigration Judge): immigration_judge
+      - Board of Immigration Appeals (BIA): bia
+      - I am no longer in Department of Justice (DOJ) or Department of Homeland Security (DHS) immigration proceedings, but I am or was in Federal court proceedings regarding immigration issues: fed_court
+  - Location (City, State): users[i].prior_immigration_proceedings[j].location
+    maxlength: 38
+  - Start Date: users[i].prior_immigration_proceedings[j].start_date
+    datatype: date
+    max: ${ today().format("yyyy-MM-dd") }
+  - Proceedings are ongoing/pending today: users[i].prior_immigration_proceedings[j].proceedings_continuing_to_present
+    datatype: yesnowide
+    grid: 6
+  - End Date: users[i].prior_immigration_proceedings[j].end_date
+    datatype: date
+    max: ${ today().format("yyyy-MM-dd") }
+    grid: 6
+    disable if: users[i].prior_immigration_proceedings[j].proceedings_continuing_to_present
+validation code: |
+  if users[i].prior_immigration_proceedings[j].proceedings_continuing_to_present:
+    users[i].prior_immigration_proceedings[j].end_date = today()
+---
+id: prior immigration proceedings review screen
+question: |
+  Applicant's Prior Immigration Proceedings
+subquestion: |
+  ${ users[i].prior_immigration_proceedings.table }
+  ${ users[i].prior_immigration_proceedings.add_action(label=bold('Add Another Proceeding'), color='warning') }
+continue button field: users[i].prior_immigration_proceedings_review
+---
+table: users[i].prior_immigration_proceedings.table
+rows: users[i].prior_immigration_proceedings
+columns:
+  #- Proceeding: row_item.name
+  - Jurisdiction: row_item.jurisdiction
+  - Location: row_item.location
+  - Start Date: row_item.start_date
+  - End Date: row_item.end_date
+edit:
+  - row_item
+allow reordering: True # might be moot/unnecessary here
+---
+########################## Travel Documents ##########################
+---
+id: passport or other travel documents
+question: |
+  Passport and Other Travel Documents for ${ users[i] }
+subquestion: |
+  ***Note: a "cedula" does not count as a travel document***
+
+  You must list all passport numbers, even if expired. Start with the most
+  recent.
+fields:
+  - Do you have a passport?: users[i].has_passport
+    datatype: yesnoradio
+  - Passport number (if any): users[i].passport_number
+    maxlength: 38
+    required: false
+    show if: users[i].has_passport
+  - What country issued your most recent passport: users[i].passport_issuing_country
+    code: |
+      uscis_countries_list()
+    default: |
+      ${ users[i].country_of_birth }
+    show if: users[i].has_passport
+  - Other travel document number (if any): users[i].other_travel_document_number
+    required: false
+  - What is the expiration date of your most recent passport or travel document?: users[i].passport_expiration_date
+    datatype: date
+    required: false      
+  - Additional passport or travel document number: users[i].travel_documents[0]
+    required: false
+  - Additional passport or travel document number: users[i].travel_documents[1]
+    required: false
+#  - ${ users[i] } has more than 3 travel documents: users[i].travel_documents.there_is_another
+#    datatype: yesnowide
+---
+id: collect more docs
+list collect: True
+question: |
+  List each additional travel document, one at a time
+subquestion: |
+  Tap "add another" to list another travel document.
+
+  % if (users[i].has_passport and users[i].passport_number) or users[i].other_travel_document_number:
+  You have already told us about the following travel documents:
+
+  % if users[i].has_passport and users[i].passport_number:
+  * ${ users[i].passport_number }
+  % endif
+  % if users[i].other_travel_document_number:
+  * ${ users[i].other_travel_document_number }
+  % endif
+  % endif
+fields:
+  - Additional passport or travel document number: users[i].travel_documents[j]
+---
+id: type of application
+question: |
+  Type of Application
+fields:
+  - "Is this Applicant's first TPS application, or is Applicant re-registering/reapplying for TPS?": users[i].is_first_TPS_application
+    datatype: radio
+    choices:
+      - First TPS Application
+      - Re-registering for TPS
+  # - "TPS Application Country(ies)": users[i].tps_application_country
+  #   datatype: checkboxes
+  #   choices:
+  #     - Venezuela
+  #     - Haiti
+  - "Who Previously Granted the Applicant TPS?": users[i].who_granted_prior_TPS
+    datatype: radio
+    choices:
+      - USCIS
+      - Immigration Judge/Board of Immigration Appeals
+    show if: 
+      variable: users[i].is_first_TPS_application
+      is: Re-registering for TPS
+---
+id: alternate birthdates there are any
+question: |
+  Have you ever used (including on any documents) a date of birth other than ${ users[i].birthdate }?
+fields: 
+  - no label: users[i].alternate_birthdates.there_are_any
+    datatype: yesnoradio
+  - "Other Date of Birth Used": users[i].alternate_birthdates[0]
+    datatype: BirthDate
+    alMax: ${ today().format("yyyy-MM-dd") }
+    show if: users[i].alternate_birthdates.there_are_any
+  - "Other Date of Birth Used": users[i].alternate_birthdates[1]
+    datatype: BirthDate
+    alMax: ${ today().format("yyyy-MM-dd") }
+    show if: users[i].alternate_birthdates.there_are_any
+    required: False
+  - note: |
+      The form has room for up to 2 alternate birthdates.
+    show if: users[i].alternate_birthdates.there_are_any
+---
+id: alternate birthdates
+question: |
+  Other birth dates used
+subquestion: |
+  You have already mentioned:
+
+  * ${ users[i].birthdate }
+  % for date in users[i].alternate_birthdates.complete_elements():
+  * ${ date }
+  % endfor  
+fields:
+  - Other Date of Birth Used: users[i].alternate_birthdates[j]
+    datatype: BirthDate
+    alMax: ${ today().format("yyyy-MM-dd") }
+---
+# id: alternate birthdates there is another
+# question: |
+#   Are there any other birthdates you've claimed or used (including on any documents) other than those below?
+# subquestion: |
+#   * ${ users[i].birthdate }
+#   % for date in users[i].alternate_birthdates.complete_elements():
+#   * ${ date }
+#   % endfor  
+# fields: 
+#   - no label: users[i].alternate_birthdates.there_is_another
+#     datatype: yesnoradio
+---
+############## Physical Characteristics and Marital Status ##############
+id: ethnicity and physical characteristics
+question: |
+  ${ users[i] }'s Ethnicity & Physical Characteristics
+fields:
+  - Gender: users[i].sex
+    datatype: radio
+    choices:
+      - Male: male
+      - Female: female
+      - Nonbinary (will be checked only on AIW): nonbinary
+  - Ethnicity: users[i].ethnicity
+    datatype: radio
+    choices:
+      - Hispanic or Latino: hispanic
+      - Not Hispanic or Latino: not_hispanic
+    default: |
+      ${ showifdef("users[0].ethnicity") if i > 0 else ""}
+  - "Race (choose 1)": users[i].race
+    datatype: checkboxes
+    choices:
+      - White: white
+      - Black or African American: black
+      - American Indian or Alaska Native: native_american
+      - Asian: asian
+      - Native Hawaiian or Other Pacific Islander: pacific_islander
+      - Other or unknown: other
+    maxlength: 1
+  - "Height (centimeters)": users[i].height_cm
+    datatype: integer
+  - Weight (kilograms): users[i].weight_kg
+    datatype: number
+  - "Hair Color (choose one)": users[i].hair_color
+    datatype: radio
+    choices:
+      - Bald (No hair): bald
+      - Black: black
+      - Blond: blond
+      - Brown: brown
+      - Gray: gray
+      - Red: red
+      - Sandy: sandy
+      - White: white
+      - Blue: blue
+      - Orange: orange
+      - Pink: pink
+      - Purple: purple
+      - Unknown/Other: other
+  - "Eye Color (choose one)": users[i].eye_color
+    datatype: radio
+    choices:
+      - Black: black
+      - Blue: blue
+      - Brown: brown
+      - Gray: gray
+      - Green: green
+      - Hazel: hazel
+      - Maroon: maroon
+      - Pink: pink
+      - Multicolor: multicolor
+      - Unknown/Other: other
+  - Marital Status: users[i].marital_status
+    datatype: radio
+    choices: 
+      - Single, never married: single, never married
+      - Married: married
+      - Divorced: divorced
+      - Widowed: widowed
+      - Separated: separated
+      - Marriage annulled: marriage annulled
+      - Other: other
+  - 'Explain "other" marital status': users[i].marital_status_other
+    maxlength: 27
+    show if: 
+      variable: users[i].marital_status
+      is: "other"
+---
+id: applicant info
+question: |
+  Applicant Info
+fields:
+  - "USCIS Online Account Number (if any)": users[i].uscis_account_number
+    maxlength: 28
+    required: false
+  - Student and Exchange Visitor Information System (SEVIS) Number (if any): users[i].sevis_number
+    maxlength: 21
+    required: false
+---
+id: current spouse and marriage info
+question: |
+  Current Spouse & Marriage Info
+fields:
+  - "Marriage Date (to current spouse)": users[i].marriage_date
+    datatype: date
+    max: ${ today().format("yyyy-MM-dd") }
+  - "Marriage Location": users[i].marriage_location # looking at the form, it is unknown if this solicits a street address or something like 'the holy temple of so and so'
+    maxlength: 38
+  - "Marriage City": users[i].marriage_city
+    maxlength: 24
+  - "Marriage State": users[i].marriage_state
+    maxlength: 5
+  - "Marriage Province": users[i].marriage_province
+    maxlength: 24
+  - "Marriage Country": users[i].marriage_country
+    maxlength: 38
+  - "Spouse's USCIS Online Account Number (if any and if known)": users[i].spouse.online_account_number
+    maxlength: 28
+  - "Spouse's A-Number (if any and if known) (do not include A-)": users[i].spouse.a_number
+    maxlength: 20
+---
+id: U.S. entry info and travel documents
+question: |
+  U.S. entry information
+fields:
+  - "${ users[i] } entered the U.S. (and has resided in the U.S. since) on what date?": users[i].date_started_us_residence
+    datatype: ThreePartsDate
+    alMax: ${ today().format("yyyy-MM-dd") }
+    default: |
+      ${ users[i].date_of_last_entry }
+  - "Port of Entry (if any)": users[i].port_of_entry
+    maxlength: 38
+    required: False
+    default: |
+      ${ showifdef("users[0].port_of_entry") if i > 0 else "" }
+  - "City/Town of Entry": users[i].city_of_entry # is this required? may not be properly applicable if applicant dod not arrive directly to a city/town...
+    maxlength: 38
+    required: False
+    default: |
+      ${ showifdef("users[0].city_of_entry") if i > 0 else "" }
+  - "State of Entry": users[i].state_of_entry
+    code: states_list()
+    default: |
+      ${ showifdef("users[0].state_of_entry") if i > 0 else "" }
+  - "Form I-94 Arrival-Departure Record Number (if any)": users[i].i94_arrival_number
+    maxlength: 11
+    required: False
+  - "Date Applicant's Authorized Period of Stay in the U.S. Expired or Will Expire (as shown on Form I-94 or Crewman's Landing Permit (Form I-95)) (mm/dd/yyyy or duration of status (D/S)": users[i].authorized_stay_ending_date # just terrible question wording
+    # datatype: date
+    required: False
+    default: |
+      ${ showifdef("users[0].authorized_stay_ending_date") if i > 0 else ''}
+  - "Immigration Status (or Lack of Status) When You Last Entered the U.S.": users[i].immigration_status_last_entry # this variable name doesn't match question
+    datatype: radio
+    choices:
+      - Parolee
+      - Visitor
+      - Student
+      - No Status
+    default: |
+      ${ showifdef("users[0].immigration_status_last_entry") if i > 0 else "" }
+  - "Current Immigration Status or Lack of Status": users[i].current_immigration_status # very badly worded question
+    datatype: radio
+    choices:
+      - Parolee
+      - Visitor
+      - Student
+      - No Status
+    default: |
+      ${ showifdef("users[0].current_immigration_status") if i > 0 else "" }
+---
+objects:
+  - users[i].kind_of_immigration_proceedings: DADict.using(auto_gather=False, gathered=True)
+---
+id: immigration proceedings
+question: |
+  Information about immigration proceedings
+fields:
+  - "Has ${ users[i] } ever been in immigration proceedings?": users[i].has_been_in_immigration_proceedings
+    datatype: yesnoradio
+    default: ${ users[i].in_removal_proceedings }
+  - note: |
+      What kind of immigration proceedings?
+    show if: users[i].has_been_in_immigration_proceedings
+  - "Immigration court (before a judge)": users[i].kind_of_immigration_proceedings["immigration_court"]
+    datatype: yesno
+    show if: users[i].has_been_in_immigration_proceedings
+    default: |
+      ${ showifdef("users[0].kind_of_immigration_proceedings['immigration_court']") if i > 0 and showifdef("users[0].has_been_in_immigration_proceedings") else False  }
+  - "Board of Immigration Appeals (BIA)": users[i].kind_of_immigration_proceedings["bia"]
+    datatype: yesno
+    show if: users[i].has_been_in_immigration_proceedings
+    default: |
+      ${ showifdef("users[0].kind_of_immigration_proceedings['bia']") if i > 0 and showifdef("users[0].has_been_in_immigration_proceedings") else False  }
+  - "I am no longer in Department of Justice (DOJ) or Department of Homeland Security (DHS) immigration proceedings, but I am or was in Federal court proceedings regarding immigration issues.": users[i].kind_of_immigration_proceedings["federal_court"]
+    datatype: yesno
+    show if: users[i].has_been_in_immigration_proceedings
+    default: |
+      ${ showifdef("users[0].kind_of_immigration_proceedings['federal_court']") if i > 0 and showifdef("users[0].has_been_in_immigration_proceedings") else False  }
+  - Location of DOJ or DHS proceedings:  users[i].proceedings_dhs_or_doj_hearing_location
+    maxlength: 38
+    required: False
+    default: |
+      ${ showifdef("users[0].proceedings_dhs_or_doj_hearing_location") if i > 0 and showifdef("users[0].has_been_in_immigration_proceedings") else showifdef("users[i].location_removal_proceedings") }
+    js show if: |
+      val("users[i].has_been_in_immigration_proceedings") && (val('users[i].kind_of_immigration_proceedings["immigration_court"]') || val('users[i].kind_of_immigration_proceedings["bia"]'))
+  - Location of federal court proceedings: users[i].federal_court_proceedings_location
+    maxlength: 38
+    show if: users[i].kind_of_immigration_proceedings["federal_court"]
+    required: False
+    default: |
+      ${ showifdef("users[0].federal_court_proceedings_location") if i > 0 and showifdef("users[0].has_been_in_immigration_proceedings") and showifdef("users[0].kind_of_immigration_proceedings['federal_court']") else showifdef("users[i].location_removal_proceedings") }
+  - Start date of proceedings: users[i].proceedings_start_date
+    datatype: date
+    max: ${ today().format("yyyy-MM-dd") }
+    show if: users[i].has_been_in_immigration_proceedings
+    default: |
+      ${ showifdef("users[0].proceedings_start_date") if i > 0 and showifdef("users[0].has_been_in_immigration_proceedings") else "" }
+  - "Proceedings are ongoing/pending today": users[i].proceedings_continuing_to_present
+    datatype: yesnowide
+    show if: users[i].has_been_in_immigration_proceedings
+    default: |
+      ${ showifdef("users[0].proceedings_continuing_to_present") if i > 0 and showifdef("users[0].has_been_in_immigration_proceedings") else "" }
+  - End date of proceedings: users[i].proceedings_end_date
+    datatype: date
+    max: ${ today().format("yyyy-MM-dd") }
+    js show if: |
+      val("users[i].has_been_in_immigration_proceedings") && !val("users[i].proceedings_continuing_to_present")
+    required: False
+    default: |
+      ${ showifdef("users[0].proceedings_end_date") if i > 0 else "" }  
+---
+id: I-765 specific questions
+question: |
+  Previous Filing & Social Security
+fields:
+  - Have you previously filed Form I-765?: users[i].previously_filed_I765
+    datatype: yesnoradio
+  - "Has the Social Security Administration ever officially issued a card to you?": users[i].has_ssn
+    datatype: yesnoradio
+  - "U.S. Social Security Number (without -)": users[i].ssn
+    maxlength: 9
+    minlength: 9
+    show if: users[i].has_ssn
+---
+id: father and mother birth name
+question: |
+  **Birth** names of ${users[i]}'s parents
+subquestion: |
+  (You can select the name of a family member who has already been named or 
+  type a new name)
+fields:
+  - Father's First (Given) Name at Birth: users[i].father_first_name
+    maxlength: 28
+    datatype: combobox
+    code: |
+      [user.name.first for user in users if user != users[i]]
+  - Father's Last (Family) Name at Birth: users[i].father_last_name
+    maxlength: 28
+    datatype: combobox
+    code: |
+      [user.name.last for user in users if user != users[i]]    
+  - Mother's First (Given) Name at Birth: users[i].mother_first_name
+    maxlength: 28
+    datatype: combobox
+    code: |
+      [user.name.first for user in users if user != users[i]]
+  - Mother's Last (Family) Name at Birth: users[i].mother_last_name
+    maxlength: 28 
+    datatype: combobox
+    code: |
+      [user.name.last for user in users if user != users[i]]
+---
+###################################################################################
+id: former spouse nationality and travel documents
+question: |
+  Former Spouse(s) Nationality & Travel Documents
+fields:
+  - "Users4 nationality": users4_nationality
+    maxlength: 38
+  - "Users4 a number": users4_a_number
+    maxlength: 20
+  - "Date of users4 death": users4_death_date
+    datatype: date
+  - "Users3 nationality": users3_nationality
+    maxlength: 38
+  - "Date of users4 marriage start": users4_marriage_start_date
+    datatype: date
+  - "Date of users4 marriage end": users4_marriage_end_date
+    datatype: date
+  - "Users3 a number": users3_a_number
+    maxlength: 20
+  - "Users4 marriage ending reason": users4_marriage_ending_reason
+    maxlength: 38
+  - "Date of users3 death": users3_death_date
+    datatype: date
+  - "Second spouse has tps": second_spouse_has_tps
+    input type: radio
+    choices:
+      - Yes 6: Yes_6
+      - No 6: No_6
+      - I do not know 3: I Do Not Know_3
+  - "Date of users3 marriage": users3_marriage_date
+    datatype: date
+  - "Date of second spouse tps start": second_spouse_tps_start_date
+    datatype: date
+  - "Date of users3 marriage ending": users3_marriage_ending_date
+    datatype: date
+  - "Date of second spouse tps end": second_spouse_tps_end_date
+    datatype: date
+  - "Second spouse tps continues": second_spouse_tps_continues
+    datatype: yesnowide
+  - "Second spouse tps dates unknown": second_spouse_tps_dates_unknown
+    datatype: yesnowide
+  - "Users3 marriage ending reason": users3_marriage_ending_reason
+    maxlength: 38
+  - "First spouse had tps": first_spouse_had_tps # not first, former
+    input type: radio
+    choices:
+      - Yes 7: Yes_7
+      - I do not know 4: I Do Not Know_4
+      - Yes 8: Yes_8
+      - No 8: No_8
+      - I do not know 5: I Do Not Know_5
+      - No 7: No_7
+  - "Date of first spouse tps start": first_spouse_tps_start_date # not first, former
+    datatype: date
+  - "Date of first spouse tps end": first_spouse_tps_end_date # not first, former
+    datatype: date
+  - "First spouse tps continuing": first_spouse_tps_continuing # not first, former
+    datatype: yesnowide
+  - "First spouse tps dates unknown": first_spouse_tps_dates_unknown # not first, former
+    datatype: yesnowide
+  - "First spouse applying for tps": first_spouse_applying_for_tps # not first, former
+    input type: radio
+    choices:
+      - Yes 5: Yes_5
+      - No 5: No_5
+      - I do not know 2: I Do Not Know_2
+  - "Children2 online account number": children2_online_account_number
+    maxlength: 28
+  - "Children2 a number": children2_a_number
+    maxlength: 20
+  - "Children1 online account number": children1_online_account_number
+    maxlength: 28
+  - "Children1 a number": children1_a_number
+    maxlength: 20
+  - "Date of children2 tps start": children2_tps_start_date
+    datatype: date
+  - "Date of children2 tps end": children2_tps_end_date
+    datatype: date
+  - "Children2 applying for tps": children2_applying_for_tps
+    input type: radio
+    choices:
+      - Yes 10: Yes_10
+      - No 10: No_10
+  - "Date of children1 tps start": children1_tps_start_date
+    datatype: date
+  - "Date of children1 tps end": children1_tps_end_date
+    datatype: date
+  - "Children1 applying for tps": children1_applying_for_tps
+    input type: radio
+    choices:
+      - Yes 9: Yes_9
+      - No 9: No_9
+---
+id: have you evers
+continue button field: users[i].have_you_ever_questions
+question: |
+  Eligibility standards (${ users[i] })
+subquestion: |
+  <button id="make_all_false" class="btn btn-info">
+    <i class="fas fa-circle-xmark"></i> Set all unchecked to "No"
+  </button>
+
+  % if i > 0 and users[0].application_is_approved:
+  The following questions will be defaulted to **Yes**, based on ${ users[0] }'s responses:
+
+  % if users[0].q8a:
+  * 8a. Have you EVER been convicted of any felony committed in the United States?
+  % endif
+  % if users[0].q8b:
+  * 8b. Have you EVER been convicted of any misdemeanor committed in the United States
+  % endif
+  % if users[0].q8c:
+  * 8c. Have you EVER been convicted of any particularly serious crime, whether committed inside or outside of the United States
+  % endif
+  % if users[0].q9a:
+  * 9a. Have you EVER ordered, incited, assisted, or otherwise participated in the persecution of any person on account of race, religion, nationality, membership in a particular social group, or political opinion?
+  % endif
+  % if users[0].q9b:
+  * 9b. Have you EVER committed serious nonpolitical crimes outside of the United States prior to your arrival in the United States?
+  % endif
+  % if users[0].q9c:
+  * 9c. Have you EVER or are you NOW engaged in activities that could be reasonable grounds for concluding that you are a danger to the security of the United States?
+  % endif
+  % if users[0].q10a:
+  * 10a. Have you EVER been convicted of or have you EVER committed acts which constitute the essential elements of a crime (other than a purely political offense)?
+  % endif
+  % if users[0].q10b:
+  * 10b. Have you EVER been convicted of or have you EVER committed acts which constitute the essential elements of a violation of any law relating to a controlled substance as defined in section 102 of the Controlled Substances Act?
+  % endif
+  % if users[0].q10c:
+  * 10c. Have you EVER been convicted of or have you EVER committed acts which constitute the essential elements of a conspiracy to violate any law relating to a controlled substance as defined in section 102 of the Controlled Substances Act?
+  % endif
+  % if users[0].q11:
+  * 11. Have you EVER been convicted of two or more criminal offenses (other than purely political offenses) for which you received sentences to confinement that, when combined, total five years or more?
+  % endif
+  % if users[0].q12a:
+  * 12a. Have you EVER trafficked in or are you NOW trafficking in any controlled substance?
+  % endif
+  % if users[0].q12b:
+  * 12b. Are you NOW or have you EVER knowingly assisted, abetted, conspired, or colluded with others in the unlawful trafficking of any controlled substance?
+  % endif
+  % if users[0].q12c:
+  * 12c. Are you the spouse or child of an alien who unlawfully trafficked in any controlled substance?
+  % endif
+  % if users[0].q12d:
+  * 12d. Are you the spouse or child of an alien who assisted, abetted, conspired, or colluded with others in the unlawful trafficking of any controlled substance?
+  % endif
+  % if users[0].q12e:
+  * 12e. Within the previous five years, have you EVER obtained any financial or other benefit from the unlawful activity of your spouse (including former spouses) or parents, and you knew, or reasonably should have known, that the financial or other benefit was the product of such illicit activity?
+  % endif
+  % if users[0].q13a:
+  * 13a. Have you EVER engaged, or do you plan to engage, solely, principally, or incidentally, in any activity to violate any law of the United States relating to espionage or sabotage?
+  % endif
+  % if users[0].q13b:
+  * 13b. Have you EVER engaged, or do you plan to engage, solely, principally, or incidentally, in any activity to violate or evade any law prohibiting the export from the United States of goods, technology, or sensitive information?
+  % endif
+  % if users[0].q13c:
+  * 13c. Have you EVER engaged, or do you plan to engage, solely, principally, or incidentally, in any other unlawful activity in the United States?
+  % endif
+  % if users[0].q13d:
+  * 13d. Have you EVER engaged, or do you plan to engage, solely, principally, or incidentally, in any activity in which a purpose is to oppose, control, or overthrow the Government of the United States by force, violence, or other unlawful means, including but not limited to participating in such activities, giving support to others involved in such activities, or being a member or representative of a terrorist organization?
+  % endif
+  % if users[0].q14a:
+  * 14a. Have you EVER or are you NOW engaged in terrorist activities?
+  % endif
+  % if users[0].q14b:
+  * 14b. Have you EVER or are you NOW engaged in or plan to engage in activities in the United States that would have potentially serious adverse foreign policy consequences for the United States?
+  % endif
+  % if users[0].q14c:
+  * 14c. Have you EVER been or are you NOW a member of the Communist or other totalitarian party, except when membership was involuntary?
+  % endif
+  % if users[0].q14d:
+  * 14d. Have you EVER participated in Nazi persecution or genocide?
+  % endif
+  % if users[0].q15a:
+  * 15a. Have you EVER, whether in the United States or any other country, been arrested for breaking or violating any law or ordinance, excluding minor traffic violations?
+  % endif
+  % if users[0].q15b:
+  * 15b. Have you EVER, whether in the United States or any other country, been cited, charged, or indicted, for breaking or violating any law or ordinance, excluding minor traffic violations?
+  % endif
+  % if users[0].q15c:
+  * 15c. Have you EVER, whether in the United States or any other country, been convicted, fined, imprisoned, placed on probation, received a suspended sentence or deferral of adjudication for breaking or violating any law or ordinance, excluding minor traffic violations?
+  % endif
+  % if users[0].q16:
+  * 16. Have you EVER been the beneficiary of a pardon, amnesty, rehabilitation decree, other act of clemency, or similar action?
+  % endif
+  % if users[0].q17:
+  * 17. Have you EVER committed a serious criminal offense in the United States and asserted immunity from prosecution?
+  % endif
+  % if users[0].q18a:
+  * 18a. Have you EVER, within the past 10 years, or are you NOW engaged in prostitution or procurement of prostitution?
+  % endif
+  % if users[0].q18b:
+  * 18b. Have you EVER, within the past 10 years (either directly or indirectly) procured or attempted to procure or import prostitutes or persons for the purpose of prostitution?
+  % endif
+  % if users[0].q18c:
+  * 18c. Have you EVER, within the past 10 years, received, in whole or in part, the proceeds of prostitution?
+  % endif
+  % if users[0].q19:
+  * 19. Have you EVER been or do you intend to be involved in any other commercial vice?
+  % endif
+  % if users[0].q20a:
+  * 20a. Have you EVER been ordered removed, and been deported from the United States?
+  % endif
+  % if users[0].q20a:
+  * 20b. Have you EVER voluntarily departed the United States under an order of removal?
+  % endif
+  % if users[0].q20c:
+  * 20c. Have you re-entered the United States unlawfully at any time after you were deported or you voluntarily departed?
+  % endif
+  % if users[0].q20a and users[0].q20d:
+  * 20d. Has DHS reinstated your prior order of removal?
+  % endif
+  % if users[0].q20e:
+  * 20e. Have you EVER failed to attend or remain in attendance at any immigration proceedings to determine your admissibility or deportability?
+  % endif
+  % if users[0].q21:
+  * 21. Have you EVER, by fraud or willfully misrepresenting a material fact, sought to obtain a visa or other documentation, admission to the United States, or any other immigration benefit?
+  % endif
+  % if users[0].q22:
+  * 22. Have you EVER assisted any other person to enter the United States in violation of the law?
+  % endif
+  % if users[0].q23a:
+  * 23a. Do you NOW have a communicable disease of public health significance?
+  % endif
+  % if users[0].q23b:
+  * 23b. Do you NOW have or have you EVER had a physical or mental disorder and behavior (or a history of behavior that is likely to recur) associated with the disorder which has posed or may pose a threat to the property, safety, or welfare of yourself or others?
+  % endif
+  % if users[0].q23c:
+  * 23c. Are you NOW or have you EVER been a drug abuser or drug addict?
+  % endif
+  % if users[0].q24:
+  * 24. Have you EVER entered the United States as a stowaway?"
+  % endif
+  % if users[0].q25:
+  * 25. Did the former Immigration and Naturalization Service (INS) EVER impose, or has DHS EVER imposed, civil monetary penalties on you for producing or using false documentation to obtain an immigration benefit?
+  % endif
+  % if users[0].q26:
+  * 26. Are you NOW subject to a final order for violation of section 274C (producing and/or using false documentation to unlawfully satisfy a requirement of the Immigration and Nationality Act)?
+  % endif
+  % if users[0].q27:
+  * 27. Do you NOW practice polygamy?
+  % endif
+  % if users[0].q28:
+  * 28. Are you NOW the guardian of, and are you accompanying, another individual who has been found to be inadmissible and who has been certified by a medical examiner to be helpless due to sickness, physical or mental disability, or infancy?
+  % endif
+  % if users[0].q29:
+  * 29. Have you EVER detained, retained, or withheld the custody of a child having a lawful claim to U.S. citizenship, outside the United States, from a U.S. citizen granted custody?
+  % endif
+  % if users[0].q30a:
+  * 30a. Have you EVER ordered, incited, called for, committed, assisted, helped with, or otherwise participated in acts involving torture or genocide?
+  % endif
+  % if users[0].q30b:
+  * 30b. Have you EVER ordered, incited, called for, committed, assisted, helped with, or otherwise participated in killing any person?
+  % endif
+  % if users[0].q30c:
+  * 30c. Have you EVER ordered, incited, called for, committed, assisted, helped with, or otherwise participated in intentionally and severely injuring any person?
+  % endif
+  % if users[0].q30d:
+  * 30d. Have you EVER ordered, incited, called for, committed, assisted, helped with, or otherwise participated in engaging in any kind of sexual contact or relations with any person who was being forced or threatened?
+  % endif
+  % if users[0].q30e:
+  * 30e. Have you EVER ordered, incited, called for, committed, assisted, helped with, or otherwise participated in limiting or denying any person's ability to exercise religious beliefs?
+  % endif
+  % if users[0].q31a:
+  * 31a. Have you EVER served in, been a member of, assisted in, or participated in any military unit, paramilitary unit, police unit, self-defense unit, vigilante unit, rebel group, guerrilla group, militia, or insurgent organization?
+  % endif
+  % if users[0].q31b:
+  * 31b. Have you EVER served or worked in any prison, jail, prison camp, detention facility, labor camp, or any other situation that involved detaining persons?
+  % endif
+  % if users[0].q32:
+  * 32. Have you EVER been a member of, assisted in, or participated in any group, unit, or organization of any kind in which you or other persons used any type of weapon against any person or threatened to do so?
+  % endif
+  % if users[0].q33:
+  * 33. Have you EVER assisted with or participated in selling or providing weapons to any person who to your knowledge used them against another person, or in transporting weapons to any person who to your knowledge used them against another person?
+  % endif
+  % if users[0].q34:
+  * 34. Have you EVER received any type of military, paramilitary, or weapons training?
+  % endif
+  % if users[0].q35:
+  * 35. Have you EVER unlawfully voted in a United States Federal, state, or local election?
+  % endif
+  % if users[0].q36:
+  * 36. Have you EVER claimed to be a U.S. citizen (in writing or in any other way)?
+  % endif
+  % if users[0].q37a:
+  * 37a. Have you EVER recruited, enlisted, conscripted, or used any person under 15 years of age to serve in or help an armed force or group?
+  % endif
+  % if users[0].q37b:
+  * 37b. Have you EVER used any person under 15 years of age to take part in hostilities or to help or provide services to people in combat?
+  % endif
+  % if users[0].q38a:
+  * 38a. Have you EVER committed or conspired to commit human trafficking offenses, as defined in the section 103 of the Victims of Trafficking and Violence Protection Act of 2000, in the United States or outside the United States?
+  % endif
+  % if users[0].q38b:
+  * 38b. Have you EVER knowingly aided, abetted, assisted, conspired, or colluded with a human trafficker?
+  % endif
+  % if users[0].q38c:
+  * 38c. Are you NOW the spouse or child of an alien who committed or conspired to commit human trafficking offenses?
+  % endif
+  % if users[0].q38d:
+  * 38d. Are you NOW the spouse or child of, or are you yourself, an alien who knowingly aided, abetted, assisted, conspired, or colluded with a human trafficker?
+  % endif
+  % if users[0].q38e:
+  * 38e. Within the previous five years, have you EVER obtained any financial or other benefit from the human trafficking activity of your spouse (including former spouses) or parents, and you knew, or reasonably should have known, that the financial or other benefit that you received resulted from such human trafficking?
+  % endif
+  % if users[0].q39a:
+  * 39a. Are you NOW or have you EVER engaged in money laundering as described in section 1956 or 1957 of Title 18, United States Code?
+  % endif
+  % if users[0].q39b:
+  * 39b. Are you NOW or have you EVER been a knowing aider, abettor, assister, conspirator, or colluder with others in money laundering?
+  % endif
+  % if users[0].q40:
+  * 40. Have you EVER been responsible for or directly carried out particularly severe violations of religious freedom, as defined in section 3 of the International Religious Freedom Act of 1998 (22 U.S.C. section 6402) while serving as a foreign government official?
+  % endif
+  % if users[0].q41:
+  * 41. Has an immigration judge or the Board of Immigration Appeals EVER determined that you filed a frivolous asylum application in the past?
+  % endif
+
+  % endif
+fields:
+  - note: |
+      <h2 class="h4">Criminal offenses and human rights violations</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "8a. Have you EVER been convicted of any felony committed in the United States?": users[i].q8a
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q8a") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "8b. Have you EVER been convicted of any misdemeanor committed in the United States": users[i].q8b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q8b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "8c. Have you EVER been convicted of any particularly serious crime, whether committed inside or outside of the United States": users[i].q8c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q8c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "9a. Have you EVER ordered, incited, assisted, or otherwise participated in the persecution of any person on account of race, religion, nationality, membership in a particular social group, or political opinion?": users[i].q9a
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q9a") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "9b. Have you EVER committed serious nonpolitical crimes outside of the United States prior to your arrival in the United States?": users[i].q9b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q9b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "9c. Have you EVER or are you NOW engaged in activities that could be reasonable grounds for concluding that you are a danger to the security of the United States?": users[i].q9c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q9c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "10a. Have you EVER been convicted of or have you EVER committed acts which constitute the essential elements of a crime (other than a purely political offense)?": users[i].q10a
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q10a") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "10b. Have you EVER been convicted of or have you EVER committed acts which constitute the essential elements of a violation of any law relating to a controlled substance as defined in section 102 of the Controlled Substances Act?": users[i].q10b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q10b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "10c. Have you EVER been convicted of or have you EVER committed acts which constitute the essential elements of a conspiracy to violate any law relating to a controlled substance as defined in section 102 of the Controlled Substances Act?": users[i].q10c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q10c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "11. Have you EVER been convicted of two or more criminal offenses (other than purely political offenses) for which you received sentences to confinement that, when combined, total five years or more?": users[i].q11
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q11") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Drug crimes</h2>
+    grid: 
+      width: 12
+      start: True
+    label above field: True
+  - "12a. Have you EVER trafficked in or are you NOW trafficking in any controlled substance?": users[i].q12a
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q12a") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "12b. Are you NOW or have you EVER knowingly assisted, abetted, conspired, or colluded with others in the unlawful trafficking of any controlled substance?": users[i].q12b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q12b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "12c. Are you the spouse or child of an alien who unlawfully trafficked in any controlled substance?": users[i].q12c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q12c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "12d. Are you the spouse or child of an alien who assisted, abetted, conspired, or colluded with others in the unlawful trafficking of any controlled substance?": users[i].q12d
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q12d") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "12e. Within the previous five years, have you EVER obtained any financial or other benefit from the unlawful activity of your spouse (including former spouses) or parents, and you knew, or reasonably should have known, that the financial or other benefit was the product of such illicit activity?": users[i].q12e
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q12e") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Spying, sedition, terrorism, and espionage</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "13a. Have you EVER engaged, or do you plan to engage, solely, principally, or incidentally, in any activity to violate any law of the United States relating to espionage or sabotage?": users[i].q13a
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q13a") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "13b. Have you EVER engaged, or do you plan to engage, solely, principally, or incidentally, in any activity to violate or evade any law prohibiting the export from the United States of goods, technology, or sensitive information?": users[i].q13b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q13b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "13c. Have you EVER engaged, or do you plan to engage, solely, principally, or incidentally, in any other unlawful activity in the United States?": users[i].q13c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q13c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "13d. Have you EVER engaged, or do you plan to engage, solely, principally, or incidentally, in any activity in which a purpose is to oppose, control, or overthrow the Government of the United States by force, violence, or other unlawful means, including but not limited to participating in such activities, giving support to others involved in such activities, or being a member or representative of a terrorist organization?": users[i].q13d
+    datatype: yesnoradio
+    default: |
+      % if users[i].age_in_years() > 13:
+      ${ users[i].acted_as_terrorist }
+      % else:
+      False
+      % endif
+    grid: 6
+    label above field: True
+  - "14a. Have you EVER or are you NOW engaged in terrorist activities?": users[i].q14a
+    datatype: yesnoradio
+    default: |
+      % if users[i].age_in_years() > 13:
+      ${ users[i].acted_as_terrorist }
+      % else:
+      False
+      % endif
+    grid: 6
+    label above field: True
+  - "14b. Have you EVER or are you NOW engaged in or plan to engage in activities in the United States that would have potentially serious adverse foreign policy consequences for the United States?": users[i].q14b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q14b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "14c. Have you EVER been or are you NOW a member of the Communist or other totalitarian party, except when membership was involuntary?": users[i].q14c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q14c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "14d. Have you EVER participated in Nazi persecution or genocide?": users[i].q14d
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q14d") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Other laws and ordinances</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "15a. Have you EVER, whether in the United States or any other country, been arrested for breaking or violating any law or ordinance, excluding minor traffic violations?": users[i].q15a
+    datatype: yesnoradio
+    default: ${ users[i].ever_arrested }
+    grid: 6
+    label above field: True
+  - "15b. Have you EVER, whether in the United States or any other country, been cited, charged, or indicted, for breaking or violating any law or ordinance, excluding minor traffic violations?": users[i].q15b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q15b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "15c. Have you EVER, whether in the United States or any other country, been convicted, fined, imprisoned, placed on probation, received a suspended sentence or deferral of adjudication for breaking or violating any law or ordinance, excluding minor traffic violations?": users[i].q15c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q15c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "16. Have you EVER been the beneficiary of a pardon, amnesty, rehabilitation decree, other act of clemency, or similar action?": users[i].q16
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q16") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "17. Have you EVER committed a serious criminal offense in the United States and asserted immunity from prosecution?": users[i].q17
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q17") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Prostitution and other vices</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "18a. Have you EVER, within the past 10 years, or are you NOW engaged in prostitution or procurement of prostitution?": users[i].q18a
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q18a") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "18b. Have you EVER, within the past 10 years (either directly or indirectly) procured or attempted to procure or import prostitutes or persons for the purpose of prostitution?": users[i].q18b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q18b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "18c. Have you EVER, within the past 10 years, received, in whole or in part, the proceeds of prostitution?": users[i].q18c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q18c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "19. Have you EVER been or do you intend to be involved in any other commercial vice?": users[i].q19
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q19") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Deportation, removal, and other immigration violations</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "20a. Have you EVER been ordered removed, and been deported from the United States?": users[i].q20a
+    datatype: yesnoradio
+    default: ${ users[i].ever_ordered_removed }
+    grid: 6
+    label above field: True
+  - "20b. Have you EVER voluntarily departed the United States under an order of removal?": users[i].q20b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q20b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "20c. Have you re-entered the United States unlawfully at any time after you were deported or you voluntarily departed?": users[i].q20c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q20c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "20d. Has DHS reinstated your prior order of removal?": users[i].q20d
+    datatype: yesnomaybe
+    label above field: True
+    grid: 6
+    default: ${ showifdef("users[0].q20d") if i > 0 else ''}
+  - "20e. Have you EVER failed to attend or remain in attendance at any immigration proceedings to determine your admissibility or deportability?": users[i].q20e
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q20e") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "21. Have you EVER, by fraud or willfully misrepresenting a material fact, sought to obtain a visa or other documentation, admission to the United States, or any other immigration benefit?": users[i].q21
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q21") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "22. Have you EVER assisted any other person to enter the United States in violation of the law?": users[i].q22
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q22") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Mental and physical fitness</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "23a. Do you NOW have a communicable disease of public health significance?": users[i].q23a
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q23a") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "23b. Do you NOW have or have you EVER had a physical or mental disorder and behavior (or a history of behavior that is likely to recur) associated with the disorder which has posed or may pose a threat to the property, safety, or welfare of yourself or others?": users[i].q23b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q23b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "23c. Are you NOW or have you EVER been a drug abuser or drug addict?": users[i].q23c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q23c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "24. Have you EVER entered the United States as a stowaway?": users[i].q24
+    datatype: yesnoradio
+    grid: 6
+    label above field: True
+    default: ${ showifdef("users[0].q24") if i > 0 else ''}
+  - "25. Did the former Immigration and Naturalization Service (INS) EVER impose, or has DHS EVER imposed, civil monetary penalties on you for producing or using false documentation to obtain an immigration benefit?": users[i].q25
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q25") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "26. Are you NOW subject to a final order for violation of section 274C (producing and/or using false documentation to unlawfully satisfy a requirement of the Immigration and Nationality Act)?": users[i].q26
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q26") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "27. Do you NOW practice polygamy?": users[i].q27
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q27") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "28. Are you NOW the guardian of, and are you accompanying, another individual who has been found to be inadmissible and who has been certified by a medical examiner to be helpless due to sickness, physical or mental disability, or infancy?": users[i].q28
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q28") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "29. Have you EVER detained, retained, or withheld the custody of a child having a lawful claim to U.S. citizenship, outside the United States, from a U.S. citizen granted custody?": users[i].q29
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q29") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Torture, murder, genocide</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "30a. Have you EVER ordered, incited, called for, committed, assisted, helped with, or otherwise participated in acts involving torture or genocide?": users[i].q30a
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q30a") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "30b. Have you EVER ordered, incited, called for, committed, assisted, helped with, or otherwise participated in killing any person?": users[i].q30b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q30b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "30c. Have you EVER ordered, incited, called for, committed, assisted, helped with, or otherwise participated in intentionally and severely injuring any person?": users[i].q30c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q30c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "30d. Have you EVER ordered, incited, called for, committed, assisted, helped with, or otherwise participated in engaging in any kind of sexual contact or relations with any person who was being forced or threatened?": users[i].q30d
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q30d") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "30e. Have you EVER ordered, incited, called for, committed, assisted, helped with, or otherwise participated in limiting or denying any person's ability to exercise religious beliefs?": users[i].q30e
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q30e") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Participation in miltary, police, and paramilitary</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "31a. Have you EVER served in, been a member of, assisted in, or participated in any military unit, paramilitary unit, police unit, self-defense unit, vigilante unit, rebel group, guerrilla group, militia, or insurgent organization?": users[i].q31a
+    datatype: yesnoradio
+    default: |
+      % if users[i].age_in_years() > 13:
+      ${ users[i].served_military }
+      % else:
+      False
+      % endif
+    grid: 6
+    label above field: True
+  - "31b. Have you EVER served or worked in any prison, jail, prison camp, detention facility, labor camp, or any other situation that involved detaining persons?": users[i].q31b
+    datatype: yesnoradio
+    default: |
+      % if users[i].age_in_years() > 13:
+      ${ users[i].served_police }
+      % else:
+      False
+      % endif
+    grid: 6
+    label above field: True
+  - "32. Have you EVER been a member of, assisted in, or participated in any group, unit, or organization of any kind in which you or other persons used any type of weapon against any person or threatened to do so?": users[i].q32
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q32") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "33. Have you EVER assisted with or participated in selling or providing weapons to any person who to your knowledge used them against another person, or in transporting weapons to any person who to your knowledge used them against another person?": users[i].q33
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q33") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "34. Have you EVER received any type of military, paramilitary, or weapons training?": users[i].q34
+    datatype: yesnoradio
+    default: |
+      % if users[i].age_in_years() > 13:
+      ${ users[i].received_weapons_training }
+      % else:
+      False
+      % endif
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Holding forth as a US citizen</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "35. Have you EVER unlawfully voted in a United States Federal, state, or local election?": users[i].q35
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q35") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "36. Have you EVER claimed to be a U.S. citizen (in writing or in any other way)?": users[i].q36
+    datatype: yesnoradio
+    default: ${ users[i].claimed_us_citizenship }
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Child soldiers, human trafficking and combat</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "37a. Have you EVER recruited, enlisted, conscripted, or used any person under 15 years of age to serve in or help an armed force or group?": users[i].q37a
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q37a") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "37b. Have you EVER used any person under 15 years of age to take part in hostilities or to help or provide services to people in combat?": users[i].q37b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q37b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "38a. Have you EVER committed or conspired to commit human trafficking offenses, as defined in the section 103 of the Victims of Trafficking and Violence Protection Act of 2000, in the United States or outside the United States?": users[i].q38a
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q38a") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "38b. Have you EVER knowingly aided, abetted, assisted, conspired, or colluded with a human trafficker?": users[i].q38b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q38b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "38c. Are you NOW the spouse or child of an alien who committed or conspired to commit human trafficking offenses?": users[i].q38c
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q38c") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "38d. Are you NOW the spouse or child of, or are you yourself, an alien who knowingly aided, abetted, assisted, conspired, or colluded with a human trafficker?": users[i].q38d
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q38d") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "38e. Within the previous five years, have you EVER obtained any financial or other benefit from the human trafficking activity of your spouse (including former spouses) or parents, and you knew, or reasonably should have known, that the financial or other benefit that you received resulted from such human trafficking?": users[i].q38e
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q38e") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Money laundering</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "39a. Are you NOW or have you EVER engaged in money laundering as described in section 1956 or 1957 of Title 18, United States Code?": users[i].q39a
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q39a") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - "39b. Are you NOW or have you EVER been a knowing aider, abettor, assister, conspirator, or colluder with others in money laundering?": users[i].q39b
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q39b") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Religious freedom</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "40. Have you EVER been responsible for or directly carried out particularly severe violations of religious freedom, as defined in section 3 of the International Religious Freedom Act of 1998 (22 U.S.C. section 6402) while serving as a foreign government official?": users[i].q40
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q40") if i > 0 else ''}
+    grid: 6
+    label above field: True
+  - note: |
+      <h2 class="h4">Frivolous claims for asylum</h2>
+    grid: 
+      width: 12
+      start: True
+      end: True
+  - "41. Has an immigration judge or the Board of Immigration Appeals EVER determined that you filed a frivolous asylum application in the past?": users[i].q41
+    datatype: yesnoradio
+    default: ${ showifdef("users[0].q41") if i > 0 else ''}
+    grid: 6
+    label above field: True
+---
+id: application language and translation
+question: |
+  Language & Translation
+fields:
+  - "Does ${ users[i] } read and understand English?": users[i].user_reads_english
+    datatype: yesnoradio
+  - "Did ${ users[i] } use the ${ interpreter.language } interpreter?": users[i].user_used_interpreter
+    datatype: yesnoradio
+    default: ${ interpreter_present }
+    show if:
+      code: |
+        interpreter_present
+---
+
+id: Addendum skip these
+question: |
+  Addendum (skip these)
+fields:
+  - "Page number 3": Page_Number_3
+    maxlength: 8
+  - "Part number 3": Part_Number_3
+    maxlength: 8
+  - "Item number 3": Item_Number_3
+    maxlength: 8
+  - "3": _3
+    maxlength: 39
+#  - "Sign and date each sheet": sign_and_date_each_sheet
+#    maxlength: 28
+#  - "First name 9": First_Name_9
+#    maxlength: 28
+#  - "Middle name 8": Middle_Name_8
+#    maxlength: 28
+#  - "A 3": A_3
+#    maxlength: 21
+  - "Page number": Page_Number
+    maxlength: 8
+  - "Part number": Part_Number
+    maxlength: 8
+  - "Item number": Item_Number
+    maxlength: 8
+  - "Page number 4": Page_Number_4
+    maxlength: 8
+  - "Part number 4": Part_Number_4
+    maxlength: 8
+  - "Item number 4": Item_Number_4
+    maxlength: 8
+  - "4": _4
+    maxlength: 39
+  - "Page number 2": Page_Number_2
+    maxlength: 8
+  - "Part number 2": Part_Number_2
+    maxlength: 8
+  - "Item number 2": Item_Number_2
+    maxlength: 8
+  - "Page number 5": Page_Number_5
+    maxlength: 8
+  - "Part number 5": Part_Number_5
+    maxlength: 8
+  - "Item number 5": Item_Number_5
+    maxlength: 8
+  - "2": _2
+    maxlength: 39
+  - "5": _5
+    maxlength: 39
+---
+id: preview USCISApplications
+question: |
+  Preview your form before you sign it
+subquestion: |
+  Here is a preview of the form you will sign on the next page.   
+  
+  ${ al_recipient_bundle.as_pdf(key='preview') }
+
+  Click the image to open it in a new tab. Click the "Edit answers" button
+  to edit your answers.
+
+  ${ action_button_html(url_action('review_USCISApplications'), label='Edit answers', color='info') }
+  
+  Remember to come back to this window to continue and sign your form.
+continue button field: USCISApplications_preview_question    
+---
+code: |
+  signature_fields = []
+---
+################## ??????? ####################
+code: |
+  users[i].alternate_birthdate_2 = DAEmpty()
+---
+# ALDocument objects specify the metadata for each template
+objects:
+  - users[i].i_821_attachment: ALDocument.using(title="I-821", filename="I-821", has_addendum=False)
+---
+objects:
+  - users[i].i_765_attachment: ALDocument.using(title="I-765", filename="I-765", has_addendum=False )
+---
+code: |
+  users[i].i_821_attachment.enabled = users[i].application_is_approved and application_kind == "ead_and_tps"
+---
+code: |
+  users[i].i_765_attachment.enabled = users[i].application_is_approved # and users[i].age_in_years() >= 16 # You can't get work authorization if under 16! but it's not a desired screening criterion for TRP
+---
+objects:
+  - users[i].tps_yes_answer_addendum: ALDocument.using(title="TPS Yes Answer Addendum", filename="TPS Yes Answer Addendum", has_addendum=False )
+---
+code: |
+  users[i].tps_yes_answer_addendum.enabled = users[i].application_is_approved and application_kind == "ead_and_tps" and any([users[i].q8a, users[i].q8b, users[i].q8c, users[i].q9a, users[i].q9b, users[i].q9c, users[i].q10a, users[i].q10b, users[i].q10c, users[i].q11, users[i].q12a, users[i].q12b, users[i].q12c, users[i].q12d, users[i].q12e, users[i].q13a, users[i].q13b, users[i].q13c, users[i].q13d, users[i].q14a, users[i].q14b, users[i].q14c, users[i].q14d, users[i].q15a, users[i].q15b, users[i].q15c, users[i].q16, users[i].q17, users[i].q18a, users[i].q18b, users[i].q18c, users[i].q19, users[i].q20a, users[i].q20b, users[i].q20c, users[i].q20d, users[i].q20e, users[i].q21, users[i].q22, users[i].q23a, users[i].q23b, users[i].q23c, users[i].q24, users[i].q25, users[i].q26, users[i].q27, users[i].q28, users[i].q29, users[i].q30a, users[i].q30b, users[i].q30c, users[i].q30d, users[i].q30e, users[i].q31a, users[i].q31b, users[i].q32, users[i].q33, users[i].q34, users[i].q35, users[i].q36, users[i].q37a, users[i].q37b, users[i].q38a, users[i].q38b, users[i].q38c, users[i].q38d, users[i].q38e, users[i].q39a, users[i].q39b, users[i].q40, users[i].q41])
+---
+attachment:
+  name: TPS_yes_answer_addendum
+  filename: TPS_yes_answer_addendum
+  variable name: users[i].tps_yes_answer_addendum[j]
+  skip undefined: True
+  docx template file: TPS_yes_answers.docx  
+---
+attachment:
+  name: I-821
+  filename: I-821
+  variable name: users[i].i_821_attachment[j]
+  skip undefined: True
+  pdf template file: I-821_flattened_MN.pdf
+  editable: False
+  fields:
+    # - "is_form_g28_attached": ${ users[i].is_form_g28_attached }
+    # - "attorneys1_bar_number": ${ preparer.attorneys1_bar_number }
+    # - "attorney_online_account_number": ${ preparer.attorney_online_account_number }
+    - "is_first_application": ${ users[i].is_first_application }
+    - "is_re_application": ${ users[i].is_re_application }
+    - "tps_application_country": ${ users[i].tps_application_country }
+    - "users1_name_last": ${ users[i].name.last }
+    - "users1_name_first": ${ users[i].name.first }
+    - "users1_name_middle": ${ users[i].name.middle }
+    - "is_USCIS_re_application": ${ users[i].is_first_TPS_application == 'First TPS Application' }
+    - "is_judge_re_applicatioin": ${ not users[i].is_first_TPS_application == 'First TPS Application' }
+    - "users1_a_number": ${ users[i].a_number }
+    - "users1_uscis_account_number": ${ users[i].uscis_account_number }
+    - "users1_previous_names1_last": ${ users[i].aliases.item(0).last }
+    - "users1_ssn": ${ users[i].ssn }
+    - "users1_previous_names1_first": ${ users[i].aliases.item(0).first }
+    - "users1_birthdate": ${ users[i].birthdate.format('MM/dd/yyyy') }
+    - "users1_previous_names1_middle": ${ users[i].aliases.item(0).middle }
+    - "users1_previous_names2_last": ${ users[i].aliases.item(1).last }
+    - "users1_previous_names2_first": ${ users[i].aliases.item(1).first }
+    - "users1_alternate_birthdate": ${ users[i].alternate_birthdates[0].format('MM/dd/yyyy') }
+    - "users1_alternate_birthdate_2": ${ users[i].alternate_birthdates[1].format('MM/dd/yyyy') }
+    - "users1_previous_names2_middle": ${ users[i].aliases.item(1).middle }
+    - "users1_gender_male": ${ users[i].sex == "male"}
+    - "users1_gender_female": ${ users[i].sex == "female"}
+    - "users1_mailing_address_in_care_of": ${ users[i].mailing_address.in_care_of }
+    - "users1_mailing_address_address": ${ users[i].mailing_address.address }
+    - "users1_mailing_address_unit": ${ users[i].mailing_address.unit }
+    - "users1_mailing_address_city": ${ users[i].mailing_address.city }
+    - "users1_mailing_address_state": ${ users[i].mailing_address.state }
+    - "users1_mailing_address_zip": ${ users[i].mailing_address.zip }
+    - "mailing_address_is_physical_address_yes": ${ users[i].mailing_address == users[i].address }
+    - "mailing_address_is_physical_address_no": ${ not users[i].mailing_address == users[i].address }
+    - "users1_mailing_address_is_apt": ${ users[i].mailing_address.address_type == 'apt' }
+    - "users1_mailing_address_is_suite": ${ users[i].mailing_address.address_type == 'suite' }
+    - "users1_mailing_address_is_floor": ${ users[i].mailing_address.address_type == 'floor' }
+    - "city_of_birth": ${ users[i].city_of_birth }
+    - "country_of_birth": ${ users[i].country_of_birth }
+    - "users1_countries_of_residence_1": ${ users[i].countries_of_residence.item(0) }
+    - "users1_countries_of_residence_2": ${ users[i].countries_of_residence.item(1) }
+    - "users1_countries_of_residence_3": ${ users[i].countries_of_residence.item(2) }
+    - "users1_countries_of_residence_4": ${ users[i].countries_of_residence.item(3) }
+    - "users1_countries_of_citizenship_1": ${ users[i].countries_of_citizenship.item(0) }
+    - "users1_countries_of_citizenship_2": ${ users[i].countries_of_citizenship.item(1) }
+    - "users1_countries_of_citizenship_3": ${ users[i].countries_of_citizenship.item(2) }
+    - "users1_countries_of_citizenship_4": ${ users[i].countries_of_citizenship.item(3) }
+    - "users1_address_address": ${ users[i].address.address }
+    - "users1_address_is_apt": ${ users[i].address.address_type == 'apt'}
+    - "users1_address_is_suite": ${ users[i].address.address_type == 'suite'}
+    - "users1_address_is_floor": ${ users[i].address.address_type == 'floor'}
+    - "users1_address_unit": ${ users[i].address.unit }
+    - "users1_address_city": ${ users[i].address.city }
+    - "users1_address_state": ${ users[i].address.state }
+    - "users1_address_zip": ${ users[i].address.zip }
+    - "is_married": ${ users[i].marital_status == 'married' }
+    - "is_unmarried": ${ users[i].marital_status == 'single, never married' }
+    - "is_divorced": ${ users[i].marital_status == 'divorced' }
+    - "is_widowed": ${ users[i].marital_status == 'widowed' }
+    - "is_separated": ${ users[i].marital_status == 'separated' }
+    - "is_annulled": ${ users[i].marital_status == 'marriage annulled' }
+    - "is_other_marital_status": ${ users[i].marital_status == 'other' }
+    - "marital_status_other_explanation": ${ users[i].marital_status_other }
+    - "marriage_date": ${ users[i].marriage_date.format('MM/dd/yyyy') }
+    # - "marriage_date__2": ${ users[i].marriage_date.format('MM/dd/yyyy') }
+    - "current_immigration_status": ${ users[i].current_immigration_status }
+    - "users1_has_been_in_immigration_proceedings_yes": ${ users[i].has_been_in_immigration_proceedings }
+    - "users1_has_been_in_immigration_proceedings_no": ${ not users[i].has_been_in_immigration_proceedings }
+    - "date_of_last_entry": ${ users[i].date_of_last_entry.format('MM/dd/yyyy') }
+    - "status_at_last_entry": ${ users[i].immigration_status_last_entry }
+    - "proceedings_was_immigration_court": ${ users[i].kind_of_immigration_proceedings.get("immigration_court") }
+    - "proceedings_was_bia": ${ users[i].kind_of_immigration_proceedings.get("bia") }
+    - "proceedings_was_federal_court": ${ users[i].kind_of_immigration_proceedings.get("federal_court") }
+    - "proceedings_federal_court_location": ${ users[i].federal_court_proceedings_location }
+    - "proceedings_dhs_or_doj_hearing_location": ${ users[i].proceedings_dhs_or_doj_hearing_location }
+    - "proceedings_start_date": ${ users[i].proceedings_start_date.format('MM/dd/yyyy') }
+    - "proceedings_end_date": ${ users[i].proceedings_end_date.format('MM/dd/yyyy') }
+    - "proceedings_continuing_to_present": ${ users[i].proceedings_continuing_to_present }
+    - "port_of_entry": ${ users[i].port_of_entry }
+    - "city_of_entry": ${ users[i].city_of_entry }
+    - "state_of_entry": ${ users[i].state_of_entry }
+    - "i94_arrival_number": ${ users[i].i94_arrival_number }
+    - "authorized_stay_ending_date": ${ users[i].authorized_stay_ending_date }
+    - "passport_number": |
+        % if users[i].has_passport:
+        ${ users[i].passport_number }
+        % endif
+    - "most_recent_passport_country_issuing": |
+        % if users[i].has_passport:
+        ${ users[i].passport_issuing_country }
+        % endif
+    - "passport_or_travel_document_expiration_date": ${ users[i].passport_expiration_date.format('MM/dd/yyyy') }
+    - "travel_document_number": ${ users[i].other_travel_document_number }
+    - "additional_passport_number_1": ${ users[i].travel_documents.item(0) }
+    - "additional_passport_number_2": ${ users[i].travel_documents.item(1) }
+    - "ethnicity_hispanic_yes": ${ users[i].ethnicity.lower() == "hispanic" }
+    - "ethnicity_hispanic_no": ${ users[i].ethnicity.lower() == "not_hispanic" }
+    - "race_white": ${ users[i].race['white'] }
+    - "race_asian": ${ users[i].race['asian'] }
+    - "race_black": ${ users[i].race['black'] }
+    - "race_american_indian": ${ users[i].race['native_american'] }
+    - "race_native_hawaiian": ${ users[i].race['pacific_islander'] }
+    - "height_feet": ${ int(users[i].height_cm * 0.0328084) }
+    - "height_inches": ${ int((users[i].height_cm * 0.0328084 - int(users[i].height_cm * 0.0328084)) * 12) }
+    #- "users2_address_address": ${ users[1].address.address }
+    # - "users2_address_is_apt": ${ users2_address_is_apt }
+    # - "users2_address_is_suite": ${ users2_address_is_suite }
+    # - "users2_address_is_floor": ${ users2_address_is_floor }
+    - "weight_pounds": ${ int(users[i].weight_kg * 2.20462) }
+    # - "users2_address_unit": ${ users[1].address.unit }
+    # - "users2_address_city": ${ users[1].address.city }
+    - "eye_color_black": ${ users[i].eye_color == 'black' }
+    - "eye_color_blue": ${ users[i].eye_color == 'blue' }
+    - "eye_color_brown": ${ users[i].eye_color == 'brown' }
+    # - "users2_address_state": ${ users[1].address.state }
+    # - "users2_address_zip": ${ users[1].address.zip }
+    - "eye_color_gray": ${ users[i].eye_color == 'gray' }
+    - "eye_color_green": ${ users[i].eye_color == 'green' }
+    - "eye_color_hazel": ${ users[i].eye_color == 'hazel' }
+    - "eye_color_marooon": ${ users[i].eye_color == 'marooon' }
+    - "eye_color_pink": ${ users[i].eye_color == 'pink' }
+    # - "users2_address_province": ${ users2_address_province }
+    - "eye_color_unknown": ${ users[i].eye_color not in ['black', 'blue', 'brown', 'gray', 'green', 'hazel', 'maroon', 'pink'] }
+    # - "users2_address_postal_code": ${ users2_address_postal_code }
+    - "hair_bald": ${ users[i].hair_color == 'bald' }
+    - "hair_black": ${ users[i].hair_color == 'black' }
+    - "hair_blond": ${ users[i].hair_color == 'blond' }
+    # - "users2_address_country": ${ users[1].address.country }
+    - "hair_brown": ${ users[i].hair_color == 'brown' }
+    - "hair_gray": ${ users[i].hair_color == 'gray' }
+    - "hair_red": ${ users[i].hair_color == 'red' }
+    - "hair_sandy": ${ users[i].hair_color == 'sandy' }
+    - "White_2": ${ users[i].hair_color == 'white' }
+    # - "users2_birthdate": ${ users[1].birthdate.format('MM/dd/yyyy') }
+    - "hair_unknown": ${ users[i].hair_color not in ['bald','black','blond','brown','gray','red','sandy','white'] }
+    - "marriage_location": ${ users[i].marriage_location }
+    - "marriage_city": ${ users[i].marriage_city }
+    - "marriage_state": ${ users[i].marriage_state }
+    - "marriage_province": ${ users[i].marriage_province }
+    - "marriage_country": ${ users[i].marriage_country }
+    # - "users2_online_account_number": ${ users2_online_account_number }
+    # - "spouse_had_tps": ${ spouse_had_tps }
+    # - "users2_a_number": ${ users2_a_number }
+    # - "users2_name_last": ${ users[1].name.last }
+    # - "spouse_tps_date": ${ spouse_tps_date.format('MM/dd/yyyy') }
+    # - "users2_name_first": ${ users[1].name.first }
+    # - "spouse_tps_ending_date": ${ spouse_tps_ending_date.format('MM/dd/yyyy') }
+    # - "users2_name_middle": ${ users[1].name.middle }
+    # - "spouse_tps_continuing": ${ spouse_tps_continuing }
+    # - "spouse_tps_dates_unknown": ${ spouse_tps_dates_unknown }
+    # - "spouse_is_tps_valid": ${ spouse_is_tps_valid }
+    # - "users4_name_last": ${ users[3].name.last }
+    # - "users4_name_first": ${ users[3].name.first }
+    # - "users4_name_middle": ${ users[3].name.middle }
+    # - "users4_nationality": ${ users4_nationality }
+    # - "users4_a_number": ${ users4_a_number }
+    # - "users3_name_last": ${ users[2].name.last }
+    # - "users4_birthdate": ${ users[3].birthdate.format('MM/dd/yyyy') }
+    # - "users3_name_first": ${ users[2].name.first }
+    # - "users3_name_middle": ${ users[2].name.middle }
+    # - "users4_death_date": ${ users4_death_date.format('MM/dd/yyyy') }
+    # - "users3_nationality": ${ users3_nationality }
+    # - "users4_marriage_start_date": ${ users4_marriage_start_date.format('MM/dd/yyyy') }
+    # - "users4_marriage_end_date": ${ users4_marriage_end_date.format('MM/dd/yyyy') }
+    # - "users3_a_number": ${ users3_a_number }
+    # - "users3_birthdate": ${ users[2].birthdate.format('MM/dd/yyyy') }
+    # - "users4_marriage_ending_reason": ${ users4_marriage_ending_reason }
+    # - "users3_death_date": ${ users3_death_date.format('MM/dd/yyyy') }
+    # - "second_spouse_has_tps": ${ second_spouse_has_tps }
+    # - "users3_marriage_date": ${ users3_marriage_date.format('MM/dd/yyyy') }
+    # - "second_spouse_tps_start_date": ${ second_spouse_tps_start_date.format('MM/dd/yyyy') }
+    # - "users3_marriage_ending_date": ${ users3_marriage_ending_date.format('MM/dd/yyyy') }
+    # - "second_spouse_tps_end_date": ${ second_spouse_tps_end_date.format('MM/dd/yyyy') }
+    # - "second_spouse_tps_continues": ${ second_spouse_tps_continues }
+    # - "second_spouse_tps_dates_unknown": ${ second_spouse_tps_dates_unknown }
+    # - "users3_marriage_ending_reason": ${ users3_marriage_ending_reason }
+    # - "first_spouse_had_tps": ${ first_spouse_had_tps }
+    # - "first_spouse_tps_start_date": ${ first_spouse_tps_start_date.format('MM/dd/yyyy') }
+    # - "first_spouse_tps_end_date": ${ first_spouse_tps_end_date.format('MM/dd/yyyy') }
+    # - "first_spouse_tps_continuing": ${ first_spouse_tps_continuing }
+    # - "first_spouse_tps_dates_unknown": ${ first_spouse_tps_dates_unknown }
+    # - "first_spouse_applying_for_tps": ${ first_spouse_applying_for_tps }
+    # - "children2_name_last": ${ children[1].name.last }
+    # - "children2_name_first": ${ children[1].name.first }
+    # - "children2_name_middle": ${ children[1].name.middle }
+    # - "children2_online_account_number": ${ children2_online_account_number }
+    # - "children2_a_number": ${ children2_a_number }
+    # - "children2_birthdate": ${ children[1].birthdate.format('MM/dd/yyyy') }
+    # - "children1_name_last": ${ children[0].name.last }
+    # - "children1_name_first": ${ children[0].name.first }
+    # - "children1_name_middle": ${ children[0].name.middle }
+    # - "children2_address_address": ${ children[1].address.address }
+    # - "children2_address_is_apt": ${ children2_address_is_apt }
+    # - "children2_address_is_suite": ${ children2_address_is_suite }
+    # - "children2_address_is_floor": ${ children2_address_is_floor }
+    # - "children2_address_unit": ${ children[1].address.unit }
+    # - "children1_online_account_number": ${ children1_online_account_number }
+    # - "children2_address_city": ${ children[1].address.city }
+    # - "children1_a_number": ${ children1_a_number }
+    # - "children2_address_state": ${ children[1].address.state }
+    # - "children2_address_zip": ${ children[1].address.zip }
+    # - "children1_birthdate": ${ children[0].birthdate.format('MM/dd/yyyy') }
+    # - "children2_address_province": ${ children2_address_province }
+    # - "children2_address_postal_code": ${ children2_address_postal_code }
+    # - "children1_address_street": ${ children[0].address.address }
+    # - "children2_address_country": ${ children[1].address.country }
+    # - "children1_address_is_apt": ${ children1_address_is_apt }
+    # - "children1_address_is_suite": ${ children1_address_is_suite }
+    # - "children1_address_is_floor": ${ children1_address_is_floor }
+    # - "children1_address_unit": ${ children[0].address.unit }
+    # - "children1_address_city": ${ children[0].address.city }
+    # - "children2_tps_start_date": ${ children2_tps_start_date.format('MM/dd/yyyy') }
+    # - "children1_address_state": ${ children[0].address.state }
+    # - "children1_address_zip": ${ children[0].address.zip }
+    # - "children2_tps_end_date": ${ children2_tps_end_date.format('MM/dd/yyyy') }
+    # - "children1_address_province": ${ children1_address_province }
+    # - "children2_applying_for_tps": ${ children2_applying_for_tps }
+    # - "children1_address_postal_code": ${ children1_address_postal_code }
+    # - "children1_address_country": ${ children[0].address.country }
+    # - "children1_tps_start_date": ${ children1_tps_start_date.format('MM/dd/yyyy') }
+    # - "children1_tps_end_date": ${ children1_tps_end_date.format('MM/dd/yyyy') }
+    - "last_country_of_residence": ${ users[i].last_country_of_residence }
+    - "children1_applying_for_tps": ${ children1_applying_for_tps }
+    - "date_started_us_residence": ${ users[i].date_started_us_residence.format("MM/dd/yyyy") }
+    - "entered_country_other_than_residence_country_before_us_yes": ${ users[i].traveled_through_central_america or users[i].traveled_through_other_countries }
+    - "entered_country_other_than_residence_country_before_us_no": ${ not( users[i].traveled_through_central_america or users[i].traveled_through_other_countries) }
+    - "other_countries_entered_list": |
+        % if users[i].traveled_through_central_america or users[i].traveled_through_other_countries:
+        See addendum
+        % endif
+    - "other_country_entered_start_date": |
+        % if users[i].traveled_through_central_america or users[i].traveled_through_other_countries:
+        ${ users[i].date_entered_first_country_month }
+        /
+        ${ users[i].date_entered_first_country_year }
+        % endif
+    - "other_country_entered_end_date": |
+        % if users[i].traveled_through_central_america or users[i].traveled_through_other_countries:
+        ${ users[i].date_left_last_country_month }
+        /
+        ${ users[i].date_left_last_country_year }
+        % endif
+    - "other_country_immigration_status": |
+        % if users[i].has_immigration_status_in_countries_traveled_through:
+        ${ users[i].immigration_status_in_countries_traveled_through }
+        % else:
+        No status
+        % endif
+    - "other_country_immigration_status_offered_yes": ${ True if users[i].other_country_immigration_status_offered else '' }
+    - "other_country_immigration_status_offered_no": ${ True if not users[i].other_country_immigration_status_offered or users[i].traveled_through_other_countries == False else '' }
+    - "other_country_immigration_status_names_and_status": ${ users[i].other_country_immigration_status_names_and_status }
+    - "other_country_immigration_status_why_refused": ${ users[i].other_country_immigration_status_why_refused }
+    - "q8a_yes": ${ users[i].q8a }
+    - "q8a_no": ${ not users[i].q8a }
+    - "q8b_yes": ${ users[i].q8b }
+    - "q8b_no": ${ not users[i].q8b }
+    - "q8c_yes": ${ users[i].q8c }
+    - "q8c_no": ${ not users[i].q8c }
+    - "q12e_yes": ${ users[i].q12e }
+    - "q12e_no": ${ not users[i].q12e }
+    - "q9a_yes": ${ users[i].q9a }
+    - "q9a_no": ${ not users[i].q9a }
+    - "q13a_yes": ${ users[i].q13a }
+    - "q13a_no": ${ not users[i].q13a }
+    - "q9b_yes": ${ users[i].q9b }
+    - "q9b_no": ${ not users[i].q9b }
+    - "q13b_yes": ${ users[i].q13b }
+    - "q13b_no": ${ not users[i].q13b }
+    - "q9c_yes": ${ users[i].q9c }
+    - "q9c_no": ${ not users[i].q9c }
+    - "q13c_yes": ${ users[i].q13c }
+    - "q13c_no": ${ not users[i].q13c }
+    - "q10a_yes": ${ users[i].q10a }
+    - "q10a_no": ${ not users[i].q10a }
+    - "q13d_yes": ${ users[i].q13d }
+    - "q13d_no": ${ not users[i].q13d }
+    - "q10b_yes": ${ users[i].q10b }
+    - "q10b_no": ${ not users[i].q10b }
+    - "q14a_yes": ${ users[i].q14a }
+    - "q14a_no": ${ not users[i].q14a }
+    - "q10c_yes": ${ users[i].q10c }
+    - "q10c_no": ${ not users[i].q10c }
+    - "q14b_yes": ${ users[i].q14b }
+    - "q14b_no": ${ not users[i].q14b }
+    - "q11_yes": ${ users[i].q11 }
+    - "q11_no": ${ not users[i].q11 }
+    - "q14c_yes": ${ users[i].q14c }
+    - "q14c_no": ${ not users[i].q14c }
+    - "q12a_yes": ${ users[i].q12a }
+    - "q12a_no": ${ not users[i].q12a }
+    - "q14d_yes": ${ users[i].q14d }
+    - "q14d_no": ${ not users[i].q14d }
+    - "q12b_yes": ${ users[i].q12b }
+    - "q12b_no": ${ not users[i].q12b }
+    - "q15a_yes": ${ users[i].q15a }
+    - "q15a_no": ${ not users[i].q15a }
+    - "q12c_yes": ${ users[i].q12c }
+    - "q12c_no": ${ not users[i].q12c }
+    - "q15b_yes": ${ users[i].q15b }
+    - "q15b_no": ${ not users[i].q15b }
+    - "q12d_yes": ${ users[i].q12d }
+    - "q12d_no": ${ not users[i].q12d }
+    - "q15c_yes": ${ users[i].q15c }
+    - "q15c_no": ${ not users[i].q15c }
+    - "q23a_yes": ${ users[i].q23a }
+    - "q23a_no": ${ not users[i].q23a }
+    - "q16_yes": ${ users[i].q16 }
+    - "q16_no": ${ not users[i].q16 }
+    - "q23b_yes": ${ users[i].q23b }
+    - "q23b_no": ${ not users[i].q23b }
+    - "q17_yes": ${ users[i].q17 }
+    - "q17_no": ${ not users[i].q17 }
+    - "q23c_yes": ${ users[i].q23c }
+    - "q23c_no": ${ not users[i].q23c }
+    - "q18a_yes": ${ users[i].q18a }
+    - "q18a_no": ${ not users[i].q18a }
+    - "q24_yes": ${ users[i].q24 }
+    - "q24_no": ${ not users[i].q24 }
+    - "q18b_yes": ${ users[i].q18b }
+    - "q18b_no": ${ not users[i].q18b }
+    - "q25_yes": ${ users[i].q25 }
+    - "q25_no": ${ not users[i].q25 }
+    - "q18c_yes": ${ users[i].q18c }
+    - "q18c_no": ${ not users[i].q18c }
+    - "q26_yes": ${ users[i].q26 }
+    - "q26_no": ${ not users[i].q26 }
+    - "q19_yes": ${ users[i].q19 }
+    - "q19_no": ${ not users[i].q19 }
+    - "q27_yes": ${ users[i].q27 }
+    - "q27_no": ${ not users[i].q27 }
+    - "q20a_yes": ${ users[i].q20a }
+    - "q20a_no": ${ not users[i].q20a }
+    - "q20b_yes": ${ users[i].q20b }
+    - "q20b_no": ${ not users[i].q20b }
+    - "q28_yes": ${ users[i].q28 }
+    - "q28_no": ${ not users[i].q28 }
+    - "q20c_yes": |
+        % if users[i].q20a or users[i].q20b:
+        ${ users[i].q20c }
+        % endif
+    - "q20c_no": |
+        % if users[i].q20a or users[i].q20b:
+        ${ not users[i].q20c }
+        % endif
+    - "q20d_yes": |
+        % if users[i].q20a or users[i].q20b:
+        ${ users[i].q20d }
+        % endif
+    - "q20d_no": |
+        % if users[i].q20a or users[i].q20b:
+        ${ users[i].q20d == False }
+        % endif
+    - "q20d_idk": |
+        % if users[i].q20a or users[i].q20b:
+        ${ users[i].q20d is None }
+        % endif
+    - "q29_yes": ${ users[i].q29 }
+    - "q29_no": ${ not users[i].q29 }
+    - "q30a_yes": ${ users[i].q30a }
+    - "q30a_no": ${ not users[i].q30a }
+    - "q20e_yes": ${ users[i].q20e }
+    - "q20e_no": ${ not users[i].q20e }
+    - "q30b_yes": ${ users[i].q30b }
+    - "q30b_no": ${ not users[i].q30b }
+    - "q30c_yes": ${ users[i].q30c }
+    - "q30c_no": ${ not users[i].q30c }
+    - "q21_yes": ${ users[i].q21 }
+    - "q21_no": ${ not users[i].q21 }
+    - "q22_yes": ${ users[i].q22 }
+    - "q22_no": ${ not users[i].q22 }
+    - "q30d_yes": ${ users[i].q30d }
+    - "q30d_no": ${ not users[i].q30d }
+    - "q30e_yes": ${ users[i].q30e }
+    - "q30e_no": ${ not users[i].q30e }
+    - "q38d_yes": ${ users[i].q38d }
+    - "q38d_no": ${ not users[i].q38d }
+    - "q31a_yes": ${ users[i].q31a }
+    - "q31a_no": ${ not users[i].q31a }
+    - "q31b_yes": ${ users[i].q31b }
+    - "q31b_no": ${ not users[i].q31b }
+    - "q38e_yes": ${ users[i].q38e }
+    - "q38e_no": ${ not users[i].q38e }
+    - "q39a_yes": ${ users[i].q39a }
+    - "q39a_no": ${ not users[i].q39a }
+    - "q32_yes": ${ users[i].q32 }
+    - "q32_no": ${ not users[i].q32 }
+    - "q39b_yes": ${ users[i].q39b }
+    - "q39b_no": ${ not users[i].q39b }
+    - "q33_yes": ${ users[i].q33 }
+    - "q33_no": ${ not users[i].q33 }
+    - "q34_yes": ${ users[i].q34 }
+    - "q34_no": ${ not users[i].q34 }
+    - "q40_yes": ${ users[i].q40 }
+    - "q40_no": ${ not users[i].q40 }
+    - "q35_yes": ${ users[i].q35 }
+    - "q35_no": ${ not users[i].q35 }
+    - "q41_yes": ${ users[i].q41 }
+    - "q41_no": ${ not users[i].q41 }
+    - "q36_yes": ${ users[i].q36 }
+    - "q36_no": ${ not users[i].q36 }
+    - "q37a_yes": ${ users[i].q37a }
+    - "q37a_no": ${ not users[i].q37a }
+    - "q37b_yes": ${ users[i].q37b }
+    - "q37b_no": ${ not users[i].q37b }
+    - "q38a_yes": ${ users[i].q38a }
+    - "q38a_no": ${ not users[i].q38a }
+    - "q38b_yes": ${ users[i].q38b }
+    - "q38b_no": ${ not users[i].q38b }
+    - "q38c_yes": ${ users[i].q38c }
+    - "q38c_no": ${ not users[i].q38c }
+    - "user_reads_english": ${ users[i].user_reads_english }
+    - "user_used_interpreter": ${ users[i].user_used_interpreter if interpreter_present else False }
+    - "interpreter_spoke_language": ${ interpreter.language }
+    - "user_used_preparer": True
+    - "preparer_name_applicant_statement": ${ preparer }
+    - "users1_phone_number": ${ users[i].phone_number }
+    - "interpreter_name_last": ${ interpreter.name.last }
+    - "users1_mobile_number": ${ users[i].mobile_number }
+    - "interpreter_name_first": ${ interpreter.name.first }
+    - "users1_email": ${ users[i].email }
+    # - "interpreter_organization": ${ interpreter.organization }
+    # - "interpreter_phone_number": ${ interpreter.phone_number }
+    # - "interpreter_mobile_number": ${ interpreter.mobile_number }
+    # - "interpreter_email": ${ interpreter.email }
+    - "interpreted_into_language": ${ interpreter.language }
+    - "signature_date": ${ signature_date.format('MM/dd/yyyy') }
+    - "signature_date__1": ${ signature_date.format('MM/dd/yyyy') }
+    - "signature_date__2": ${ signature_date.format('MM/dd/yyyy') }
+    - "preparer_is_attorney_yes": ${ preparer_is_attorney }
+    - "preparer_is_attorney_no": ${ not preparer_is_attorney }
+    - "preparer_full_rep": No
+    - "preparer_limited_rep": ${ preparer_is_attorney }
+    - "preparer_name_last": ${ preparer.name.last }
+    - "preparer_name_first": ${ preparer.name.first }
+    - "preparer_organization": ""
+    - "preparer_phone_number": ""
+    - "preparer_mobile_number": ""
+    - "preparer_email": ""
+    - "Page Number_3": ${ Page_Number_3 }
+    - "Part Number_3": ${ Part_Number_3 }
+    - "Item Number_3": ${ Item_Number_3 }
+    - "1_3": ${ _3 }
+    - "2_3": ${ _3 }
+    - "3_3": ${ _3 }
+    - "4_3": ${ _3 }
+    - "5_3": ${ _3 }
+    - "6_3": ${ _3 }
+    - "7_3": ${ _3 }
+    - "8_3": ${ _3 }
+    - "9_3": ${ _3 }
+    - "10_3": ${ _3 }
+    - "sign and date each sheet": ${ users[i].name.last }
+    - "First Name_9": ${ users[i].name.first }
+    - "Middle Name_8": ${ users[i].name.middle }
+    - "A_3": ${ users[i].a_number }
+    - "Page Number": ${ Page_Number }
+    - "Part Number": ${ Part_Number }
+    - "Item Number": ${ Item_Number }
+    - "Page Number_4": ${ Page_Number_4 }
+    - "Part Number_4": ${ Part_Number_4 }
+    - "Item Number_4": ${ Item_Number_4 }
+    - "1": ${  }
+    - "2": ${  }
+    - "3": ${  }
+    - "4": ${  }
+    - "5": ${  }
+    - "6": ${  }
+    - "7": ${  }
+    - "8": ${  }
+    - "9": ${  }
+    - "10": ${  }
+    - "1_4": ${ _4 }
+    - "2_4": ${ _4 }
+    - "3_4": ${ _4 }
+    - "4_4": ${ _4 }
+    - "5_4": ${ _4 }
+    - "6_4": ${ _4 }
+    - "7_4": ${ _4 }
+    - "8_4": ${ _4 }
+    - "9_4": ${ _4 }
+    - "10_4": ${ _4 }
+    - "Page Number_2": ${ Page_Number_2 }
+    - "Part Number_2": ${ Part_Number_2 }
+    - "Item Number_2": ${ Item_Number_2 }
+    - "Page Number_5": ${ Page_Number_5 }
+    - "Part Number_5": ${ Part_Number_5 }
+    - "Item Number_5": ${ Item_Number_5 }
+    - "1_2": ${ _2 }
+    - "2_2": ${ _2 }
+    - "3_2": ${ _2 }
+    - "4_2": ${ _2 }
+    - "5_2": ${ _2 }
+    - "6_2": ${ _2 }
+    - "7_2": ${ _2 }
+    - "8_2": ${ _2 }
+    - "9_2": ${ _2 }
+    - "10_2": ${ _2 }
+    - "1_5": ${ _5 }
+    - "2_5": ${ _5 }
+    - "3_5": ${ _5 }
+    - "4_5": ${ _5 }
+    - "5_5": ${ _5 }
+    - "6_5": ${ _5 }
+    - "7_5": ${ _5 }
+    - "8_5": ${ _5 }
+    - "9_5": ${ _5 }
+    - "10_5": ${ _5 }
+---
+########################################################
+###################I-765 PDF fields ####################
+---
+attachment:
+  name: I-765
+  filename: I-765
+  variable name: users[i].i_765_attachment[j]
+  skip undefined: True
+  pdf template file: I-765_flattened_MN_updated.pdf
+  editable: False
+  fields:
+    # - "US Citizenship and Immigration Services": ${ US_Citizenship_and_Immigration_Services }
+    #- "is_form_g28_attached": ${ users[i].is_form_g28_attached }
+    #- "attorney_online_account_number": ${ preparer.attorney_online_account_number }
+    - "application_reason_employment": 'Yes'
+    - "application_reason_replacement": ''
+    - "application_reason_renewal": ''
+    - "users1_name_last": ${ users[i].name.last }
+    - "users1_name_first": ${ users[i].name.first }
+    - "users1_name_middle": ${ users[i].name.middle }
+    - "users1_previous_names1_last": ${ users[i].aliases.item(0).last }
+    - "users1_previous_names1_first": ${ users[i].aliases.item(0).first }
+    - "users1_previous_names1_middle": ${ users[i].aliases.item(0).middle }
+    - "users1_previous_names2_last": ${ users[i].aliases.item(1).last }
+    - "users1_previous_names2_first": ${ users[i].aliases.item(1).first }
+    - "users1_previous_names2_middle": ${ users[i].aliases.item(1).middle }
+    - "users1_previous_names3_last": ${ users[i].aliases.item(2).last }
+    - "users1_previous_names3_first": ${ users[i].aliases.item(2).first }
+    - "users1_previous_names3_middle": ${ users[i].aliases.item(2).middle }
+    - "has_ssn": ${ users[i].has_ssn }
+    - "users1_ssn": |
+        % if users[i].has_ssn:
+        ${ users[i].ssn }
+        % endif
+    # - "users1_wants_ssn": Yes # Pre-checked on form
+    - "users1_mailing_address_is_apt": ${ users[i].mailing_address.address_type == 'apt' }
+    - "users1_mailing_address_is_suite": ${ users[i].mailing_address.address_type == 'suite' }
+    - "users1_mailing_address_is_floor": ${ users[i].mailing_address.address_type == 'floor' }
+    - "users1_address_is_apt": ${ users[i].address.address_type == 'apt' }
+    - "users1_address_is_suite": ${ users[i].address.address_type == 'suite' }
+    - "users1_address_is_floor": ${ users[i].address.address_type == 'floor' }
+    - "users1_mailing_address_in_care_of": ${ users[i].mailing_address.in_care_of }
+    - "users1_mailing_address_address": ${ users[i].mailing_address.address }
+    - "users1_mailing_address_unit": ${ users[i].mailing_address.unit }
+    - "users1_mailing_address_city": ${ users[i].mailing_address.city }
+    - "users1_mailing_address_state": ${ users[i].mailing_address.state }
+    - "users1_mailing_address_zip": ${ users[i].mailing_address.zip }
+    - "mailing_address_is_physical_address_yes": ${ users[i].mailing_address == users[i].address }
+    - "mailing_address_is_physical_address_no": ${ not users[i].mailing_address == users[i].address }
+    - "users1_address_address": ${ users[i].address.address if users[i].mailing_address != users[i].address else '' }
+    - "users1_address_unit": ${ users[i].address.unit if users[i].mailing_address != users[i].address else '' }
+    - "users1_address_city": ${ users[i].address.city if users[i].mailing_address != users[i].address else '' }
+    - "users1_address_state": ${ users[i].address.state if users[i].mailing_address != users[i].address else '' }
+    - "users1_address_zip": ${ users[i].address.zip if users[i].mailing_address != users[i].address else '' }
+    - "users1_a_number": ${ users[i].a_number }
+    - "users1_uscis_account_number": ${ users[i].uscis_account_number }
+    - "users1_gender": ${ users[i].sex == 'male' }
+    - "marital_status_single": ${ users[i].marital_status in ['single, never married', 'marriage annulled'] }
+    - "marital_status_married": ${ users[i].marital_status in ['married','separated'] }
+    - "marital_status_divorced": ${ users[i].marital_status == 'divorced' }
+    - "marital_status_widowed": ${ users[i].marital_status == 'widowed' }
+    - "father_name_last": ${ users[i].father_last_name}
+    - "father_name_first": ${ users[i].father_first_name }
+    - "mother_name_last": ${ users[i].mother_last_name }
+    - "mother_name_first": ${ users[i].mother_first_name }
+    - "citizen_country_1": ${ users[i].countries_of_citizenship.item(0) }
+    - "citizen_country_2": ${ users[i].countries_of_citizenship.item(1) }
+    - "previously_filed_i765": ${ users[i].previously_filed_I765 } #TODO: check
+    - "city_of_birth": ${ users[i].city_of_birth }
+    - "state_of_birth": ${ users[i].state_of_birth }
+    - "country_of_birth": ${ users[i].country_of_birth }
+    - "users1_birthdate": ${ users[i].birthdate.format('MM/dd/yyyy') }
+    - "i94_arrival_number": ${ users[i].i94_arrival_number }
+    - "passport_number": |
+        % if users[i].has_passport:
+        ${ users[i].passport_number }
+        % endif
+    - "travel_document_number": ${ users[i].other_travel_document_number }
+    - "passport_country_of_issue": ${ users[i].passport_issuing_country }
+    - "passport_expiration_date": ${ users[i].passport_expiration_date.format('MM/dd/yyyy') }
+    - "date_of_last_arrival": ${ users[i].date_of_last_entry.format('MM/dd/yyyy') }
+    - "place_of_last_arrival": ${ users[i].city_of_entry }${ ', ' if showifdef('users[i].city_of_entry') else '' }${ users[i].state_of_entry }
+    - "immigration_status_at_last_arrival": ${ users[i].immigration_status_last_entry }
+    - "current_immigration_status": ${ users[i].current_immigration_status }
+    - "sevis_number": ${ users[i].sevis_number }
+    # EAD Eligibility category
+    # Depends on whether TPS or EAD only
+    - "Q27_1": |
+        % if application_kind == "ead_and_tps":
+        a
+        % else:
+        c
+        % endif
+    - "Q27_2": |
+        % if application_kind == "ead_and_tps":
+        12
+        % else:
+        11
+        % endif
+    - "user_reads_english": ${ users[i].user_reads_english }
+    - "user_used_interpreter": ${ users[i].user_used_interpreter }
+    - "interpreter_spoke_language": ${ interpreter.language }
+    - "interpreter_spoke_language__1": ${ interpreter.language }
+    - "user_used_preparer": True
+    - "preparer_name": ${ preparer.name.full() }
+    - "users1_phone_number": ${ users[i].phone_number}
+    - "users1_mobile_number": ${ users[i].mobile_number }
+    - "users1_email": ${ users[i].email }
+    - "signature_date": ${ signature_date.format('MM/dd/yyyy') }
+    - "signature_date__2": ${ signature_date.format('MM/dd/yyyy') }
+ #   - "is_abc_salvadoran_guatemalan_national": ${ users[i].country_of birth == "Guatemala" or users[i].country_of birth == "El Salvador" or xxxxxxxxx##### }
+    - "interpreter_name_last": ${ interpreter.name.last }
+    - "interpreter_name_first": ${ interpreter.name.first }
+    - "interpreter_organization": ${ interpreter.organization }
+    - "preparer_name_first": ${ preparer.name.first }
+    - "preparer_name_last": ${ preparer.name.last }
+    - "preparer_is_attorney_yes": ${ preparer_is_attorney }
+    - "preparer_is_attorney_no": ${ not preparer_is_attorney }
+    - "preparer_full_rep": No
+    - "preparer_limited_rep": Yes
+#   # - "interpreter_mailing_address_city": ${ interpreter.mailing_address.city }
+#   # - "interpreter_mailing_address_zip": ${ interpreter.mailing_address.zip }
+    - "interpreter_mailing_address_address": '77 W Jackson Blvd'
+    - "interpreter_mailing_address_unit": ''
+    - "interpreter_mailing_address_city": 'Chicago'
+    - "interpreter_mailing_address_state": 'IL'
+    - "interpreter_mailing_address_zip": '60604'
+    - "interpreter_mailing_address_country": 'USA'
+#   # - "preparer_organization": ${ preparer.organization }
+#   # - "interpreter_phone_number": ${ interpreter.phone_number }
+#   # - "interpreter_mobile_number": ${ interpreter.mobile_number }
+#   # - "interpreter_email": ${ interpreter.email }
+#   # - "preparer_phone_number": ${ preparer.phone_number }
+#   # - "preparer_mobile_number": ${ preparer.mobile_number }
+#   # - "preparer_email": ${ preparer.email }
+    - "Page Number_3": ${ Page_Number_3 }
+    - "Part Number_3": ${ Part_Number_3 }
+    - "Item Number_3": ${ Item_Number_3 }
+    - "sign and date each sheet": ${ users[i].name.last }
+    - "First Name_7": ${ users[i].name.first }
+    - "Middle Name_5": ${ users[i].name.middle }
+    - "Page Number_4": ${ Page_Number_4 }
+    - "Part Number_4": ${ Part_Number_4 }
+    - "Item Number_4": ${ Item_Number_4 }
+    - "A_2": ${ users[i].a_number }
+    - "Page Number": ${ Page_Number }
+    - "Part Number": ${ Part_Number }
+    - "Item Number": ${ Item_Number }
+    - "Page Number_5": ${ Page_Number_5 }
+    - "Part Number_5": ${ Part_Number_5 }
+    - "Item Number_5": ${ Item_Number_5 }
+    - "Page Number_2": ${ Page_Number_2 }
+    - "Part Number_2": ${ Part_Number_2 }
+    - "Item Number_2": ${ Item_Number_2 }

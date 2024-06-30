@@ -1,0 +1,330 @@
+include:
+  - docassemble.playground1:2023-08-21_EP_Universal_Questions.yml
+---
+imports:
+  - re
+---
+modules:
+  - .ocr_processing
+  - .gfrogs_dict
+---
+features:
+  table width: 95
+---
+mandatory: True
+code: |
+  version = 0
+---
+mandatory: True
+code: |
+  aid_not_author
+  conduct_data_intake
+  methods.gather()
+  user_approves
+---
+objects:
+  - dataloader: DataLoader.using(filename="2023-04-26_disco_blurbs.xlsx")
+  - methods: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False, complete_attribute='complete')
+  - methods[i].responses: DAList.using(object_type=Thing, there_is_another=False, complete_attribute='complete')
+  - methods[i].ncr: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False, complete_attribute='complete')
+  - sprogs_combined: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False)
+---
+code: |
+  #pick which method is at issue, pick beginning/end numbers
+  methods[i].name.text
+  methods[i].propounding_parties
+  #use beginning/end numbers from above screen to populate the initial 'name.text' attributes of ALL requests/interrogatories, 'methods[i].responses'
+  if methods[i].name.text == 'Interrogatories' and methods[i].interrogatories_type == 'g_frogs':
+    methods[i].frogs_propounded
+    display_served_gfrogs
+  if methods[i].name.text == 'Interrogatories' and methods[i].interrogatories_type == 'sprogs':
+    ocr_sprogs_and_responses
+  if ocr_sprogs.ready() and ocr_responses.ready():
+    populate_initial_dictionary
+  else:
+    waiting_screen
+  set_sprogs_combined
+  sprogs_reviewed
+  methods[i].pick_challenged_responses
+  #use all selected checkboxes from 'methods[i].pick_challenged_responses' to initialize and populate the first '.name.text' attribute of each challenged request/interrogatory Thing object in the 'methods[i].ncr' DAList
+  #select all applicable request/interrogatory numbers being contested/challenged
+  set_challenged_responses_list
+  methods[i].complete = True
+  #as to each ncr, select all applicable deficiencies from the DB and add custom deficiencies 
+  methods[i].ncr.gather()
+---
+code: |
+  methods[i].ncr[j].name.text
+  methods[i].ncr[j].deficiencies
+  methods[i].ncr[j].complete = True
+---
+code: |
+  ocr_sprogs = ocr_file_in_background(methods[i].sprogs_file, 'refresh', language='en', psm='3')
+  ocr_responses = ocr_file_in_background(methods[i].responses_file, 'refresh', language='en', psm='3')
+  ocr_sprogs_and_responses = True
+---
+event: waiting_screen
+question: |
+  Please wait.
+subquestion: |
+  Your document is being processed.
+  This may take several minutes.
+
+  The text of your document will be
+  shown on the screen when the
+  processing is finished.
+---
+id: choose method, pp, rp, set no, and range
+question: Discovery Method Propounded
+subquestion: |
+  ${ all_parties }
+fields:
+  - What did you serve?: methods[i].name.text
+    datatype: radio
+    code: |
+      unique_values(dataloader, search_column="Method")
+  - Type of Interrogatories: methods[i].interrogatories_type
+    input type: radio
+    choices:
+      - General Form Interrogatories (DISC-001): g_frogs
+      - Unlawful Detainer Form Interrogatories (DISC-003): ud_frogs
+      - Economic Litigation For Interrogatories (DISC-004): el_frogs
+      - Employment Law Form Interrogatories (DISC-002): emp_frogs
+      - Special Interrogatories: sprogs
+    show if:
+      variable: methods[i].name.text
+      is: 'Interrogatories'    
+  - Upload  **Your Rogs/Requests**: methods[i].sprogs_file
+    datatype: files
+    js show if: |
+      val("methods[i].name.text") === 'Interrogatories' && val("methods[i].interrogatories_type") === 'sprogs'
+  - Upload the **Responses**: methods[i].responses_file
+    datatype: files
+---
+id: set propounding party, responding party, set no, and range
+question: ${ methods[i] } Parties, Set No., Range
+reconsider:
+  - set_all_parties
+fields:
+  - Propounding Party(ies): methods[i].propounding_parties
+    datatype: object_checkboxes
+    choices: all_parties
+  - Responding Party(ies): methods[i].responding_parties
+    datatype: object_checkboxes
+    choices: all_parties
+  - What set number were they?: methods[i].set_no
+    input type: radio
+    choices: 
+      - One
+      - Two
+      - Three
+      - Four
+      - Supplemental
+  - Beginning number: methods[i].start_range
+    datatype: integer
+    show if: 
+      code: |
+        methods[i].name.text == 'Interrogatories' and methods[i].interrogatories_type == 'sprogs'
+  - End number: methods[i].end_range
+    datatype: integer
+    show if: 
+      code: |
+        methods[i].name.text == 'Interrogatories' and methods[i].interrogatories_type == 'sprogs'
+---
+id: pick propounded form rogs
+question: Select the Form Interrogatories You Propounded
+fields:
+  - no label: methods[i].frogs_propounded
+    datatype: checkboxes
+    code: get_gfrogs_dict_keys_list()
+    none of the above: False
+    default:
+      code: |
+        ['2.1', '2.2', '2.3']
+validation code: |
+  methods[i].gfrogs_served = methods[i].frogs_propounded.true_values()
+---
+id: display propounded gfrogs
+question: The GFROGS you served are
+subquestion: |
+  ${ get_formatted_values_by_keys(methods[i].gfrogs_served) }
+continue button field: display_served_gfrogs
+---
+code: |
+  start_number = methods[0].start_range
+  end_number = methods[0].end_range
+
+  def create_initial_dictionary(start_number, end_number):
+    return {str(number): {'question': 'question not detected/extracted', 'answer': 'answer not detected/extracted'} for number in range(start_number, end_number + 1)}
+    
+  def extract_text(content, pattern):
+    return re.findall(pattern, content, re.DOTALL)
+  
+  def validate_content(found_questions, found_answers, start_number, end_number):
+    total_expected = end_number - start_number + 1
+    total_found = len(set(number for number, _ in found_questions + found_answers))
+  
+    # Check if the total found is significantly different from the total expected
+    if abs(total_found - total_expected) > total_expected * 0.1: # 10% tolerance
+      print(f"Warning: Mismatch detected. Expected {total_expected} questions/answers, but found {total_found}. Check the variables and content.")
+  
+    # Check if a large proportion of the question numbers don't match the range
+    unexpected_numbers = [int(number) for number, _ in found_questions + found_answers if int(number) < start_number or int(number) > end_number]
+    if len(unexpected_numbers) > total_expected * 0.1: # 10% tolerance
+      print(f"Warning: {len(unexpected_numbers)} question/answer numbers are out of the expected range ({start_number} to {end_number}). Check the variables and content.")
+  
+  def populate_dictionary(found_items, initial_dictionary, start_number, item_type):
+    for number, text in found_items:
+      number = int(number)
+      if str(number) in initial_dictionary:
+        initial_dictionary[str(number)][item_type] = text.strip()
+          
+  initial_dictionary = create_initial_dictionary(start_number, end_number)
+
+  sprogs_clean_text = re.sub(r'(?<=[a-z,])\n+(?=[A-Za-z])', ' ', re.sub(r'[ \t]+\n', '\n', ocr_sprogs.get().content))
+
+  responses_clean_text = re.sub(r'(?<=[a-z,])\n+(?=[A-Za-z])', ' ', re.sub(r'[ \t]+\n', '\n', ocr_responses.get().content))
+
+  sprogs_pattern = r'(?:[Ss][Pp][Ee][Cc][Ii][Aa][Ll]\W*)?[Ii][Nn][Tt][Ee][Rr][Rr][Oo][Gg][Aa][Tt][Oo][Rr](?:[Yy]|[Ii][Ee][Ss])?\W*(?:[Nn][Oo]\.?:?|#)\W*(\d+)[^\w]*(.*?)(?=\n\n|\n\d+\W+[A-Z]|\n[A-Z]{3,})'
+  
+  responses_pattern = r'[R][Ee][Ss][Pp][Oo][Nn][Ss][Ee]\W*[Tt][Oo]\W*(?:[Ss][Pp][Ee][Cc][Ii][Aa][Ll]\W*)?(?:[Ff][Oo][Rr][Mm]\W*)?[Ii][Nn][Tt][Ee][Rr][Rr][Oo][Gg][Aa][Tt][Oo][Rr](?:[Yy]|[Ii][Ee][Ss])?\W*(?:[Nn][Oo]\.?:?|#)\W*(\d+)[^\w]*(.*?)(?=\n\n|\n\d+\W+[A-Z])'
+    
+  #questions_content = '5 Question text for 5\n6 Question text for 6\n8 Question text for 8\n9 Question text for 9\n'
+  #answers_content = '5 Answer text for 5\n6 Answer text for 6\n8 Answer text for 8\n9 Answer text for 9\n'
+  
+  found_questions = extract_text(sprogs_clean_text, sprogs_pattern)
+  found_answers = extract_text(responses_clean_text, responses_pattern)
+  
+  #validate_content(found_questions, found_answers, methods[i].start_range, methods[i].end_range) # Validation step
+  
+  populate_dictionary(found_questions, initial_dictionary, start_number, 'question')
+  populate_dictionary(found_answers, initial_dictionary, start_number, 'answer')
+  
+  error_sprogs = []
+
+  # Check the initial_dictionary for any question or answer that was not overwritten
+  for number, item in initial_dictionary.items():
+    if item['question'] == 'question not detected/extracted' or item['answer'] == 'answer not detected/extracted':
+      error_sprogs.append(number)
+  # error_sprogs will contain the numbers for which either the question or the answer was not detected/extracted
+  
+  populate_initial_dictionary = True
+---
+code: |
+  for key, value in initial_dictionary.items():
+    sprogs_combined.appendObject()
+    sprogs_combined[-1].name.text = f"{key}"
+    sprogs_combined[-1].question = f"{value['question']}"
+    sprogs_combined[-1].answer = f"{value['answer']}"
+  set_sprogs_combined = True
+---
+id: pick all challenged responses
+question: Select all deficient ${ methods[i] } responses
+fields: 
+  - no label: methods[i].pick_challenged_responses
+    datatype: checkboxes
+    code: |
+      sprogs_combined
+    none of the above: false
+---
+code: |
+  for number_picked in methods[i].pick_challenged_responses.true_values():
+    for sprog in sprogs_combined:
+      if sprog.name.text == number_picked:
+        methods[i].ncr.appendObject()
+        methods[i].ncr[-1].name.text = sprog.name.text
+        methods[i].ncr[-1].question = sprog.question
+        methods[i].ncr[-1].answer = sprog.answer
+        break
+  set_challenged_responses_list = True
+---
+id: explain noncompliant responses
+question: |
+  <span style="color: red;">Challenge to Interrogatory No. ${ methods[i].ncr[j] }</span>
+subquestion: |
+  [BOLDCENTER]Interrogatory No. ${ methods[i].ncr[j] }:[BR]
+  
+  ${ methods[i].ncr[j].question }[BR]
+  
+  [BOLDCENTER]Response:[BR]
+  
+  ${ methods[i].ncr[j].answer }[BR][BR]
+fields:
+  - '**Check all applicable deficiencies**': methods[i].ncr[j].deficiencies
+    datatype: multiselect
+    code: |
+      [{"label": result["Label"], "group": result["Category"], "value": index} for index, result in dataloader._load_data()[dataloader._load_data()["Method"]==(methods[i].name.text)].iterrows()]
+  - note: |
+      [BR][BR][BR][BR][BR][CENTER]**-----Option: Add Custom-Typed Criticism------**[BR]
+  - '**Add custom criticism**': methods[i].ncr[j].add_custom_critique
+    datatype: yesno
+  - note: |
+      e.g., *There is no question that the interrogatory seeks information relevant to respondent's defense that plaintiff failed to mitigate her damages.*     
+  - Custom criticism: methods[i].ncr[j].custom_critique
+    input type: area
+    rows: 8
+    show if: methods[i].ncr[j].add_custom_critique
+script: |
+  <script type="text/javascript">
+    /* Need to activate the multiselect JavaScript on each input, after base64 encoding the name
+     of the input (it is "objection_categories[i].objections[j].selected" here) */  
+     $(document).ready(function() {$("#${base64.b64encode(str('methods[i].ncr[j].deficiencies').encode()).decode().replace('=', '') } ").multiselect({enableCaseInsensitiveFiltering: true, inheritClass: true, enableClickableOptGroups: true, enableCollapsibleOptGroups: true, collapseOptGroupsByDefault: true});}); </script>
+---
+id: review sprogs
+question: Review Sprogs
+subquestion: |
+  % if error_sprogs:
+    [BR]<span style="color: red;">**Alert: Interrogatory/ies No. ${ comma_and_list(error_sprogs) }** was/were not properly captured.</span>
+  % endif
+  ${ sprogs_table }
+continue button field: sprogs_reviewed
+---
+table: sprogs_table
+rows: sprogs_combined
+columns:
+  - No.: row_item
+  - Rog: row_item.question
+  - Response: row_item.answer
+edit:
+  - question
+---
+id: question block for editing of sprogs
+question: Revise/Confirm Interrogatory No. ${ sprogs_combined[i] }
+fields:
+  - Interrogatory: sprogs_combined[i].question
+    input type: area
+    rows: 6
+  - Response: sprogs_combined[i].answer
+    input type: area
+    rows: 20
+---
+id: language table
+variable name: language_table
+data:
+  Interrogatories:
+    singular: interrogatory
+    plural: interrogatories
+  Requests for Production:
+    singular: request
+    plural: document requests
+  Requests for Admission:
+    singular: request
+    plural: admission requests
+---
+code: |
+  short_filename = f"{format_date(today(), format='yyyy-MM-dd')} Disco SEP STMT [draft]"
+---
+id: generate document
+depends on: version
+need: short_filename
+question: Your Separate Statement is below.
+subquestion: Do you approve?
+yesno: user_approves
+attachment:
+  name: Disco Separate Statement
+  filename: ${ short_filename }
+  docx template file: 2023-08-25_sep_stmt.docx
+  valid formats:
+    - pdf
+    - docx
+include attachment notice: False

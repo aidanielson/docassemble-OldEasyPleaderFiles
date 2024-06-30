@@ -1,0 +1,35 @@
+modules:
+  - .mymodule
+---
+objects:
+  case: MyCase
+---
+question: Are there any parties?
+yesno: case.parties.there_are_any
+---
+question: Parties
+fields:
+  - First Name: case.parties[i].name.first
+  - Last Name: case.parties[i].name.last
+  - Address: case.parties[i].address.address
+    address autocomplete: True
+  - City: case.parties[i].address.city
+  - State: case.parties[i].address.state
+---
+question: Add another party?
+yesno: case.parties.there_is_another
+---
+question: Who is the oldest party?
+fields:
+  - Existing Party?: oldest_party
+    datatype: object
+    choices: case.parties
+    disable others: True
+  - First Name: oldest_party_name_first
+  - Last Name: oldest_party_name_last
+---
+mandatory: True
+question: |
+  The parties live in ${ nice_number(len(case.unique_states())) } different states.
+  The oldest party is ${ oldest_party }.
+  The function 'case.unique_states' is ${ case.unique_states() }

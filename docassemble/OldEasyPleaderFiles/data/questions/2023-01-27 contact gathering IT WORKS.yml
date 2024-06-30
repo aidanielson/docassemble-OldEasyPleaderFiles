@@ -1,0 +1,78 @@
+metadata:
+  title: Edit list
+  short title: Edit list
+  documentation: "https://docassemble.org/docs/groups.html#editing"
+  example start: 7
+  example end: 8
+---
+objects:
+  - party_contact: DAList.using(object_type=Person,
+                         there_are_any=True,
+                         complete_attribute='complete')
+---
+code: |
+  party_contact[i].name.text
+  party_contact[i].favorite_fruit
+  party_contact[i].complete = True
+---
+question: |
+  Who is the ${ ordinal(i) } party?
+fields:
+  - Select Party Role: party_contact[i].role
+    input type: combobox
+    choices:
+      - Plaintiff
+      - Petitioner
+      - Claimant
+      - Defendant
+      - Respondent
+  - Is this party a person/human or a company/entity?: party_contact[i].human_or_entity
+    input type: radio
+    choices:
+      - Person/Human
+      - Company/Entity
+  - Company/Entity Full Name: party_contact[i].name.text
+    show if:
+      variable: party_contact[i].human_or_entity
+      is: 'Company/Entity'
+  - Full Name: party_contact[i].name.text
+    show if:
+      variable: party_contact[i].human_or_entity
+      is: 'Person/Human'
+---
+question: |
+  What is ${ party_contact[i].possessive('favorite fruit') }?
+fields:
+  - Fruit: party_contact[i].favorite_fruit
+---
+question: |
+  Are there any more parties?
+yesno: party_contact.there_is_another
+---
+question: |
+  Who is your favorite contact?
+fields:
+  - Favorite: favorite
+    code: party_contact
+---
+mandatory: True
+question: |
+  All done
+subquestion: |
+  The people are ${ party_contact }.
+  Your favorite is ${ favorite }.
+  
+  ${ party_contact.table }
+  
+  ${ party_contact.add_action() }
+---
+table: party_contact.table
+rows: party_contact
+columns:
+  - Name: |
+      row_item.name.full()
+  - Fruit: |
+      row_item.favorite_fruit
+edit:
+  - name.first
+  - favorite_fruit

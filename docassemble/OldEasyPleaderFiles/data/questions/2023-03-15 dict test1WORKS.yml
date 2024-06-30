@@ -1,0 +1,27 @@
+objects:
+  dict1: DADict.using(there_are_any=True, complete_attribute='complete')
+---
+question: |
+  Enter the key for a new key-value pair.
+fields:
+  - Key: dict1.new_item_name
+  - Value: dict1.new_item_value
+  - Value2: dict1.value2
+---
+question: |
+  Enter another key-value pair?
+yesno: dict1.there_is_another
+---
+needs: dict1.gathered
+code: |
+  description = ''
+  for key, value in dict1.items():
+    description += "* " + key + ": " + value + "\n"
+  description1 = description
+  del description
+---
+mandatory: True
+question: |
+  xxxx.
+subquestion: |
+  ${ description1 }

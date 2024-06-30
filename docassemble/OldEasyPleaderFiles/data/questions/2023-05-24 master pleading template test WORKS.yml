@@ -1,0 +1,696 @@
+features:
+  css: 2023-04-25_tony_test_with_expansion.css
+  centered: False
+---
+metadata:
+  title: Logo title
+  short title: Polished legal documents. Zero hassle.
+---
+mandatory: True
+code: |
+  version = 0
+---
+event: new_version
+code: |
+  version += 1
+---
+mandatory: True
+code: |
+  set_parts(title='EasyPleader', logo='<img src="' + company_logo.url_for() + '" style="height: 65px; width: 280px;">')
+  intro
+  author.name
+  atty_info_in_caption
+  if author.is_me or author.is_attorney:
+    client[0].name.text
+    client_contact_review
+  court.short_name
+  party_contact[0].name.text
+  party_contact_review
+  lead_filing_party
+  if enter_nonparty_contacts:
+    nonparty_contact[0].name.text
+  doc.type
+  if doc.has_hrg:
+    hrg.date
+    doc.lm_proceeding_title
+  doc.title_full
+  doc.footer
+  if attach_exhibits:
+    exhibit_intro_screen
+    exhibit_review
+    information_gathered
+    exhibit_bundle
+    download_exhibits
+  sig_block_date_field
+  if doc.sign:
+    signature
+  user_approves
+  final_screen
+---
+modules: 
+  - .courts_works
+  - .biz_days
+---
+objects:
+  - company_logo: DAStaticFile.using(filename='EP_Logo_White.png')
+  - aid_signature: DAStaticFile.using(filename='AID_PDF_Sig.png')
+  - author: Individual
+  - client: DAList.using(object_type=Person, there_are_any=True, there_is_another=False)
+  - court: DAObject
+  - case: DAObject
+  - party_contact: DAList.using(object_type=Person, there_are_any=True, there_is_another=False)
+  - nonparty_contact: DAList.using(object_type=Person, there_are_any=True)
+  - attorney: Individual
+  - hrg: DAObject
+  - doc: DAObject
+  - exhibits: DAList.using(object_type=DAObject, there_are_any=True, there_is_another=False)
+  - exhibit_divider_page: DAList
+---
+variable name: litigant_roles
+data:
+  - Plaintiff
+  - Defendant
+  - Petitioner
+  - Respondent
+  - Claimant
+  - Court-Appointed Receiver
+  - Proposed Court-Appointed Receiver
+  - Real-Party-in-Interest
+  - Appellant
+  - Appellee
+  - Conservator
+  - Conservatee
+---
+question: |
+  *Easy*Pleader ---> Polished pleadings. Less hassle. 
+field: intro
+---
+question: Enter the author's contact info.
+subquestion: This information will go into the author's caption block at the top-left of the caption page.
+fields:
+  - Full Name: author.name.text
+  - Is the author an attorney?: author.is_attorney
+    datatype: yesno
+  - Law Firm: author.law_firm
+    show if: author.is_attorney
+  - Role at Law Firm: author.law_firm_role
+    show if: author.is_attorney
+    note: |
+      Example: "*managing partner of...partner and shareholder of...associate attorney at...*"
+  - State Bar Number: author.sbn
+    show if: author.is_attorney
+    datatype: integer
+  - Address: author.address.address
+    address autocomplete: True
+  - Unit: author.address.unit
+    required: False
+  - City: author.address.city
+  - State: author.address.state
+  - Zip: author.address.zip
+  - Phone: author.phone_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Fax: author.fax_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+  - Email Address: author.email
+    datatype: email
+    required: False
+---
+question: Who is authoring this document?
+field: author.is_me
+buttons: 
+  - "Tony Danielson": True
+    color: primary
+  - "Someone Else": False
+    color: warning
+---
+code: |
+  if author.is_me: 
+    author.name.text = "Anthony I. Danielson"
+    author.law_firm = "Danielson Kim Law Group, P.C."
+    author.law_firm_role = "managing partner of"
+    author.sbn = 285576
+    author.address.address = "5170 Golden Foothill Parkway"
+    author.address.city = "El Dorado Hills"
+    author.address.state = "CA"
+    author.address.zip = 95762
+    author.phone_number = '9165203977'
+    author.fax_number = '9165431601'
+    author.email = 'Anthony@DanielsonKim.com'
+---
+code: |
+  if author.is_me or author.is_attorney:
+    atty_info_in_caption = True
+  else:
+    atty_info_in_caption = False
+---
+question: Enter Case Information
+fields:
+  - Case Jurisdiction: court.short_name
+    code: get_court_names()
+  - Case Number: case.number
+  - Original Filing Date: case.filing_date
+    datatype: date
+  - Is there a set trial date?: case.trial_date_set_yes
+    datatype: yesnoradio
+  - Trial Date: case.trial_date
+    datatype: date
+    show if: case.trial_date_set_yes
+  - For the case **caption**, what are the litigant **roles**?: action_type
+    default: Plaintiff v. Defendant
+    choices:
+      - Plaintiff v. Defendant
+      - Petitioner v. Respondent
+      - Something Else
+  - Filing Party: other_filing_party_role
+    input type: combobox
+    choices:
+      - Claimant
+      - Applicant
+      - Creditor
+      - Appellant
+    show if:
+      variable: action_type
+      is: 'Something Else'
+  - Pluralize the filing party in the caption?: pluralize_filing_party_yes
+    datatype: yesno
+    note: |
+      This appends "et al." to the first filing party and it adds an "s" to plaintiff, petitioner, etc.
+  - Pluralize the responding/defending party in the caption?: pluralize_responding_party_yes
+    datatype: yesno
+  - Responding/Defending Party: other_responding_party_role
+    input type: combobox
+    choices:
+      - Debtor
+      - Accused
+      - Appellee
+    show if:
+      variable: action_type
+      is: 'Something Else'
+  - Has anyone filed a cross-action or counterclaim in this case?: counteraction_filed
+    datatype: yesno
+---
+code: |
+  filing_party_role = 'Plaintiff' if action_type == 'Plaintiff v. Defendant' else 'Petitioner' if action_type == 'Petitioner v. Respondent' else other_filing_party_role
+  responding_party_role = 'Defendant' if action_type == 'Plaintiff v. Defendant' else 'Respondent' if action_type == 'Petitioner v. Respondent' else other_responding_party_role
+---
+question: Client Info
+subquestion: Enter your client's information.
+fields:
+  - Select Party Role: client[i].role
+    input type: combobox
+    code: |
+      litigant_roles
+  - Is the client an individual or a business/entity?: client[i].human_or_entity
+    input type: radio
+    choices:
+      - Individual
+      - Business/Entity
+  - Full Name: client[i].name.text
+    show if:
+      variable: client[i].human_or_entity
+      is: 'Individual'
+  - Business/Entity **Name**: client[i].name.text
+    show if:
+      variable: client[i].human_or_entity
+      is: 'Business/Entity'
+    note: |
+      e.g., *Intel Corporation...Tesla, Inc....Rodriguez & Sons, LLC*
+  - Business/Entity **Type**: client[i].entity_type
+    show if:
+      variable: client[i].human_or_entity
+      is: 'Business/Entity'
+    note: |
+      e.g., *a California corporation...a Nevada limited liability company...a municipal corporation...an entity of unknown form*
+    required: False
+  - Shorthand Name: client[i].short_name
+    note: |
+      e.g., *Acme* for *Acme Baccalaureate Foundation*
+---
+question: Client Review
+subquestion: |
+    The ${client.number_as_word()} ${client.as_noun()} you've entered thusfar are:
+    ${ client.table }
+    ${ client.add_action() }
+continue button field: client_contact_review
+---
+table: client.table
+rows: client
+columns:
+  - Role: |
+      row_item.role
+  - Name: |
+      row_item.name.full()
+edit:
+  - role
+allow reordering: True
+---
+question: Other Named Parties
+subquestion: Enter the **OTHER** named parties in this case.
+fields:
+  - Select Party Role: party_contact[i].role
+    input type: combobox
+    code: |
+      litigant_roles
+  - Is this party an individual or a business/entity?: party_contact[i].human_or_entity
+    input type: radio
+    choices:
+      - Individual
+      - Business/Entity
+  - Full Name: party_contact[i].name.text
+    show if:
+      variable: party_contact[i].human_or_entity
+      is: 'Individual'
+  - Business/Entity **Name**: party_contact[i].name.text
+    show if:
+      variable: party_contact[i].human_or_entity
+      is: 'Business/Entity'
+    note: |
+      e.g., *Intel Corporation...Tesla, Inc....Rodriguez & Sons, LLC*
+  - Business/Entity **Type**: party_contact[i].entity_type
+    show if:
+      variable: party_contact[i].human_or_entity
+      is: 'Business/Entity'
+    note: |
+      e.g., *a California corporation...a Nevada limited liability company...a municipal corporation...an entity of unknown form*
+    required: False
+  - Is this party represented by an attorney?: party_contact[i].repd_by_attorney
+    datatype: yesno
+  - Address: party_contact[i].address.address
+    address autocomplete: True
+  - Unit: party_contact[i].address.unit
+    required: False
+  - City: party_contact[i].address.city
+  - State: party_contact[i].address.state
+  - Zip: party_contact[i].address.zip
+  - Phone: party_contact[i].phone_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Fax: party_contact[i].fax_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+  - Email Address: party_contact[i].email
+    datatype: email
+---
+question: Party Review
+subquestion: |
+    So far, you've entered ${ party_contact.number_as_word() } ${ party_contact.as_noun('party') }:
+    ${ party_contact.table }
+    ${ party_contact.add_action() }
+continue button field: party_contact_review
+---
+table: party_contact.table
+rows: party_contact
+columns:
+  - Party: |
+      row_item.role
+  - Name: |
+      row_item.name.full()
+  - Address: |
+      row_item.address.block()
+  - Email: |
+      row_item.email
+edit:
+  - email
+allow reordering: True
+---
+code: |
+  all_parties = client + party_contact 
+---
+question: Caption Page Parties
+subquestion: Select the **first** (top) named party on each side for the case caption page.
+fields:
+  - Lead Filing Party: lead_filing_party
+    datatype: object
+    choices: all_parties
+  - Lead Responding Party: lead_responding_party
+    datatype: object
+    choices: all_parties
+---
+question: Do you want to enter **nonparty** case participants?
+subquestion: These include witnesses, litigation vendors (e.g., process servers, court reporters), and governmental roleplayers like sheriff/levying officer.
+yesno: enter_nonparty_contacts
+---
+question: Nonparty Case Participants
+subquestion: Enter contact info for all nonparty case participants.
+fields:
+  - What is this nonparty's role in this litigation?: nonparty_contact[i].role
+    input type: combobox
+    choices:
+      - Fact Witness
+      - Expert Witness
+      - Court Reporter
+      - Interpreter
+      - Process Server
+      - eService Vendor
+      - Civil Filing Clerk
+      - Courtroom Deputy
+      - Levying Officer
+      - Judge
+  - Is this nonparty an individual or a business/entity?: nonparty_contact[i].human_or_entity
+    input type: radio
+    choices:
+      - Individual
+      - Business/Entity
+  - Full Name: nonparty_contact[i].name.text
+    show if:
+      variable: nonparty_contact[i].human_or_entity
+      is: 'Individual'
+  - Business/Entity Name: nonparty_contact[i].name.text
+    show if:
+      variable: nonparty_contact[i].human_or_entity
+      is: 'Business/Entity'
+  - Address: nonparty_contact[i].address.address
+    address autocomplete: True
+  - Unit: nonparty_contact[i].address.unit
+    required: False
+  - City: nonparty_contact[i].address.city
+  - State: nonparty_contact[i].address.state
+  - Zip: nonparty_contact[i].address.zip
+  - Phone: nonparty_contact[i].phone_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Fax: nonparty_contact[i].fax_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+  - Email Address: nonparty_contact[i].email
+    datatype: email
+    required: False
+---
+question: Enter another nonparty case participant?
+subquestion: |
+  So far, you've entered:
+  % for x in nonparty_contact:
+  
+  * ${nonparty_contact}
+  % endfor
+yesno: nonparty_contact.there_is_another
+---
+depends on: version
+question: Document Type
+fields:
+  - What kind of document are you drafting?: doc.type
+    input type: radio
+    choices:
+      - Generic Pleading
+      - Notice of Motion and Motion
+      - Declaration
+      - Memorandum of Points & Authorities
+      - Request for Judicial Notice
+      - Index of Exhibits
+      - Proposed Order
+      - Proof of Service
+  - Does this document relate to a hearing?: doc.has_hrg
+    datatype: yesnoradio
+---
+depends on: version
+code: |
+  if doc.type in ['Generic Pleading', 'Notice of Motion and Motion', 'Memorandum of Points & Authorities', 'Request for Judicial Notice']:
+    sig_block_type = 'author'
+  elif doc.type == 'Declaration' or 'Proof of Service':
+    sig_block_type = 'declarant'
+  elif doc.type == 'Proposed Order':
+    sig_block_type = 'judge'
+---
+id: law and motion proceeding info
+depends on: version
+question: Law & Motion Proceeding Info
+fields:
+  - What is the Law & Motion/Litigation Proceeding Called?: doc.lm_proceeding_title
+    note: |
+      e.g., *Motion to Compel Further Responses to Special Interrogatories*
+  - Who is the movant?: doc.lm_proceeding_movant
+    datatype: object
+    choices: all_parties
+  - Does this document support/oppose/reply to the RFO?: doc.support_oppose
+    input type: radio
+    choices:
+      - in support of
+      - in opposition to
+      - in reply to
+      - objecting to
+      - regarding
+---
+code: |
+  doc.proposed_title = doc.type + ' ' + title_case(doc.support_oppose) + ' ' + doc.lm_proceeding_movant.role + "'s " + doc.lm_proceeding_title
+---
+id: document title
+depends on: version
+question: Document Title
+subquestion: |
+  % if doc.has_hrg:
+    The proposed document title is:
+    
+    **${ doc.proposed_title }**
+    
+  % endif
+fields:
+  - Go with the proposed title set forth above?: doc.wants_proposed_title
+    datatype: yesnoradio
+    show if: 
+      code: |
+        doc.has_hrg
+    required: doc.proposed_title
+  - Document Title (Full): doc.custom_title_full
+    input type: area
+    rows: 3
+    default: ${ doc.proposed_title }
+    disable if: doc.wants_proposed_title
+    required: False
+  - Do you want a short title for the footer/easier reference?: wants_shorthand_title
+    datatype: yesnoradio
+  - Document Title (Shorthand): doc.custom_title_shorthand
+    show if: wants_shorthand_title
+---
+code: |
+  if doc.wants_proposed_title:
+    doc.title_full = doc.proposed_title
+  else:
+    doc.title_full = doc.custom_title_full
+---
+depends on: version
+code: |
+  if wants_shorthand_title:
+    doc.footer = doc.custom_title_shorthand
+  else:
+    doc.footer = doc.title_full
+---
+depends on: version
+question: Enter hearing information.
+fields:
+  - Hearing Date: hrg.date
+    datatype: date
+  - Hearing Time: hrg.time_bad_format
+    datatype: time
+  - Hearing Dept.: hrg.dept
+  - Hearing Judge: hrg.judge
+under: |
+  Note: Under CCP § 1005, if the papers are served **TODAY**, ${today()}, 16 court days from now is:
+  
+  * **${sixteen_court_days_from_today_string}** for PERSONAL SERVICE;
+  * **${earliest_overnight_or_fax_service_date_string}** for OVERNIGHT DELIVERY or FAX SERVICE;
+  * **${eighteen_court_days_from_today_string}** for EMAIL or ELECTRONIC SERVICE;
+  * **${earliest_mail_service_date_string}** for REGULAR MAIL SERVICE
+   
+  Visit Los Angeles County Superior Court's [Court Date Calculator](https://www.lacourt.org/courtdatecalculator/ui/) website for an additional date validation check.
+---
+depends on: version
+code: |
+  hrg.time = format_time(hrg.time_bad_format, format='h:mm a')
+---
+depends on: version
+code: |
+  hrg.date_with_weekday = format_date(hrg.date, format='EEEE, MMMM d, yyyy')
+---
+depends on: version
+question: Document-Specific Info
+subquestion: Choose document options.
+fields:
+  - Include Statutory Call-Out Under Doc Title in Caption Page?: include_stat_callout
+    datatype: yesno
+  - Enter the statutory call-out text: stat_callout
+    show if: include_stat_callout
+  - Include "Concurrently filed with [documents]..." notice?: include_concurrently_filed_docs_notice
+    datatype: yesno
+  - Enter short titles of concurrently filed documents: custom_entered_concurrently_filed_docs
+    show if: include_concurrently_filed_docs_notice
+  - Attach exhibits to this document?: attach_exhibits
+    datatype: yesno
+---
+id: exhibit intro screen
+question: |
+  **The Exhibit Packager**
+subquestion: |
+  This packager creates a unified PDF document containing:
+  
+  * an index page listing all of your exhibits
+  * labeled exhibit divider pages for each exhibit, and 
+  * all of your documentary exhibits themselves.
+  
+  
+  **Don't worry about the proper chronological order of the exhibits as you enter them. Once you've entered all of your exhibits, you'll be able to re-order them to your liking, on-the-fly!**
+  
+  [FILE exhibit_divider_page.jpg, 190px]
+field: exhibit_intro_screen
+---
+id: exhibit info
+depends on: version
+question: The Exhibits
+subquestion: For each exhibit, you'll first type the full description of the exhibit as you would introduce it in a declaration or an RJN. If you also give an optional "Short Title," it will be used on the exhibit index and divider pages.
+fields:
+  - Full Description: exhibits[i].full_desc
+    input type: area
+    rows: 4
+    note: |
+      Describe it the way you would in the declaration or RJN, e.g., *a grant deed recorded January 3, 1997, conveying full legal title to 123 Main Street from John Alan Smith to Jane Elizabeth Doe*
+  - Short Title (optional): exhibits[i].short_title
+    note: |
+      e.g., *January 1997 Grant Deed to Jane Doe*
+    required: False
+  - Upload the exhibit now?: exhibits[i].has_documentation
+    datatype: yesnoradio
+    note: |
+      **If you're not ready to upload, EasyPleader will create an exhibit divider page where you can later insert the exhibit itself.**
+  - Upload the exhibit: exhibits[i].documentation
+    datatype: files
+    show if: exhibits[i].has_documentation
+comment: |
+  Will want to figure out a way to sort or modify the order of multiple files uploaded to DA in any given exhibit - it appears they don't sort automatically but instead randomize possibly through the browser. Here's what jp said: I don't think the JavaScript plugin has any controls for that. The order in which the files are uploaded may be dictated by the browser. A DAFileList is a DAList so it can be sorted by filename using the .sorted() method. E.g., myfiles.sort(key=lambda y: y.filename). You can also present a list as a table and reorder it: https://docassemble.org/docs/groups.html#reordering
+---
+code: |
+  exhibits[i].reference = title_case(exhibits[i].short_title if exhibits[i].short_title else exhibits[i].full_desc)
+---
+depends on: version
+id: Exhibit Review
+question: Exhibit Review
+subquestion: |
+    **Your Exhibits**
+    ${ exhibits.table }
+    ${ exhibits.add_action() }
+continue button field: exhibit_review
+---
+table: exhibits.table
+rows: exhibits
+columns:
+  - Exhibit: |
+      row_item.reference
+edit:
+  - reference
+allow reordering: True
+---
+depends on: version
+id: exhibit options
+question: Exhibit Options
+fields:
+  - Do you want to include an exhibit **index** page?: include_exhibit_index
+    datatype: yesnoradio
+    note: |
+      Usually a good idea if you've got more than five exhibits. Required by CRC, Rule 3.1110(f)(1).
+  - Do you want to include the **declaration text** for each exhibit?: include_exhibit_declaration_text
+    note: |
+      You can copy/paste into the declaration which provides the foundation for each exhibit.
+    datatype: yesnoradio
+  - How are the exhibits presented?: standalone_or_index
+    input type: radio
+    choices:
+      - attached to the declaration/RJN
+      - in a stand-alone, unified Index of Exhibits
+    show if: include_exhibit_declaration_text
+---
+attachment:
+  variable name: exhibit_declaration_text
+  docx template file: 2023-05-22_exhibit_declaration_text.docx
+---
+attachment:
+  variable name: exhibit_index_page
+  docx template file: 2023-05-22_exhibit_index_page.docx
+---
+attachment:
+  variable name: exhibit_divider_page[i]
+  docx template file: 2023-05-22_exhibit_divider_page.docx
+---
+code: |
+  indexno = 0
+  for item in exhibits:
+    item.full_desc
+    item.documentation_reference = indexno
+    indexno += 1
+    if item.has_documentation:
+      item.documentation
+  information_gathered = True
+---
+code: |
+  document_list = list()
+  if include_exhibit_declaration_text:
+    document_list.append(exhibit_declaration_text)
+  if include_exhibit_index:
+    document_list.append(exhibit_index_page)
+  for item in exhibits:
+    document_list.append(exhibit_divider_page[item.documentation_reference])
+    if item.has_documentation:
+      document_list.append(item.documentation)
+  exhibit_bundle = pdf_concatenate(document_list, filename="Exhibit Bundle.pdf")
+---
+depends on: version
+id: download exhibits
+question: Your Exhibit Bundle is Complete
+subquestion: |
+  ${ action_button_html(exhibit_bundle.url_for(), color='link', label='Download Exhibit Bundle', icon='file-pdf') }
+continue button field: download_exhibits
+---
+depends on: version
+question: Signature Block
+fields:
+  - What date goes in the signature block?: sig_block_date_field
+    datatype: radio
+    choices:
+      - Today
+      - Different Date
+      - Leave Blank
+  - Different Date: sig_block_alternate_date
+    datatype: date
+    show if: 
+      variable: sig_block_date_field
+      is: 'Different Date'
+  - Sign the document?: doc.sign
+    datatype: yesno
+---
+depends on: version
+question: Sign your name
+signature: user_signature
+under: |
+  ${ author.name.text }
+---
+depends on: version
+code: |
+  signature = aid_signature if author.is_me else user_signature
+---
+depends on: version
+question: Your ${doc.type} is below.
+subquestion: |
+  Do you approve?
+yesno: user_approves
+attachment:
+  name: Pleading
+  filename: letter
+  docx template file: 2023-05-24_pleading_template.docx
+  valid formats:
+    - pdf
+    - docx
+include attachment notice: False
+---
+event: final_screen
+question: |
+  Well, ${author.name.text}, 
+  % if user_approves:
+  Hope you liked your ${doc.type}!
+  % endif
+  We're all through here...
+action buttons:
+  - label: Try again
+    action: new_version
+    color: primary

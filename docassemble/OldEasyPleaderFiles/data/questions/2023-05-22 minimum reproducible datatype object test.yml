@@ -1,0 +1,37 @@
+objects:
+  - students: DAList.using(object_type=Individual, there_are_any=True)
+---
+question: Students
+fields:
+  - What is the first name of the ${ ordinal(i) } student?: students[i].name.first
+---
+question: Is there a ${ ordinal(len(students)) } student?
+yesno: students.there_is_another
+---
+question: The Dumbest Students in Class
+fields:
+  - Who are the dumbest students in class?: dumbest_students
+    datatype: object_checkboxes
+    choices: students
+---
+sets:
+  - students[i].dumb
+code: |
+  for student in students:
+    if student in dumbest_students:
+      student.dumb = True
+    else:
+      student.dumb = False
+---
+question: Age of ${ dumbest_students[i] }
+fields:
+  - How old is the ${ ordinal(i) } dumb student?: students[i].age
+---
+mandatory: True
+question: Results
+subquestion: |
+  The students you've entered are: ${ students }.
+  The ${ nice_number(len(students.filter(dumb=True))) } dumbest students in class are:
+  % for student in students.filter(dumb=True):
+  ${ student }, who is ${ student.age } years old.
+  % endfor

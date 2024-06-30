@@ -1,0 +1,40 @@
+---
+modules:
+  - .courts_works
+---
+objects:
+  - court: DAObject
+---
+mandatory: True
+code: |
+  court_screen
+  user_approves
+---
+question: |
+  Choose the court you're litigating in.
+fields:
+  - Court: court.short_name
+    code: get_court_names()
+---
+question: |
+  Jurisdiction
+subquestion: |
+  You are litigating in:
+  
+    * ${court.short_name}
+    * ${court_info(court.short_name)['court.branch_name']}
+    * ${court_info(court.short_name)['court.street_address']}
+continue button field: court_screen
+---
+question: |
+  Here is your document.
+subquestion: |
+  Does it meet your approval?
+yesno: user_approves
+attachment:
+  name: Your letter
+  filename: letter
+  docx template file: 2023-01-30_db_test.docx
+  valid formats:
+    - pdf
+    - docx

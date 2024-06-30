@@ -1,0 +1,262 @@
+features:
+  centered: False
+---
+mandatory: True
+code: |
+  intro_screen
+  author.gather()
+  clients.gather()
+  litigants.gather()
+  third_parties.gather()
+  final_screen
+---
+objects:
+  - author: DAList.using(object_type=Individual, there_are_any=True, there_is_another=False, complete_attribute=['law_firm', 'address.address'])
+  - clients: DAList.using(object_type=Individual, there_are_any=True, complete_attribute=['party_role', 'address.address', 'process_name_code_block'])
+  - litigants: DAList.using(object_type=Individual, there_are_any=True, complete_attribute='complete')
+  - litigants[i].attorneys: DAList.using(object_type=Individual, there_are_any='litigants[i].is_represented', complete_attribute=['law_firm', 'address.address'])
+  - third_parties: DAList.using(object_type=Individual, complete_attribute=['name.first', 'address.address', 'process_name_code_block'])
+---
+code: |
+  litigants[i].party_role
+  if litigants[i].is_represented:
+    litigants[i].attorneys.gather()
+  else:
+    litigants[i].address.address
+  litigants[i].process_name_code_block
+  litigants[i].complete = True
+---
+id: third party are there any question
+question: Do you want to add third parties now?
+yesno: third_parties.there_are_any
+---
+id: intro screen
+question: Welcome to EasyPleader
+continue button field: intro_screen
+---
+id: contact type name role
+check in: question_food
+generic object: Individual
+question: What is the ${ x.object_name() }'s name and party role?
+right: |
+  <div class="da-page-header">
+    <h1 class="h3">Preview of Full, Captioned Party Name</h1>
+  </div>
+  [TARGET food_section_text]
+fields:
+  - Litigation Role: x.party_role
+    datatype: combobox
+    choices:
+      - Plaintiff
+      - Defendant
+      - Receiver
+  - Person or Entity: x.person_type
+    datatype: radio
+    choices:
+      - Human: human
+      - Someone Acting NOT on Their Personal Behalf: person_specific_capacity
+      - Entity (Company/Governmental Org): entity
+      - Something Else: other
+  - First Name: x.name.first
+    show if: 
+      variable: x.person_type
+      is: human
+  - Middle Name: x.name.middle
+    required: False
+    show if: 
+      variable: x.person_type
+      is: human
+  - Last Name: x.name.last
+    show if: 
+      variable: x.person_type
+      is: human
+  - Representative Name: x.name.first
+    show if: 
+      variable: x.person_type
+      is: person_specific_capacity
+  - Representing in what capacity?: x.capacity
+    input type: combobox
+    choices:
+      - trustee
+      - co-trustee
+      - executive director and designated representative
+      - administrator
+    show if: 
+      variable: x.person_type
+      is: person_specific_capacity
+  - Represented Trust/Entity Name: x.representee
+    show if: 
+      variable: x.person_type
+      is: person_specific_capacity
+  - Entity **Name**: x.name.first
+    show if: 
+      variable: x.person_type
+      is: entity
+  - Entity **Type**: x.entity_type
+    input type: combobox
+    choices:
+      - a California corporation
+      - a California limited liability company
+      - a California professional corporation
+      - a municipal corporation
+    show if: 
+      variable: x.person_type
+      is: entity
+  - Short Name: x.short_name
+  - Gender: x.gender
+    input type: radio
+    choices:
+      - Male: male
+      - Female: female
+      - Other: other
+    js show if:
+      val('x.person_type') == 'human' || val('x.person_type') == 'person_specific_capacity'
+  - Is the party represented by counsel?: x.is_represented
+    datatype: yesno
+    show if:
+      code: |
+        x in (litigants)
+---  
+id: author info
+generic object: Individual
+question: |
+  ${ title_case(x.object_name()) } Info
+fields:
+  - First Name: x.name.first
+  - Middle Name: x.name.middle
+    required: False
+  - Last Name: x.name.last
+  - Law Firm: x.law_firm
+  - Bar Number: x.bar_number
+  - Bar State: x.bar_state
+    default: 'CA'
+---
+template: question_food
+content: |
+  % if action_argument('x.person_type') == 'human':
+  ### **${ action_argument('x.party_role') + ' ' + action_argument('x.name.first') } ${ action_argument('x.name.middle') or '' } ${ action_argument('x.name.last') } (${ action_argument('x.short_name') })**
+  % elif action_argument('x.person_type') == 'person_specific_capacity':
+  **${ action_argument('x.party_role') + ' ' + action_argument('x.name.first') + ', ' + action_argument('x.capacity') + ' of ' + action_argument('x.representee') } (${ action_argument('x.short_name') })**
+  % else:
+  **${ action_argument('x.party_role') + ' ' + action_argument('x.name.first') + ', ' + action_argument('x.entity_type') } (${ action_argument('x.short_name') })**
+  % endif
+target: food_section_text
+---
+generic object: Individual
+question: What is ${ x }'s address?
+fields:
+  - Address: x.address.address
+    address autocomplete: True
+  - Unit/Suite: x.address.unit
+    required: False
+  - City: x.address.city
+  - State: x.address.state
+  - Zip Code: x.address.zip
+  - note: |
+      #### ---Phone, Fax & Email---
+  - Phone: x.phone
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+  - Second Phone?: x.add_second_phone
+    datatype: yesno
+  - Second Phone Number: x.second_phone
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+    show if: x.add_second_phone
+  - Fax: x.fax
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+  - Email: x.email
+    datatype: email
+    required: False
+  - Second Email?: x.add_second_email
+    datatype: yesno
+  - Second Email Address: x.second_email
+    datatype: email
+    show if: x.add_second_email
+validation code: |
+  if not showifdef('x.phone'):
+    x.phone = 'unknown'
+  else:
+    x.phone = phone_number_formatted(x.phone)
+---
+generic object: DAList
+question: Is there another ${ x.object_name() }?
+yesno: x.there_is_another
+---
+code: |
+  everyone = author.complete_elements() + clients.complete_elements() + litigants.complete_elements() + third_parties.complete_elements()
+---
+code: |
+  all_parties = clients.complete_elements() + litigants.complete_elements()
+---
+generic object: Individual
+code: |
+  if x.person_type == 'human':
+    x.whole_name = x.name.first + ' ' + (x.name.middle if x.name.middle != '' else '') + x.name.last
+  elif x.person_type == 'person_specific_capacity':
+    x.whole_name = x.name.first + ', ' + x.capacity + ' of ' + x.representee
+  else:
+    x.whole_name = x.name.first + ', ' + x.entity_type
+    
+  x.complete_formal_name = x.party_role + ' ' + x.whole_name + ' (' + x.short_name + ')'
+  
+  x.process_name_code_block = True
+---
+id: author caption block
+code: |
+  author_caption_block = f"""{author[0].name.full()}\n\n{author[0].law_firm}\n\n{author[0].address.address}\n\n{author[0].address.city}, {author[0].address.state} {author[0].address.zip}\n\nPhone: {author[0].phone}\n\nFax: {author[0].fax}\n\nEmail: {author[0].email}
+  """
+---
+question: xxx
+fields:
+  - Which party opposed the motion?: xyz
+    datatype: object
+    choices: everyone
+---
+id: final screen
+event: final_screen
+question: xxx
+subquestion: |
+  % for auth in author:
+  ${ author_caption_block }
+  % endfor
+  
+  % for litigant in litigants:
+  % if not litigant.is_represented:
+  ${ litigant.address_block() }
+  % else:
+  % for attorney in litigant.attorneys:
+  ${ attorney.law_firm }[BR]
+  ${ attorney.address_block() }
+  
+  % endfor
+  % endif
+  % endfor
+  The party that opposed the motion is: ${ xyz }
+  
+  The 'whole_name' and 'complete_formal_name' of ${ all_parties } are:
+  
+  % for x in all_parties:
+  'whole_name' = ${ x.whole_name }[BR]
+  'complete_formal_name' = ${ x.complete_formal_name }
+  Here's their address block:
+  ${ x.address_block() }
+  
+  And here's their contact info:
+  
+  Phone: ${ x.phone }[BR]
+  Fax: ${ x.fax }[BR]
+  % if defined('x.second_phone'):
+  Second Phone: ${ x.second_phone }[BR]
+  % endif
+  Email: ${ x.email }[BR]
+  % if defined('x.second_email'):
+  Second Email: ${ x.second_email }[BR]
+  % endif
+  % endfor
+buttons:
+  - Try again: restart

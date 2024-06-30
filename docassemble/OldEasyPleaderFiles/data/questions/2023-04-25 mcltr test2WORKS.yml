@@ -1,0 +1,397 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ALToolbox:multiselect.yml
+---
+features:
+  css: 2023-04-25_tony_test_with_expansion.css
+  debug: False
+  progress bar: False
+---
+default screen parts:
+  pre: |
+---
+metadata:
+  title: |
+    Meet & Confer Letter Builder
+  short title: Polished legal documents. Zero hassle.
+---
+imports:
+  - base64
+---
+modules:
+  - .load_data
+---
+id: language table
+variable name: language_table
+data:
+  Interrogatories:
+    singular: interrogatory
+    plural: interrogatories
+  Requests for Production:
+    singular: request
+    plural: document requests
+  Requests for Admission:
+    singular: request
+    plural: admission requests
+---
+objects:
+  - company_logo: DAStaticFile.using(filename='EP_Logo_White.png')
+  - doc: DAObject
+  - discov: DAObject
+  - dataloader: DataLoader.using(filename="2023-08-14_disco_blurbs.xlsx")
+  - objection_categories: DADict.using(object_type=DAObject, auto_gather=False, gathered=True)
+  - objection_categories[i].ncr: DADict.using(object_type=DAObject)
+  - objection_categories[i].objections: DADict.using(object_type=DAObject)
+  - al_user_bundle: ALDocumentBundle.using(elements=[disco_attachment], filename="mcltr.docx", title="All forms to download for your records", enabled=True)
+  - disco_attachment: ALDocument.using(enabled=True, title="Meet & Confer Letter", filename="mcltr")
+---
+mandatory: True
+id: interview order
+code: |
+  set_parts(title='EasyPleader', logo='<img src="' + company_logo.url_for() + '" style="height: 65px; width: 280px;">')
+  # Choose whether the author/firm is the propounder or responder
+  propounder_or_responder
+  # Select the discovery methods at issue in the letter
+  methods
+  # Run code block to establish whether we're dealing with a single discovery method or multiple methods
+  several_methods
+  # If we're dealing with multiple methods, ask umbrella questions to possibly eliminate repetitive entry of same info later
+  if several_methods == True:
+    same_PP_and_RP
+  # for each method propounded, gather all noncompliant responses (ncr)
+  for method in methods.true_values():
+    # set variables for every method propounded
+    if not showifdef('same_PP_and_RP'):
+      objection_categories[method].propounder_list
+    objection_categories[method].set_no
+    objection_categories[method].responses_type
+    objection_categories[method].number_propounded
+    # Check all NCRs per method propounded
+    for ncr in objection_categories[method].ncr.true_values():
+      # for each NCR, choose all applicable deficiency grounds
+      objection_categories[method].objections[ncr].selected
+  language_table
+  propose_call_or_meeting
+  objection_categories[method].mtc_deadline
+  # Now run code blocks that set final docx field variables based on the user's interview responses. We do this so as not to have to do very complicated, conditional "if user's answer is this, print this, else, print that" Jinja2 tags in the word template.
+  propounder_docx_field
+  response_deadline
+  doc.sign_date
+  doc.date
+  download
+---
+id: are you propounder or responder
+question: |
+  Welcome to EasyPleader's **Meet & Confer Letter Builder**!
+fields:
+  - Did your firm propound the discovery, or are you responding to it?: propounder_or_responder
+    input type: radio
+    choices:
+      - We propounded it: user_is_propounder
+      - We're responding to it: user_is_responder
+---
+id: different propounder and responder
+question: |
+  **${ i }** Propounding & Responding Parties
+fields:
+  - Propounding party(ies): objection_categories[i].propounder_list
+    datatype: checkboxes
+    choices:
+      - Michael H. Anderson
+      - Ralph G. Wiggum
+      - Thelonius R. Monk
+    none of the above: False
+  - Responding party(ies): objection_categories[i].responder_list
+    datatype: checkboxes
+    choices:
+      - Alexis G. Waterford
+      - AGW & Associates, Inc.
+      - Jeremy I. Gilmore
+    none of the above: False
+---
+id: only if multiple methods served
+question: |
+  Multiple Discovery Methods - Parties, Timing & Service
+fields:
+  - note: |
+      **---Identify specific party propounders and responders---**
+  - Are the propounding and responding parties the same for every method served?: same_PP_and_RP
+    datatype: yesnoradio
+  - note: |
+      Example:
+      If we're dealing with Form Interrogatories, RFAs, and RPDs, click "Yes" if John Smith served all three sets of discovery on Jane Doe and Jane Doe only. But if John Smith served one of the sets on Jack Doe (opposed to, or along with Jane Doe), then click "No."
+  - Propounding party(ies): discov.propounder_list
+    datatype: checkboxes
+    choices:
+      - Michael H. Anderson
+      - Ralph G. Wiggum
+      - Thelonius R. Monk
+    none of the above: False
+    show if: same_PP_and_RP
+  - Responding party(ies): discov.responder_list
+    datatype: checkboxes
+    choices:
+      - Alexis G. Waterford
+      - AGW & Associates, Inc.
+      - Jeremy I. Gilmore
+    none of the above: False
+    show if: same_PP_and_RP
+  - note: |
+      **---When and how did you serve the discovery?---**
+  - Did you propound all of the discovery at the same time?: discov.propounded_same_day
+    datatype: yesnoradio
+  - When did you serve it?: discov.propound_svc_date_same_day
+    datatype: date
+    show if: discov.propounded_same_day
+  - Did you serve all of the discovery the same way?: discov.served_same_way
+    datatype: yesnoradio
+  - Discovery was propounded by: discov.svc_method_same_way
+    input type: radio
+    choices:
+      - regular mail
+      - overnight delivery
+      - email
+    show if: discov.served_same_way
+  - note: |
+      **---How did you receive the _responses_?---**
+  - Were the responses to each method served on the same day?: discov.responses_served_same_day
+    datatype: yesnoradio
+  - Date discovery responses served: discov.responses_svc_date_same_day
+    datatype: date
+    show if: discov.responses_served_same_day
+  - Were the responses to each method served the same way?: discov.responses_served_same_way
+    datatype: yesnoradio
+  - How were they served?: discov.responses_svc_method_same_way
+    input type: radio
+    choices:
+      - regular mail
+      - overnight delivery
+      - email
+    show if: discov.responses_served_same_way
+---
+id: discovery methods propounded
+question: |
+  Discovery method(s) propounded
+fields:
+  - no label: methods
+    datatype: checkboxes
+    code: |
+      unique_values(dataloader, search_column="Method")
+    none of the above: false
+---
+id: facts about each method served
+question: |
+  The ${ i }
+fields:
+  - What set number were they?: objection_categories[i].set_no
+    input type: radio
+    choices: 
+      - One
+      - Two
+      - Three
+      - Four
+      - Supplemental
+  - Beginning number: objection_categories[i].start_range
+    datatype: integer
+  - End number: objection_categories[i].end_range
+    datatype: integer
+  - When were they served?: objection_categories[i].date_disco_served
+    datatype: date
+    show if: 
+      code: |
+        not showifdef('discov.propounded_same_day')
+  - How were they served?: objection_categories[i].disco_svc_method
+    input type: radio
+    choices:
+      - regular mail
+      - overnight delivery
+      - email
+    show if:
+      code: |
+        not showifdef('discov.served_same_way')
+---
+id: facts about the responses to each method
+question: |
+  Responses to the ${ i }
+fields:
+  - When were they served?: objection_categories[i].responses_date_served
+    datatype: date
+    show if:
+      code: |
+        not showifdef('discov.responses_served_same_day')
+  - How were they served?: objection_categories[i].responses_svc_method
+    input type: radio
+    choices:
+      - regular mail
+      - overnight delivery
+      - email
+    show if:
+      code: |
+        not showifdef('discov.responses_served_same_way')
+  - What did they consist of?: objection_categories[i].responses_type
+    input type: radio
+    choices: 
+      - objections only
+      - a hybrid mix of objections and substantive responses
+      - substantive responses without objection
+  - Were they *verified*?: objection_categories[i].received_verification
+    datatype: yesnoradio
+    js show if: |
+      val('objection_categories[i].responses_type') != 'objections only'
+  - Were they untimely?: objection_categories[i].responses_untimely
+    datatype: yesnoradio
+---
+id: noncompliant response number
+question: |
+  Check all responses to the **${ i }** you consider deficient
+fields: 
+  - no label: objection_categories[i].ncr
+    datatype: checkboxes
+    code: |
+      [str(x) for x in range(objection_categories[i].start_range, objection_categories[i].end_range + 1)]
+    none of the above: false
+---
+################### Start Code Blocks ############################
+---
+code: |
+  several_methods = True if len(methods.true_values()) > 1 else False
+---
+code: |
+  objection_categories[i].mtc_deadline = (discov.responses_svc_date_same_day if (several_methods and discov.responses_served_same_day) else objection_categories[i].responses_date_served) + date_interval(days=45)
+---
+code: |
+  objection_categories[i].number_propounded = nice_number(int(objection_categories[i].end_range) - int(objection_categories[i].start_range) + 1, use_word=True)
+---
+code: |
+  propounder_docx_field = discov.propounder_list.true_values() if showifdef('same_PP_and_RP') else objection_categories[method].propounder_list.true_values()
+  
+  responder_docx_field = discov.responder_list.true_values() if showifdef('same_PP_and_RP') else objection_categories[i].responder_list.true_values()
+  
+  disco_svc_date_docx_field = discov.propound_svc_date_same_day if showifdef('discov.propounded_same_day') else objection_categories[i].date_disco_served
+  
+  disco_svc_method_docx_field = discov.svc_method_same_way if showifdef('discov.served_same_way') else objection_categories[i].disco_svc_method
+  
+  responses_svc_date_docx_field = discov.responses_svc_date_same_day if showifdef('discov.responses_served_same_day') else objection_categories[i].responses_date_served
+  
+  responses_svc_method_docx_field = discov.svc_method_same_way if showifdef('discov.served_same_way') else objection_categories[i].responses_svc_method
+  
+  responses_svc_deadline = as_datetime(disco_svc_date_docx_field) + date_interval(days=35)
+---
+################### End Code Blocks ############################
+---
+id: explain noncompliant responses
+question: |
+  **${ i }** Responses:
+  How was Response # **${ j }** noncompliant?
+fields:
+  - Check all applicable deficiencies: objection_categories[i].objections[j].selected
+    datatype: multiselect
+    code: |
+      [{"label": result["Label"],
+         "group": result["Category"],
+         "value": index
+       }
+       for index, result
+       in dataloader._load_data()[dataloader._load_data()["Method"]==(i)].iterrows()
+      ]
+  - note: |
+      [BR][BR][BR]
+      [CENTER]**-----Option: Add Custom-Typed Criticism------**
+      
+      Example:
+      
+      *There is no question that the interrogatory seeks information relevant to respondent's defense that plaintiff failed to mitigate her damages.*
+      
+  - Add custom-typed critique: objection_categories[i].objections[j].add_custom_critique
+    datatype: yesno
+  - Custom critique: objection_categories[i].objections[j].custom_critique
+    input type: area
+    rows: 5
+    show if: objection_categories[i].objections[j].add_custom_critique
+script: |
+  <script type="text/javascript">
+    /* Need to activate the multiselect JavaScript on each input, after base64 encoding the name
+     of the input (it is "objection_categories[i].objections[j].selected" here)
+     */  
+     $(document).ready(function() {
+       $("#${ base64.b64encode(str('objection_categories[i].objections[j].selected').encode()).decode().replace('=', '') } ").multiselect({enableCaseInsensitiveFiltering: true, inheritClass: true, enableClickableOptGroups: true, enableCollapsibleOptGroups: true, collapseOptGroupsByDefault: true});
+      });
+  </script>
+---
+id: resolution options
+question: |
+  Dispute Resolution Options
+fields:
+  - Propose setting a call or in-person meeting to review this letter?: propose_call_or_meeting
+    datatype: checkboxes
+    choices:
+      - Phone call
+      - Zoom call
+      - In-person meeting/conference
+    none of the above: False
+  - To resolve the dispute, are you open to considering...: discov.proposal_list
+    datatype: checkboxes
+    choices:
+      - appointment of a discovery referee
+      - a stipulated protective order
+      - narrowing scope or revising/clarifying language
+      - reasonable extensions to respond based on legitimate need
+    none of the above: False
+---
+id: follow up dates
+question: |
+  Timeline & Follow-Up
+subquestion: |
+  Today is **${ format_date(today(), format='EEEE, MMMM d, yyyy') }**. 
+  
+  % for method in methods.true_values():
+  The 45-day deadline to file a motion to compel further responses to ${ method } is **${ format_date(objection_categories[method].mtc_deadline, format='EEEE, MMMM d, yyyy') }**, in **${ nice_number(date_difference(starting=today(), ending=objection_categories[method].mtc_deadline).days) } days**. 
+  
+  % endfor
+fields:
+  - Deadline for ${ responder_docx_field } to respond to the letter: response_deadline
+    datatype: date
+  - Propose extension to MTC deadline?: request_to_extend_MTC_deadline
+    datatype: yesnoradio
+  - Proposed deadline extension date: proposed_MTC_extension_deadline
+    datatype: date
+    show if: request_to_extend_MTC_deadline
+---
+id: signature block
+question: |
+  Letter Date & Signature
+fields:
+  - Date of Letter: doc.sign_date
+    input type: radio
+    choices:
+      - Today
+      - Choose Different Date
+      - Leave Blank For Now
+  - Different Date: doc.sign_date_alternate
+    datatype: date
+    show if: 
+      variable: doc.sign_date
+      is: 'Choose Different Date'
+  - Sign the document?: doc.sign_yes
+    datatype: yesnowide
+---
+code: |
+  doc.date = today() if doc.sign_date == 'Today' else doc.sign_date_alternate if doc.sign_date_alternate else 'DATE'
+---
+need: language_table
+attachments:
+  - name: Meet & Confer Letter
+    filename: disco.docx
+    variable name: disco_attachment[i]
+    skip undefined: True
+    docx template file: 2023-04-25_mcltr2.docx
+---
+id: download
+event: download
+question: |
+  The Meet & Confer Letter is ready.[BR][BR] 
+subquestion: |
+  Thanks for using EasyPleader's **Meet & Confer Letter Builder**!
+  ${ al_user_bundle.download_list_html(format="docx") }
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }

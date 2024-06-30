@@ -1,0 +1,72 @@
+---
+mandatory: True
+question: |
+  Select case type and enter captioned party litigants.
+fields:
+  - Type of case: case_type
+    datatype: radio
+    choices:
+      - Jones v. Smith
+      - Petition
+      - Bankruptcy
+  - Lawsuit Litigant Roles: lawsuit_roles
+    datatype: radio
+    choices: 
+      - plaintiff/defendant
+      - petitioner/respondent
+      - claimant/respondent
+    show if:
+      variable: case_type
+      is: Jones v. Smith
+  - Petition Litigant Roles: petition_roles
+    datatype: radio
+    choices: 
+      - In re
+      - In the matter of
+    show if:
+      variable: case_type
+      is: Petition
+---
+code: |
+  if case_type == 'Jones v. Smith':
+    if lawsuit_roles == 'plaintiff/defendant':
+      top_role = 'Plaintiff'
+      bottom_role = 'Defendant'
+    elif lawsuit_roles == 'petitioner/respondent':
+      top_role = 'Petitioner'
+      bottom_role = 'Respondent'
+    else:
+      top_role = 'Claimant'
+      bottom_role = 'Respondent'
+  elif case_type == 'Petition':
+    if petition_roles == 'In re':
+      top_role = 'In re'
+    else:
+      top_role ='In the matter of'
+---
+question: |
+  Has a cross or counterclaim been filed?
+yesno: counteraction_filed
+---
+mandatory: True
+question: |
+  Do you approve?
+yesno: user_approves
+attachment:
+  name: Pleading
+  filename: letter
+  docx template file: 2023-01-23_litigant_id.docx
+  valid formats:
+    - pdf
+    - docx
+include attachment notice: False
+---
+mandatory: True
+event: final_screen
+question: |
+  The top litigant role in the caption is ${top_role}. 
+  
+  We're all through here...
+buttons:
+  Exit: exit
+  Restart: restart

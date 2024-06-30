@@ -1,0 +1,104 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ALToolbox:multiselect.yml
+---
+objects:
+  - dataloader: DataLoader.using(filename="disco_blurbs.xlsx")
+  - objection_categories: DADict.using(object_type=DAObject)
+  - objection_categories[i].ncr: DADict.using(object_type=DAObject)
+  - objection_categories[i].objections: DADict.using(object_type=DAObject)
+  - al_user_bundle: ALDocumentBundle.using(elements=[disco_attachment], filename="disco.docx", title="All forms to download for your records", enabled=True)
+  - disco_attachment: ALDocument.using(enabled=True, title="Disco", filename="Disco")
+---
+imports:
+  - base64
+---
+modules:
+  - .load_data
+---
+mandatory: True
+id: interview order
+code: |
+  # gather all methods propounded
+  methods
+  # for each method, gather all noncompliant responses (ncr)
+  for method in methods.true_values():
+    #collect all ncrs per selected method
+    for ncr in objection_categories[method].ncr.true_values():
+      # for each nrc, show catergory/label dropdown (CLP mimic)
+      objection_categories[method].objections[ncr].selected
+  download
+---
+id: discovery methods
+question: |
+  Discovery method(s) propounded
+fields:
+  - no label: methods
+    datatype: checkboxes
+    code: |
+      unique_values(dataloader, search_column="Method")
+    none of the above: false
+---
+id: discovery number ranges served
+question: |
+  What number range did you serve?
+fields:
+  - Beginning number: start
+    datatype: integer
+  - End number: end
+    datatype: integer
+---
+id: noncompliant response number
+question: |
+  Noncompliant response number(s) for **${ i }**
+fields: 
+  - no label: objection_categories[i].ncr
+    datatype: checkboxes
+    code: |
+      range(start, end)
+    none of the above: false
+---
+id: explain noncompliant responses
+question: |
+  How was Response **${ j }** noncompliant?
+fields:
+  - Select: objection_categories[i].objections[j].selected
+    datatype: multiselect
+    code: |
+      [{"label": result["Label"],
+         "group": result["Category"],
+         "value": index
+       }
+       for index, result
+       in dataloader._load_data()[dataloader._load_data()["Method"]==(i)].iterrows()
+      ]
+script: |
+  <script type="text/javascript">
+    /* Need to activate the multiselect JavaScript on each input, after base64 encoding the name
+     of the input (it is "objection_categories[i].objections[j].selected" here)
+     */  
+     $(document).ready(function() {
+       $("#${ base64.b64encode(str('objection_categories[i].objections[j].selected').encode()).decode().replace('=', '') } ").multiselect({enableCaseInsensitiveFiltering: true, inheritClass: true, enableClickableOptGroups: true, enableCollapsibleOptGroups: true, collapseOptGroupsByDefault: true});
+      });
+  </script>
+---
+attachments:
+  - name: Disco
+    filename: disco.docx     
+    variable name: disco_attachment[i]        
+    skip undefined: True
+    docx template file: 2023-04-11_mc_ltr.docx
+---
+id: download
+event: download
+question: |
+  Your form is ready to download.
+subquestion: |
+  Thank you. Your form is ready to download.
+  
+  ${ al_user_bundle.download_list_html(format="docx") }
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+progress: 100

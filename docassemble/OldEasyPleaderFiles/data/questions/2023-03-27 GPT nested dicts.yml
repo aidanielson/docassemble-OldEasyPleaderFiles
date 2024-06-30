@@ -1,0 +1,50 @@
+---
+
+objects:
+  - main_dict: DADict
+  - nested_dict: DADict
+
+---
+
+question: |
+  Let's gather some information.
+fields:
+  - First Name: main_dict['first_name']
+  - Last Name: main_dict['last_name']
+  - Age: main_dict['age']
+  - Occupation: main_dict['occupation']
+
+---
+
+question: |
+  Let's gather some additional information.
+fields:
+  - Favorite Color: nested_dict['favorite_color']
+  - Favorite Food: nested_dict['favorite_food']
+  - Hobbies: nested_dict['hobbies']
+
+---
+
+code: |
+  main_dict['additional_info'] = nested_dict
+
+---
+
+template: summary
+content: |
+  Here's a summary of the information you provided:
+
+  - First Name: ${main_dict['first_name']}
+  - Last Name: ${main_dict['last_name']}
+  - Age: ${main_dict['age']}
+  - Occupation: ${main_dict['occupation']}
+  - Additional Information:
+      * Favorite Color: ${nested_dict['favorite_color']}
+      * Favorite Food: ${nested_dict['favorite_food']}
+      * Hobbies: ${nested_dict['hobbies']}
+---
+mandatory: True
+question: |
+  Summary
+subquestion: |
+  ${summary}

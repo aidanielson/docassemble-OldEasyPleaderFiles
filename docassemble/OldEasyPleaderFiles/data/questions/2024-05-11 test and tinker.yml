@@ -1,0 +1,55 @@
+question: xxx
+subquestion: yyyy
+fields:
+  - something: something
+  - something else: something_else
+---
+mandatory: True
+question: xxx
+fields:
+  - yyy: third_thing
+    input type: combobox
+    code: |
+      [something, something_else]
+---
+mandatory: True
+question: xxx
+fields:
+  - yyy: thirhjhd_thing
+    datatype: checkboxes
+    code: |
+      list(set([something, f"{something_else} filed {today()}", third_thing, 'Motion for Commotion', 'Application for Default Judgment', str(today()), 'ldfghh' if third_thing == 'hhh' else '']))
+---
+mandatory: True
+question: xxx
+fields:
+  - yyy: fourth_thing
+    datatype: radio
+    choices:
+      - Red: 12
+      - Green: 34
+      - Blue: 56
+    required: True
+validation code: |
+  fourth_thing = tuple(fourth_thing)
+---
+#mandatory: True
+#code: |
+#  # Define the lookup table as a dictionary
+#  lookup_table = {
+#    'red': (1, 2),
+#    'green': (3, 4),
+#    'blue': (5, 6),
+#  }
+#  # Use the lookup table and a temporary variable to assign your desired value correlated to the user's choice
+#  temp_variable = fourth_thing
+#  del fourth_thing
+#  fourth_thing = lookup_table.get(temp_variable)
+---
+mandatory: True
+question: Results Screen
+subquestion: |
+  Here are what your variables are assigned to:[BR][BR]
+  fourth_thing is: ${ fourth_thing }[BR]
+  repr(fourth_thing) is: ${ repr(fourth_thing) }[BR]
+  type(fourth_thing) is: ${ print(type(fourth_thing)) }

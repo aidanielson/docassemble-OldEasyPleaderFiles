@@ -1,0 +1,145 @@
+features:
+  wide side by side: True
+---
+mandatory: True
+code: |
+  intro_screen
+  exhibit.gather()
+  exhibit_final_review
+  information_gathered
+  bundle
+  final_screen
+---
+objects:
+  - exhibit: DAList.using(object_type=DAObject, there_are_any=True, there_is_another=False, complete_attribute='full_desc')
+  - exhibit_divider_page: DAList
+---
+id: intro screen
+question: |
+  **The Exhibit Packager**
+subquestion: |
+  This packager creates a unified PDF document containing:
+  
+  * an index page listing all of your exhibits
+  * labeled exhibit divider pages for each exhibit, and 
+  * all of your documentary exhibits themselves.
+  
+  
+  **Don't worry about the proper chronological order of the exhibits as you enter them. Once you've entered all of your exhibits, you'll be able to re-order them to your liking, on-the-fly!**
+  
+  [FILE exhibit_divider_page.jpg, 190px]
+field: intro_screen
+---
+question: |
+  The Exhibits
+subquestion: |
+  For each exhibit, you'll first type the full description of the exhibit as you would introduce it in a declaration or an RJN. If you also give an optional "Short Title," it will be used on the exhibit index and divider pages.
+right: |
+  % if len(exhibit.complete_elements()) > 0:
+  The Exhibits you've entered are:[SKIPLINE]
+  % for y in exhibit.complete_elements():
+  1. **${ y.short_title }**[SKIPLINE]
+  ${ y.full_desc }[BR][BR]
+  % endfor
+  % endif  
+fields:
+  - Full Description: exhibit[i].full_desc
+    input type: area
+    rows: 4
+  - note: |
+      Example: *a grant deed recorded January 3, 1997, conveying full legal title to 123 Main Street from John Alan Smith to Jane Elizabeth Doe*
+  - Short Title (optional): exhibit[i].short_title
+  - note: |
+      Example: *January 1997 Grant Deed to Jane Doe*
+    required: False
+  - Upload the exhibit now?: exhibit[i].has_documentation
+    datatype: yesnoradio
+  - note: |
+      **If you're not ready to upload, EasyPleader will create an exhibit divider page where you can later insert the exhibit itself.**
+  - "Upload the exhibit:": exhibit[i].documentation
+    datatype: files
+    show if: exhibit[i].has_documentation
+comment: |
+  Will want to figure out a way to sort or modify the order of multiple files uploaded to DA in any given exhibit - it appears they don't sort automatically but instead randomize possibly through the browser. Here's what jp said: I don't think the JavaScript plugin has any controls for that. The order in which the files are uploaded may be dictated by the browser. A DAFileList is a DAList so it can be sorted by filename using the .sorted() method. E.g., myfiles.sort(key=lambda y: y.filename). You can also present a list as a table and reorder it: https://docassemble.org/docs/groups.html#reordering
+---
+code: |
+  exhibit[i].reference = title_case(exhibit[i].short_title if exhibit[i].short_title else exhibit[i].full_desc)
+---
+question: |
+  Final Review
+subquestion: |
+    **Your Exhibits**
+    
+    ${ exhibit.table }
+    
+    ${ exhibit.add_action(color='warning') }
+continue button field: exhibit_final_review
+---
+table: exhibit.table
+rows: exhibit
+columns:
+  - No.: |
+      row_index + 1
+  - Exhibit: |
+      row_item.short_title
+edit:
+  - short_title
+allow reordering: True
+---
+question: |
+  Options
+fields:
+  - Do you want to include an exhibit **index** page?: include_exhibit_index
+    datatype: yesnoradio
+    note: |
+      Usually a good idea if you've got more than five exhibits. Required by CRC, Rule 3.1110(f)(1).
+  - Do you want to include the **declaration text** for each exhibit?: include_exhibit_declaration_text
+    note: |
+      You can copy/paste into the declaration which provides the foundation for each exhibit.
+    datatype: yesnoradio
+  - How are the exhibits presented?: standalone_or_index
+    input type: radio
+    choices:
+      - attached to the declaration/RJN
+      - in a stand-alone, unified Index of Exhibits
+    show if: include_exhibit_declaration_text
+---
+attachment:
+  variable name: exhibit_declaration_text
+  docx template file: exhibit_declaration_text.docx
+---
+attachment:
+  variable name: exhibit_index_page
+  docx template file: exhibit_index_page.docx
+---
+attachment:
+  variable name: exhibit_divider_page[i]
+  docx template file: exhibit_divider_page.docx
+---
+code: |
+  indexno = 0
+  for item in exhibit:
+    item.full_desc
+    item.documentation_reference = indexno
+    indexno += 1
+    if item.has_documentation:
+      item.documentation
+  information_gathered = True
+---
+code: |
+  document_list = list()
+  if include_exhibit_declaration_text:
+    document_list.append(exhibit_declaration_text)
+  if include_exhibit_index:
+    document_list.append(exhibit_index_page)
+  for item in exhibit:
+    document_list.append(exhibit_divider_page[item.documentation_reference])
+    if item.has_documentation:
+      document_list.append(item.documentation)
+  bundle = pdf_concatenate(document_list, filename="Exhibit Bundle.pdf")
+---
+event: final_screen
+question: |
+  Your Exhibit Bundle is Complete
+subquestion: |
+  ${ action_button_html(bundle.url_for(), color='link', label='Download Exhibit Bundle', icon='file-pdf') }

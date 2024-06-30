@@ -1,0 +1,78 @@
+mandatory: True
+code: |
+  contacts.gather()
+  final_screen
+---
+objects:
+  contacts: DAList.using(object_type=Individual, there_are_any=True, complete_attribute='complete')
+  contacts[i].lawyers: DAList.using(object_type=Individual)
+  good_guy: Individual
+---
+code: |
+  contacts[i].name.first
+  if contacts[i].lawyers.there_are_any:
+    initialize_lawyer_list
+    contacts[i].lawyers.gather()
+  contacts[i].complete = True
+---    
+question: Contacts
+fields:
+  - First Name: contacts[i].name.first
+  - Last Name: contacts[i].name.last
+  - Role: contacts[i].role
+    datatype: checkboxes
+    choices:
+      - King
+      - Prince
+      - Servant
+    none of the above: False
+  - Represented by counsel?: contacts[i].lawyers.there_are_any
+    datatype: yesno
+---
+question: Add another contact?
+yesno: contacts.there_is_another
+---
+question: Lawyer(s)
+fields: 
+  - Existing Lawyer?: contacts[i].lawyers[j]
+    datatype: object
+    choices: lawyer_list
+    disable others: True
+    show if: 
+      code: |
+        len(lawyer_list) > 0
+  - First Name: contacts[i].lawyers[j].name.first
+  - Last Name: contacts[i].lawyers[j].name.last
+validation code: |
+  lawyer_list.append(contacts[i].lawyers[j])
+---
+code: |
+  lawyer_list = list()
+  initialize_lawyer_list = True
+---
+#code: |
+#  for contact in contacts.complete_elements():
+#    for lawyer in contact.lawyers:
+#      lawyer_list.append(lawyer)
+#  add_lawyer_to_list = True
+---
+question: Does ${ contacts[i] } have another lawyer?
+yesno: contacts[i].lawyers.there_is_another
+---
+question: Who is the good guy?
+fields:
+  - One of these: good_guy
+    datatype: object
+    choices: contacts
+    disable others: True
+  - First Name: good_guy.name.first
+  - Last Name: good_guy.name.last
+validation code: |
+  if good_guy.name.first:
+    contacts.appendObject()
+    contacts[-1].name.first = good_guy.name.first
+    contacts[-1].name.last = good_guy.name.last
+---
+event: final_screen
+question: |
+  The contacts are ${ contacts }, and ${ good_guy.name.first } is truly a Good Guy!

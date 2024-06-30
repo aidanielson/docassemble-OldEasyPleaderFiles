@@ -1,0 +1,56 @@
+include: 
+  - docassemble.AssemblyLine:assembly_line.yml
+---
+mandatory: True
+code: |
+  intro
+  text
+  user_approves
+  final_screen
+---
+objects:
+  - users: ALIndividual
+  - clients: ALPeopleList.using(there_are_any=True, there_is_another=False)
+  - litigants: ALPeopleList.using(there_are_any=True, there_is_another=False)
+  - nonparties: ALPeopleList.using(there_are_any=True)
+  - attorneys: ALIndividual
+---
+question: |
+  *Easy*Pleader ---> Polished pleadings. Less hassle. 
+field: intro
+---
+field: text
+question: |
+  xxxx
+subquestion: |
+  the nonparties we've got are: 
+  % for nonparty in nonparties:
+    ${ nonparty }'s address is ${ nonparty.address.block() }
+  % endfor
+---
+depends on: version
+question: |
+  Your doc is below.
+subquestion: |
+  Do you approve?
+yesno: user_approves
+attachment:
+  name: Pleading
+  filename: letter
+  docx template file: 2023-04-10_name_addy_test.docx
+  valid formats:
+    - pdf
+    - docx
+include attachment notice: False
+---
+event: final_screen
+question: |
+  Well, ${author.name.text}, 
+  % if user_approves:
+  Hope you liked your doc!
+  % endif
+  We're all through here...
+action buttons:
+  - label: Try again
+    action: new_version
+    color: primary

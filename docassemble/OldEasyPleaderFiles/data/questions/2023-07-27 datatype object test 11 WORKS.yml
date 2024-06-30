@@ -1,0 +1,196 @@
+include:
+  docassemble.AssemblyLine:al_package.yml
+---
+features: 
+  progress bar: False
+---
+mandatory: True
+code: |
+  parties.gather()
+  oldest_person
+  interim_party_list
+  opposing_parties
+  all_unique_people_updated
+  final_screen
+---
+objects:
+  parties: ALPeopleList.using(object_type=ALIndividual, there_are_any=True, complete_attribute='complete')
+  parties[i].lawyers: ALPeopleList.using(object_type=ALIndividual)
+  oldest_person: ALPeopleList.using(object_type=ALIndividual, ask_number=True, target_number=1)
+  lawyer_list: ALPeopleList.using(object_type=ALIndividual, gathered=True)
+  nonparties: ALPeopleList.using(object_type=ALIndividual)
+  combined_all_people: ALPeopleList.using(auto_gather=False, gathered=True)
+  set_of_all_people: DASet.using(gathered=True)
+  opposing_parties: ALPeopleList(object_type=ALIndividual, auto_gather=False, gathered=True)
+---
+generic object: ALPeopleList
+code: |
+  x[i].name.first
+  if x[i].lawyers.there_are_any:
+    x[i].lawyers.gather()
+  x[i].complete = True
+---
+id: gather parties
+generic object: ALPeopleList
+question: Parties
+fields:
+  - First Name: x[i].name.first
+  - Last Name: x[i].name.last
+  - Role: x[i].role
+    datatype: radio
+    choices:
+      - Plaintiff
+      - Defendant
+      - Cross-Defendant
+  - Represented by counsel?: x[i].lawyers.there_are_any
+    datatype: yesno
+---
+id: add another party
+question: Add party?
+yesno: parties.there_is_another
+---
+id: gather party lawyers
+generic object: ALPeopleList
+question: ${ x[i] }'s Lawyer(s)
+fields: 
+  - An ***Existing*** Lawyer: x[i].lawyers[j]
+    datatype: object
+    choices: lawyer_list
+    disable others: True
+    exclude: x[i].lawyers
+    show if: 
+      code: |
+        len(lawyer_list) > 0
+  - First Name: x[i].lawyers[j].name.first
+  - Last Name: x[i].lawyers[j].name.last
+validation code: |
+  if x[i].lawyers[j] not in lawyer_list:
+    lawyer_list.append(x[i].lawyers[j])
+    lawyer_list.sort(key=lambda y: y.name.last)
+---
+id: add a party lawyer
+question: Does ${ parties[i] } have another lawyer?
+yesno: parties[i].lawyers.there_is_another
+---
+id:  proceeding short reference
+question: What's the short reference for the proceeding/motion/RFO?
+fields:
+  - Short Ref.: proceeding_short_ref
+---
+id: select oldest party
+question: Who is the oldest party?
+fields:
+  - An ***Existing*** Party: oldest_person[i]
+    datatype: object
+    choices: parties
+    disable others: True
+  - First Name: oldest_person[i].name.first
+  - Last Name: oldest_person[i].name.last
+  - Role: oldest_person[i].role
+#validation code: |
+#  if oldest_person not in parties:
+#    parties.appendObject()
+#    parties[-1].name.first = oldest_person.name.first
+#    parties[-1].name.last = oldest_person.name.last
+#    oldest_person = parties[-1]
+---
+id: interim party list
+question: Interim List of All Entered Parties
+subquestion: |
+  Parties: ${ parties }[BR]
+  Oldest Person: ${ oldest_person }
+continue button field: interim_party_list
+---
+id: select opposing parties
+question: Who are the parties opposing this filing?
+fields:
+  - Existing Parties: opposing_parties
+    datatype: object_checkboxes
+    choices: parties + oldest_person
+    none of the above: |
+      None of these
+#  - First Name: opposing_parties.name
+#    show if:
+#      variable: opposing_parties
+#      is: null
+#  - Last Name: opposing_parties.name.last
+#   show if:
+#     variable: opposing_parties
+#     is: null
+#  - Some Variable: opposing_parties.some_variable
+---
+id: pick a subset of opposing parties
+question: Who is the worst of the opposing parties?
+fields:
+  - Pick the worst one: worst_opponent
+    datatype: object_radio
+    choices: opposing_parties
+---
+id: update list of all people
+code: |
+  combined_all_people.extend(parties)
+  combined_all_people.extend(lawyer_list)
+  combined_all_people.extend(oldest_person)
+  combined_all_people.extend(opposing_parties)
+  set_of_all_people.add(combined_all_people)
+  all_unique_people_updated = True
+#  combined_all_people = parties + lawyer_list
+#  all_unique_people.add(combined_all_people)
+---
+id: final screen
+event: final_screen
+question: |
+  ***Party List***
+  
+  % for party in parties:
+  1. ${ party }
+  % endfor
+  
+  ***Lawyer List***
+  
+  % for lawyer in lawyer_list:
+  1. ${ lawyer }
+  % endfor
+  
+  ***Combined Party/Lawyer List***
+  [BR][BR] 
+  % for party in parties:
+  ${ party.role } ${ party }
+    % if party.lawyers.there_are_any:
+    is represented by:
+    [BR]  
+      % for lawyer in party.lawyers:
+      ${ lawyer }
+      [BR]
+      % endfor
+    % endif
+  [BR]
+  % endfor
+  ***Oldest Party***
+  [BR][BR]
+  ${ oldest_person }
+  [BR][BR]
+  ***Opposing Parties***
+  [BR][BR]
+  The parties opposing the ${ proceeding_short_ref } is/are 
+  % for rdf in opposing_parties:
+  ${ rdf.role } ${ rdf }
+  % endfor
+  . And the worst of these is ${ worst_opponent}
+  [BR][BR]
+  ***All Human Beings (Party or not) ['combined_all_people']***
+  [BR][BR]
+  % for xcv in combined_all_people:
+  
+  1. ${ xcv }
+  % endfor
+  
+  Set of all people: 
+  % for djf in set_of_all_people:
+  
+  1. 
+  % if showifdef('djf.role'): 
+  ${ djf.role }
+  % endif 
+  ${ djf }
+  % endfor

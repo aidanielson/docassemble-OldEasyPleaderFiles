@@ -1,0 +1,134 @@
+mandatory: True
+code: |
+  intro_screen
+  doc.title
+  parties.review
+  headings_1.review
+  headings_2.review
+  doc.date
+  final_screen
+---
+objects:
+  - doc: DAObject
+  - headings_1: DAList.using(there_are_any=True, there_is_another=False)
+  - headings_2: DAList.using(there_are_any=True, there_is_another=False)
+  - parties: DAList.using(object_type=Individual, there_are_any=True, there_is_another=False, complete_attribute='complete')
+---
+question: Welcome to EasyPleader's Agreement Builder!
+field: intro_screen
+---
+question: Document Title & Short Reference
+fields:
+  - What is the title of this document?: doc.title
+  - What is the shorthand reference?: doc.short_title
+---
+question: Parties
+fields:
+  - Full Legal Name: parties[i].name.first
+  - Shorthand Ref.: parties[i].short_ref
+---
+code: |
+  parties[i].name.first
+  parties[i].short_ref
+  parties[i].complete = True
+---
+question: Party Review
+subquestion: |
+  So far, you've entered ${ parties.number_as_word() } parties:
+    
+  ${ parties.table }
+    
+  ${ parties.add_action() }
+continue button field: parties.review
+---
+table: parties.table
+rows: parties
+columns:
+  - Full Name: |
+      row_item.name.first
+  - Short Ref.: |
+      row_item.short_ref   
+allow reordering: True
+---
+question: ${ capitalize(ordinal(i)) } Level 1 Heading (Preliminary Provisions)
+fields:
+  - Choose Level 1 Headings: headings_1[i]
+    input type: radio
+    choices:
+      - Preamble
+      - Preliminary Statement
+      - Definitions
+      - Recitals
+---
+question: Heading Level 1 Review
+subquestion: |
+  So far, you've entered ${ headings_1.number_as_word() } Level 1 headings:
+    
+  ${ headings_1.table }
+    
+  ${ headings_1.add_action() }
+continue button field: headings_1.review
+---
+table: headings_1.table
+rows: headings_1
+columns:
+  - Number: |
+      row_index
+  - Heading: |
+      row_item
+allow reordering: True
+---
+question: ${ capitalize(ordinal(i)) } Level 2 Heading (Substantive Provisions)
+fields:
+  - Choose Level 2 Headings: headings_2[i]
+  - note: |  
+      Examples: *consideration...release...dismissal*
+---
+question: Heading Level 2 Review
+subquestion: |
+  So far, you've entered ${ headings_2.number_as_word() } Level 2 headings:
+    
+  ${ headings_2.table }
+    
+  ${ headings_2.add_action() }
+continue button field: headings_2.review
+---
+table: headings_2.table
+rows: headings_2
+columns:
+  - Number: |
+      row_index
+  - Heading: |
+      row_item
+allow reordering: True
+---
+question: |
+  Date
+fields:
+  - What date goes in the signature block?: doc.date
+    datatype: date
+---
+question: |
+  Your doc is below.
+subquestion: |
+  Do you approve?
+yesno: user_approves
+attachment:
+  name: Pleading
+  filename: letter
+  docx template file: 2023-05-09_agmt_tmpl.docx
+  valid formats:
+    - pdf
+    - docx
+include attachment notice: False
+---
+event: final_screen
+question: |
+  % if user_approves:
+  Hope you liked your ${doc.type}!
+  % endif
+  We're all through here...
+action buttons:
+  - label: Try again
+    action: new_version
+    color: primary

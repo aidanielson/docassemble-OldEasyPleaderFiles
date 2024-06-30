@@ -1,0 +1,35 @@
+features:
+  centered: False
+---
+objects:
+  - fruits: DAList.using(object_type=Thing, there_are_any=True)
+---
+question: |
+  Tell me about the fruits
+right: |
+  [TARGET fruit_table]
+fields:
+  - Fruit: fruits[i].name.text
+  - Seeds: fruits[i].seeds
+check in: update_fruit_table
+list collect: True
+---
+template: update_fruit_table
+content: |
+  Fruit | Seeds
+  ------|------
+  % for indexno in range(99):
+  <%
+    var_fruit = 'fruits[' + str(indexno) + '].name.text'
+    var_seeds = 'fruits[' + str(indexno) + '].seeds'
+  %>\
+  % if var_fruit in action_arguments():
+  ${ action_argument(var_fruit) } | ${ action_argument(var_seeds) }
+  % endif
+  % endfor
+target: fruit_table
+---
+mandatory: True
+question: Fruits
+subquestion: |
+  ${ fruits }

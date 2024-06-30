@@ -1,0 +1,48 @@
+objects:
+  - method: |
+      DADict.using(object_type=Organization,
+                   auto_gather=False,
+                   complete_attribute='complete')
+---
+code: |
+  method.new(types_of_companies.true_values())
+  method.gathered = True
+---
+code: |
+  method[i].name.text
+  method[i].place
+  method[i].complete = True       
+---
+question: |
+  Which of the following discovery methods did you propound?
+fields:
+  - no label: types_of_companies
+    datatype: checkboxes
+    none of the above: False
+    choices:
+      - FROGS
+      - SPROGS
+      - RFA
+      - RPD
+---
+question: |
+  What is the name of ${ i }?
+fields:
+  - Company name: method[i].name.text
+---
+question: |
+  In what city does ${ i } do business?
+fields:
+  - City: method[i].place
+---
+mandatory: True
+question: All done
+subquestion: |
+ 
+  % for y in method.keys():
+  You served ${ y }
+  called ${ method[y] },
+  which has a principal place of business in
+  ${ method[y].place }.
+ 
+  % endfor

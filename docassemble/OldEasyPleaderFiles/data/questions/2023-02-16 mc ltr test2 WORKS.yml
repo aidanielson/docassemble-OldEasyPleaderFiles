@@ -1,0 +1,188 @@
+features:
+  progress bar: False
+  centered: False
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+---
+objects:
+  - dataloader: DataLoader.using(filename="pets.xlsx")
+  - pet: PetsDict.using(object_type=DAObject, there_are_any=True, complete_attribute='complete')
+  - al_user_bundle: ALDocumentBundle.using(elements=[pet_attachment], filename="pets.docx", title="All forms to download for your records", enabled=True)
+  - pet_attachment: ALDocument.using(enabled=True, title="Pets", filename="Pets")
+  - doc: DAObject
+  - disco: DAObject
+---
+modules:
+  - .load_data
+---
+mandatory: True
+id: interview order
+code: |
+  disco.type
+  disco.propounder
+  pet.gather()
+  doc.sign_yes
+  download
+---
+code: |
+  pet[i].species
+  pet[i].breed
+  pet[i].label_ids
+  pet[i].selected_labels_df
+  pet[i].complete = True
+---
+question: |
+  What type of discovery are you enforcing?
+fields:
+  - Choose specific discovery type: disco.type
+    input type: radio
+    choices:
+      - General Form Interrogatories
+      - Special Interrogatories
+      - Requests for Admission
+      - Requests for Production
+      - Supplemental Discovery
+  - What Set Number?: disco.set_no_EPchoices
+    input type: radio
+    choices: 
+      - One
+      - Two
+      - Three
+      - Four
+      - Choose Other
+  - Enter the set number: disco.set_no_custom
+    show if: 
+      variable: disco.set_no_EPchoices
+      is: "Choose Other"
+---
+code: |
+  disco.set_no = disco.set_no_EPchoices if not disco.set_no_custom else disco.set_no_custom
+---
+question: |
+  Propounder, Responder & Timeline
+fields:
+  - Select propounding party(ies): disco.propounder_list
+    datatype: checkboxes
+    choices:
+      - Michael H. Anderson
+      - Ralph G. Wiggum
+      - Thelonius R. Monk
+    none of the above: False
+  - Select responding party(ies): disco.responder_list
+    datatype: checkboxes
+    choices:
+      - Alexis Waterford
+      - Brent U. Lafferty
+      - Jeremy I. Gilmore
+    none of the above: False
+  - How many interrogatories were propounded: number_propounded
+    datatype: integer
+  - What day were the interrogatories served?: propound_svc_date
+    datatype: date
+  - What kind of responses were served?: response_type
+    input type: radio
+    choices: 
+      - objections only
+      - a mix of objections and substantive responses
+  - What day were the responses served?: response_svc_date
+    datatype: date
+  - Were the responses untimely?: responses_untimely_yes
+    datatype: yesnowide
+---
+code: |
+  disco.propounder = disco.propounder_list.true_values()
+  disco.responder = disco.responder_list.true_values()
+---
+id: add another pet
+question: |
+  Add another noncompliant response?
+yesno: pet.there_is_another 
+---
+id: pets names
+question: |
+  Noncompliant Interrogatory Responses
+fields: 
+  - Interrogatory No.: pet.new_item_name
+---
+id: species
+question: |
+  What category of responses are we dealing with?
+fields: 
+  - no label: pet[i].species
+    code: |
+      unique_values(dataloader, search_column="Species")
+---
+id: breed
+question: |
+  What category do the deficiencies fall within?
+fields: 
+  - no label: pet[i].breed
+    code: |
+      unique_values(dataloader, search_column="Breed", filter_column="Species", filter_value=pet[i].species)
+---
+id: characteristics
+question: |
+  Select all applicable deficiencies of the response to Interrogatory No. ${ i }
+subquestion: |
+  Pick among pre-populated responses and custom responses.
+fields:
+  - no label: pet[i].label_ids
+    datatype: checkboxes
+    code: |
+      rows_with_label(dataloader, display_column="Label", filter_column="Species", filter_value=pet[i].species, filter_column2="Breed", filter_value2=pet[i].breed)
+    none of the above: False
+  - Insert custom critique?: pet[i].choose_custom_critique
+    datatype: yesnowide
+  - How is the response noncompliant?: pet[i].custom_critique
+    input type: area
+    show if: pet[i].choose_custom_critique
+  - note: Do you want to custom-enter a specific request for further response?
+  - Specific request for further response: pet[i].wants_specific_request_for_further_response_yes
+    datatype: yesnowide
+  - Specific request for further response: pet[i].specific_request_for_further_response
+    input type: area
+    note: |
+      e.g., *Please withdraw all objections and serve further responses which specifically identify all witnesses to the incident who you are aware of as of the time you execute your verification to your further responses.*
+    show if: pet[i].wants_specific_request_for_further_response_yes
+---
+code: |
+  pet[i].selected_labels_df = dataloader.load_rows(int(val)
+    for val in pet[i].label_ids.true_values())
+---
+question: |
+  Document Options
+fields:
+  - What do you want this letter dated?: doc.sign_date
+    input type: radio
+    choices:
+      - Today
+      - Choose Different Date
+      - Leave Blank For Now
+  - Different Date: doc.sign_date_alternate
+    datatype: date
+    show if: 
+      variable: doc.sign_date
+      is: 'Choose Different Date'
+  - Sign the document?: doc.sign_yes
+    datatype: yesnowide
+---
+attachments:
+  - name: Pets
+    filename: pets.docx     
+    variable name: pet_attachment[i]        
+    skip undefined: True
+    docx template file: pets.docx
+---
+id: download
+event: download
+question: |
+  Your meet-and-confer letter has been generated.
+subquestion: |
+  Download the letter below.
+  
+  ${ al_user_bundle.download_list_html(format="docx") }
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+progress: 100

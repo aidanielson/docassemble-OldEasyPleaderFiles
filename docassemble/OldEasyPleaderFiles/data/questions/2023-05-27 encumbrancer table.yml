@@ -1,0 +1,182 @@
+mandatory: True
+code: |
+  intro_screen
+  rp.address.address
+  liens.gather()
+  lien_review
+  final_screen
+---
+question: Lien Table
+field: intro_screen
+---
+objects: 
+  - rp: Person
+  - rp.owners: Person
+  - rp.vesting_instrument: DAObject
+  - liens: DAList.using(object_type=DAObject, there_are_any=True, there_is_another=False, complete_attribute='present_balance')
+  - liens[i].lien_beneficiary: Person
+---
+question: |
+  The Property
+fields:
+  - Site Address: rp.address.address
+    address autocomplete: True
+  - Site County: rp.address.county
+  - Legal Description: rp.legal_description
+    input type: area
+    rows: 6
+  - Type of Property: rp.type
+    input type: combobox
+    choices:
+      - single-family residence
+      - multi-family residence
+      - commercial property
+      - residential duplex
+      - vacant land
+  - Number of Units: rp.number_of_units
+    datatype: integer
+    js show if:
+      val('rp.type') === 'multi-family residence' || val('rp.type') === 'commercial property'
+  - Acreage: rp.acreage
+    datatype: number
+  - Stories (above-ground): rp.levels_above_ground
+  - Basement: rp.basement
+    input type: radio
+    choices:
+      - Finished
+      - Partially Finished
+      - Unfinished
+  - Parking: rp.parking
+    input type: combobox
+    choices:
+      - two-car garage
+      - one-car garage
+      - carport
+      - driveway only
+      - no driveway, only on-street parking
+  - Original Build Year: rp.original_build_year
+    datatype: number
+    minlength: 4
+    maxlength: 4
+  - Estimated Sale Value: rp.fmv
+    datatype: currency
+---
+question: Ownership
+fields:
+  - Record Owner: rp.owners.name.text
+  - Record Owner Address: rp.owners.address.address
+    address autocomplete: True
+  - Vesting Instrument Type: rp.vesting_instrument.title
+    choices:
+      - Grant Deed
+      - Transfer-on-Death Deed
+      - Affidavit of Death of Joint Tenant
+      - Quitclaim Deed
+      - Trust Transfer Deed
+  - Book/Page No.: rp.vesting_instrument.book_page_num
+  - Date Recorded: rp.vesting_instrument.recording_date
+    datatype: date
+---
+question: Tenants/Occupants
+fields:
+  - Is the property occupied?: rp.occupied
+  - By Who?: rp.occupants
+    input type: combobox
+    choices:
+      - Owner/Owner's Family
+      - Tenants
+      - Squatters/Trespassers
+  - How many people live there?: rp.number_of_occupants
+    datatype: integer
+---
+question: Liens & Encumbrances
+fields:
+  - Instrument Type/Title: liens[i].type
+    input type: combobox
+    choices:
+      - Short Form Deed of Trust
+      - Long Form Deed of Trust
+      - Receiver's Certificate
+      - Abstract of Judgment
+      - Mechanic's Lien
+      - Notice of State Tax Lien
+      - Notice of Federal Tax Lien
+  - Book/Page No.: liens[i].book_page_num
+  - Date Recorded: liens[i].recording_date
+  - NOT monetary: liens[i].is_nonmonetary
+    datatype: yesno
+  - Type of Nonmonetary Lien: liens[i].nonmonetary_type
+    input type: combobox
+    choices:
+      - Easement
+      - CC&Rs
+      - Taxes & Assessments
+    show if: liens[i].is_nonmonetary
+  - Principal Secured: liens[i].secured_principal_amount
+    datatype: currency
+    hide if: liens[i].is_nonmonetary
+  - Term (years): liens[i].term
+    datatype: number
+  - Interest Rate: liens[i].interest_rate
+    datatype: number
+  - Beneficiary: liens[i].lien_beneficiary
+  - Record Address: liens[i].address
+  - Notes (optional): liens[i].notes
+    input type: area
+    rows: 4
+    required: False
+---
+code: |
+  liens[i].interval = date_difference(starting=liens[i].recording_date).days
+  liens[i].total_monthly_payments_to_date = round(liens[i].interval / 30.4)
+  
+  liens[i].monthly_payment = liens[i].secured_principal_amount * (liens[i].interest_rate / 100 / 12) / (1 - (1 + liens[i].interest_rate / 100 / 12) ** -(liens[i].term * 12))
+  
+  liens[i].present_balance = liens[i].secured_principal_amount * (1 + liens[i].interest_rate / 100 / 12) ** liens[i].total_monthly_payments_to_date - liens[i].monthly_payment * ((1 + liens[i].interest_rate / 100 / 12) ** liens[i].total_monthly_payments_to_date - 1) / (liens[i].interest_rate / 100 / 12)
+reconsider: True
+---
+id: review liens
+question: Review Property Liens
+subquestion: |
+    [BOLDCENTER]**Property Liens**
+    ${ liens.table }
+    ${ liens.add_action(label='Add Lien', color='warning') }
+    The total principal amount of secured liens is: ${ liens_principal_total }
+continue button field: lien_review
+---
+table: liens.table
+rows: liens
+columns:
+  - No.: |
+      row_index + 1
+  - Book/Page No.: |
+      row_item.book_page_num
+  - Date Recorded: |
+      row_item.recording_date
+  - Principal: |
+      currency(row_item.secured_principal_amount) if row_item.secured_principal_amount else ''
+  - Present Balance: |
+      currency(row_item.present_balance) if row_item.present_balance else ''
+  - Interval: |
+      row_item.interval if row_item.interval else ''
+  - Total Monthly Payments: |
+      row_item.total_monthly_payments_to_date if row_item.total_monthly_payments_to_date else ''
+  - Monthly Payment: |
+      row_item.monthly_payment if row_item.monthly_payment else ''
+  - Beneficiary: |
+      row_item.lien_beneficiary
+edit:
+  - lien_beneficiary
+allow reordering: True
+---
+code: |
+  liens_principal_total = sum(lien.secured_principal_amount for lien in liens)
+reconsider: True
+---
+event: final_screen
+question: |
+  Well, we're all through here...
+subquestion: |
+  ${ map_of(rp) }
+buttons:
+  - Restart: restart

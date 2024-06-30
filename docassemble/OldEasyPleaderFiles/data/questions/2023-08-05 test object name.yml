@@ -1,0 +1,22 @@
+objects:
+  people: DAList.using(object_type=Person, there_are_any=True)
+---
+question: xxxx
+fields:
+  - Person: people[i].name.text
+---
+question: is there another?
+yesno: people.there_is_another
+---
+mandatory: True
+question: Results
+subquestion: |
+  People are: ${ people }[BR]
+  % for person in people:
+  ${ person.object_name() }[BR]
+  ${ person.instanceName }[BR]
+  ${ people.object_name }[BR]
+  ${ people.instanceName }[BR]
+  ${ person.object_name }[BR]
+  ${ person.intrinsicName }
+  % endfor

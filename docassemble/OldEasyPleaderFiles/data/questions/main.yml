@@ -1,0 +1,1155 @@
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ILAO:ilao-interview-framework.yml
+  - limited_scope_questions.yml
+  - screeners.yml
+  - aiw.yml
+  - combined_application_questions.yml
+  - review_screen.yml
+---
+default screen parts:
+  under: |
+  footer: |
+    [:share-alt-square: Share](${ url_ask([{'undefine': ['al_sharing_type','al_how_share_link']}, 'al_share_form_screen', {'recompute': ['al_did_share_form']}, 'al_share_results']) })
+    [:info-circle: About](${ url_action('about_this_interview') })
+    [:comment-dots: Feedback](${ feedback_link(user_info(), i=feedback_form, github_repo=github_repo_name, github_user=github_user, package_version=package_version_number) } ){:target="_blank"}
+  right: |
+---
+code: |
+  ilao_easy_form_title = "TPS/EAD application"
+  ilao_easy_form_url = "None - this is an advocate only Easy Form"
+---
+metadata:
+  title: >-
+    TPS/EAD application
+  short title: >-
+    TPS/EAD application
+  description: |-
+    This interview helps someone in Illinois apply to the DHS for an Employment Authorization Document (EAD) or Temporary Protected Status (TPS).
+  tags:
+    - "IM-00-00-00-00"
+  authors:
+    - Quinten Steenhuis
+    - Anthony Danielson
+    - Matt Newsted
+  allowed_courts: []
+  typical_role: "na"
+  al_weaver_version: "playground"
+  generated_on: "2024-02-04"
+---
+features:
+  javascript: actions.js
+---
+code: |
+  # This controls the default country and list of states in address field questions
+  AL_DEFAULT_COUNTRY = "US"
+---
+code: |
+  # This controls the default state in address field questions
+  AL_DEFAULT_STATE = "IL"
+---
+code: |
+  github_repo_name =  'docassemble-USCISApplications'
+  github_user = 'aidanielson'
+---
+code: |
+  interview_short_title = "TPS/EAD application"
+  ilao_easy_form_title = "TPS/EAD application"
+---
+code: |
+  al_form_type = "other_form"
+---
+features:
+  progress bar: True
+  progress bar multiplier: 0.01
+---
+code: |
+  nav.set_sections(default_sections)
+  set_initial_sections = True
+---
+#################### Interview order #####################
+id: interview_order_main
+mandatory: True
+code: |
+  set_initial_sections
+  intro_main
+  if interpreter_present:
+    interpreter.name.first
+  preparer.name.first
+  preparer_is_attorney
+  users.gather()
+  review_initial_user_list
+  nav.set_section("section_retainer")
+  agrees_to_retainer
+  set_progress(10)
+  for user in users:
+    if user.age_in_years() > 13:
+      user.signature
+  nav.set_section("section_screener")
+  application_kind
+  signpost_screener
+  if len(users) > 1:
+    update_sections
+  for idx, user in enumerate(users):
+    nav.set_section(f"users_{idx}_signpost_screen")
+    if application_kind == "ead_only":
+      user.ead_screening_questions
+    else:
+      user.tps_screening_questions
+    # user.applicant_intake_worksheet_questions
+    set_progress((80/len(users.complete_elements())) * (idx + 1) + 10 )
+    # Trigger the more detailed questions on a per-user basis
+  if application_kind == "ead_only":
+    review_ead_screening_questions
+  else:
+    review_tps_screening_questions
+
+  # End early if all users are screened out
+  if supervisor_overall_approval_status == "screened_out":
+    # still need to start the background process
+    generate_downloads_task
+    if generate_downloads_task.ready():
+      download_completed_ea_application
+    else:
+      waiting_screen
+
+
+  for idx,user in enumerate(users):
+    nav.set_section(f"users_{idx}_signpost_app")
+    if user.application_is_approved:
+      user.signpost
+      if user.age_in_years() < 14:
+        user.parent
+      user.user_reads_english
+      user.sex
+      user.alternate_birthdates.gather()
+      user.address.address
+      user.mailing_address.address
+      user.countries_of_residence.gather()
+      if user.countries_of_residence.there_are_any:
+        user.countries_of_residence_review
+      user.has_passport
+      user.travel_documents.gather()
+      user.i94_arrival_number
+      user.has_been_in_immigration_proceedings
+      user.father_first_name
+      user.previously_filed_I765
+      if application_kind == "ead_and_tps":
+        if user.traveled_through_other_countries:
+          user.date_entered_first_country_month
+        user.have_you_ever_questions
+      user.countries_of_citizenship
+      user.signpost
+      user.check_work
+
+  if application_kind == "ead_and_tps" and any([any([user.q8a, user.q8b, user.q8c, user.q9a, user.q9b, user.q9c, user.q10a, user.q10b, user.q10c, user.q11, user.q12a, user.q12b, user.q12c, user.q12d, user.q12e, user.q13a, user.q13b, user.q13c, user.q13d, user.q14a, user.q14b, user.q14c, user.q14d, user.q15a, user.q15b, user.q15c, user.q16, user.q17, user.q18a, user.q18b, user.q18c, user.q19, user.q20a, user.q20b, user.q20c, user.q20d, user.q20e, user.q21, user.q22, user.q23a, user.q23b, user.q23c, user.q24, user.q25, user.q26, user.q27, user.q28, user.q29, user.q30a, user.q30b, user.q30c, user.q30d, user.q30e, user.q31a, user.q31b, user.q32, user.q33, user.q34, user.q35, user.q36, user.q37a, user.q37b, user.q38a, user.q38b, user.q38c, user.q38d, user.q38e, user.q39a, user.q39b, user.q40, user.q41]) for user in users if user.application_is_approved]):
+    for user in users:
+      if user.application_is_approved:
+        if any([user.q8a, user.q8b, user.q8c, user.q9a, user.q9b, user.q9c, user.q10a, user.q10b, user.q10c, user.q11, user.q12a, user.q12b, user.q12c, user.q12d, user.q12e, user.q13a, user.q13b, user.q13c, user.q13d, user.q14a, user.q14b, user.q14c, user.q14d, user.q15a, user.q15b, user.q15c, user.q16, user.q17, user.q18a, user.q18b, user.q18c, user.q19, user.q20a, user.q20b, user.q20c, user.q20d, user.q20e, user.q21, user.q22, user.q23a, user.q23b, user.q23c, user.q24, user.q25, user.q26, user.q27, user.q28, user.q29, user.q30a, user.q30b, user.q30c, user.q30d, user.q30e, user.q31a, user.q31b, user.q32, user.q33, user.q34, user.q35, user.q36, user.q37a, user.q37b, user.q38a, user.q38b, user.q38c, user.q38d, user.q38e, user.q39a, user.q39b, user.q40, user.q41]):
+          user.explain_add_explanations
+
+  nav.set_section("section_download")
+  store_variables_snapshot(
+      persistent=True,
+      data={
+          "application_kind": application_kind,
+          "zip": showifdef("users[0].address.zip"),
+          "reached_interview_end": True,
+      },
+  )
+  children_for_retainer
+  generate_downloads_task
+  if generate_downloads_task.ready():
+    download_completed_ea_application
+  else:
+    waiting_screen
+---
+code: |
+  users[i].name.first
+  users[i].aliases.gather()
+  users[i].names_only = True
+---
+code: |
+  children_for_retainer = [child for child in users if child.age_in_years() < 14]
+---
+variable name: default_sections
+data:
+  - section_family: Applicant names
+  - section_retainer: Limited Retainer
+  - section_screener: Verify eligibility
+  - section_application: Application
+  #- review_USCIS_Applications: Review 
+  - section_download: Download and print
+---
+code: |
+  if len(users) > 1:
+    sections = default_sections[:-3]
+    for idx, user in enumerate(users):
+      sections.append({f"users_{idx}_signpost_screen": f"Eligibility for {user}"})
+    for idx, user in enumerate(users):
+      sections.append({f"users_{idx}_signpost_app": f"Application for {user}"})
+    sections.extend(default_sections[-1:]
+    )
+    nav.set_sections(sections)
+  update_sections = True
+---
+id: signpost_screener
+question: |
+  Legal screener
+subquestion: |
+  Before you start the application, we will check that ${ users }
+  % if len(users) > 1:
+  are all eligible to apply.
+  % else:
+  is eligible to apply.
+  % endif  
+continue button field: signpost_screener
+---
+id: interpreter_present
+question: |
+  Is an interpreter present?
+fields:
+  - Is an interpreter present?: interpreter_present
+    datatype: yesnoradio
+  - What language will the interpreter speak?: interpreter.language
+    show if: interpreter_present
+    datatype: combobox
+    choices:
+      - Spanish
+      - Arabic
+      - Chinese
+      - French
+      - Haitian Creole
+      - Korean
+      - Polish
+      - Portuguese
+      - Russian
+      - Tagalog
+      - Vietnamese
+  - note: |
+      <h2 class="h4">Interpreter's Name</h2>
+    show if: interpreter_present    
+  - code: |
+      interpreter.name_fields(person_or_business="person", show_if="interpreter_present", show_suffix=False)
+---
+id: welcome
+question: |
+  Let's get started
+subquestion: |
+
+  This interview will help you complete employment authorization
+  paperwork for a family group.
+
+  <h2 class="h4">Overview</h2>
+
+  You will work through the following sections:
+
+  1. Gather names
+  2. Complete the limited scope retainer
+  3. Verify eligibility
+  4. Complete the application, for the I-765 or the I-821 or both, for each applicant
+  5. Download and print your work. You will get a separate
+      set of documents for each person in the family group.
+continue button field: intro_main
+---
+id: signpost for main application questions
+continue button field: users[i].signpost
+question: |
+  The next questions are about ${ bold(users[i]) }
+subquestion: |
+  We will cover 
+  % if application_kind == "ead_only":
+  EAD application questions.
+  % else:
+  TPS and EAD application questions.
+  % endif
+
+  % if i + 1 == len(users):
+  This set of questions is for the **last** member of this family group.
+
+  When you're done with the questions for ${ bold(users[i]) }, you'll be able to review your answers and download the completed application.
+  % else:
+  This set of questions is for the ${ ordinal(i) } family member of ${ len(users) }.
+
+  When you're done with the questions for ${ bold(users[i]) }, you'll be able to move on to the next person in the family group.
+  % endif
+---
+objects:
+  - signed_in_user: ALIndividual
+---
+code: |
+  if user_logged_in():
+    signed_in_user.name.first = user_info().first_name
+    signed_in_user.name.last = user_info().last_name
+    signed_in_user.email = user_info().email
+---
+sets:
+  - preparer.name.first
+  - preparer_is_attorney
+id: preparer name interpreter present
+question: |
+  Who is the volunteer/preparer assisting the applicant(s) with this application?
+fields:
+  - Someone already named: preparer
+    datatype: object_radio
+    none of the above: Someone else
+    disable others:
+      - preparer.name.first
+      - preparer.name.middle
+      - preparer.name.last
+    choices: |
+      [signed_in_user, interpreter] if user_logged_in() and interpreter_present else [signed_in_user] if user_logged_in() else [interpreter] if interpreter_present else []
+  - code: |
+      preparer.name_fields(person_or_business="person", show_suffix=False,)
+  - Is the preparer an attorney or accredited representative?: preparer_is_attorney
+    datatype: yesnoradio
+---
+id: people
+question: |
+  How many people are applying for work authorization at this station?
+subquestion: |
+  Get the names of all people who have a **family relationship** and are here
+  to get work authorization together today. For example: siblings, aunts, 
+  uncles, parents, cousins, children, and spouses or intimate partners.
+
+  Please complete a separate interview for each person who is not in 
+  a family relationship with the others.
+
+fields:
+  - How many?: users.target_number
+    datatype: integer
+    min: 1
+  - note: |
+      <h2 class="h4">Name of the first family member</h2>
+
+      Start with the head of household, one of the parents, or the oldest person in the group.
+      The answers you give for this person will be used as the default for many answers.
+  - First name: users[0].name.first
+  - Middle name: users[0].name.middle
+    required: False
+  - Last name: users[0].name.last
+  - Have you ever been known by a different name?: users[0].aliases.there_are_any
+    datatype: yesnoradio
+  - note: |
+      OK, we'll get the other names you used on the next screen.
+    show if: users[0].aliases.there_are_any
+  - City or town of birth: users[0].city_of_birth
+  - State/Province of birth: users[0].state_of_birth
+  - Country of birth: users[0].country_of_birth
+    input type: dropdown
+    code: |
+      uscis_countries_list()
+  - Birthdate: users[0].birthdate
+    datatype: BirthDate
+    alMax: ${ today().format("yyyy-MM-dd") }
+  - A Number (do not include A-): users[0].a_number
+    required: False
+    validate: |
+      lambda y: (not y) or re.match(r'^\d{8,9}$', str(y)) or validation_error("Enter a valid 8 or 9 digit A number")
+  - What was the last country you were a **resident** of before coming to the United States?: users[0].last_country_of_residence
+    input type: dropdown
+    code: |
+      uscis_countries_list()      
+  - note: |
+      <h2 class="h4">We'll get the name of the remaining applicants on the next screen</h2>
+    js show if: |
+      val("users.target_number") > 1
+---
+sets:
+  - users[i].name.first
+id: add another applicant
+question: |
+  What is the name of the ${ ordinal(i) } applicant?
+subquestion: |
+  % if len(users.complete_elements()) == 1:
+  You can give the names in any order, but you may want
+  to start with the second oldest applicant.
+  % endif
+
+  So far you have named ${ bold(users.complete_elements()) }.
+fields:
+  - code: |
+      users[i].name_fields(person_or_business="person", show_suffix=False)
+  - Have you ever been known by a different name?: users[i].aliases.there_are_any
+    datatype: yesnoradio
+  - note: |
+      OK, we'll get the other names you used on the next screen.
+    show if: users[i].aliases.there_are_any
+  - Country of Birth: users[i].country_of_birth
+    code: |
+      uscis_countries_list()
+    default: |
+      ${ showifdef("users[0].country_of_birth") }      
+  - City or town of birth: users[i].city_of_birth
+  - State/Province of birth: users[i].state_of_birth  
+  - Birthdate: users[i].birthdate
+    datatype: BirthDate
+    alMax: ${ today().format("yyyy-MM-dd") }
+  - A Number (do not include A-): users[i].a_number
+    required: False
+    validate: |
+      lambda y: (not y) or re.match(r'^\d{8,9}$', str(y)) or validation_error("Enter a valid 8 or 9 digit A number")
+  - What was the last country you were a **resident** of before coming to the United States?: users[i].last_country_of_residence
+    input type: dropdown
+    code: |
+      uscis_countries_list()      
+---
+id: Has user i been known by a different name before?
+question: |
+  Has ${ users[i] } ever been known by a different name or alias?  
+fields:
+  - no label: users[0].aliases.there_are_any
+    datatype: yesnoradio
+---
+generic object: ALIndividual
+id: x i name
+question: |
+  What is the ${ ordinal(i) } other name that ${ x } has been known by?
+fields:
+  - First name: x.aliases[i].first
+  - Middle name: x.aliases[i].middle
+    required: False
+  - Last name: x.aliases[i].last
+---
+generic object: ALIndividual
+id: has x been known by a different name again
+question: |
+  Has ${ x } been known by any other names?
+subquestion: |
+  So far you entered ${comma_and_list(x.aliases)}.
+fields:
+  - no label: x.aliases.there_is_another
+    datatype: yesnoradio  
+---
+id: name i
+question: |
+  What was ${ users[0].name }'s ${ ordinal(i) } alias or other name?
+fields:
+  - First name: users[0].aliases[i].first
+  - Middle name: users[0].aliases[i].middle
+    required: False
+  - Last name: users[0].aliases[i].last
+---
+id: have you been known by a different name again
+question: |
+  Has ${ users[0].name } been known by any other names?
+subquestion: |
+  So far you entered ${comma_and_list(users[0].aliases)}.
+fields:
+  - no label: users[0].aliases.there_is_another
+    datatype: yesnoradio
+---
+table: users.initial_review_table
+rows: users
+columns:
+  - Name: |
+      row_item.name.full(middle="full")
+  - Country of birth: |
+      row_item.country_of_birth
+  - City of birth: |
+      row_item.city_of_birth
+  - State/Province of birth: |
+      row_item.state_of_birth
+  - Country of last residence: |
+      row_item.last_country_of_residence
+  - Date of birth: |
+      row_item.birthdate.format("MM/dd/yyyy")
+  - Age: |
+      row_item.age_in_years()
+  - A-Number: |
+      row_item.a_number
+edit:
+  - name.first
+confirm: True
+---
+id: review_initial_user_list
+question: |
+  OK, we'll make documents for the following people
+subquestion: |
+  ${ users.initial_review_table }
+
+  ${ users.add_action() }
+
+  On the next screens, we'll review the limited scope retainer.
+continue button field: review_initial_user_list
+---
+id: signatures for users i
+question: |
+  ${ users[i].name.first }, please sign here to agree / firma aqui para aceptar
+signature: users[i].signature
+under: |
+  ${ users[i] }
+required: False
+---
+id: kind of interview
+question: |
+  What kind of application will this family complete?
+field: application_kind
+buttons:
+  - TPS and EAD: ead_and_tps
+    image: shield-halved
+  - EAD via parole only: ead_only
+    image: briefcase
+---
+id: explain_add_explanations
+question: |
+  ${ users[i] } answered "yes" to one of the TPS screening questions
+subquestion: |
+  Call a supervisor to help draft a response to each "yes" answer
+  that explains it to USCIS.
+
+  ${ len([any([user.q8a, user.q8b, user.q8c, user.q9a, user.q9b, user.q9c, user.q10a, user.q10b, user.q10c, user.q11, user.q12a, user.q12b, user.q12c, user.q12d, user.q12e, user.q13a, user.q13b, user.q13c, user.q13d, user.q14a, user.q14b, user.q14c, user.q14d, user.q15a, user.q15b, user.q15c, user.q16, user.q17, user.q18a, user.q18b, user.q18c, user.q19, user.q20a, user.q20b, user.q20c, user.q20d, user.q20e, user.q21, user.q22, user.q23a, user.q23b, user.q23c, user.q24, user.q25, user.q26, user.q27, user.q28, user.q29, user.q30a, user.q30b, user.q30c, user.q30d, user.q30e, user.q31a, user.q31b, user.q32, user.q33, user.q34, user.q35, user.q36, user.q37a, user.q37b, user.q38a, user.q38b, user.q38c, user.q38d, user.q38e, user.q39a, user.q39b, user.q40, user.q41]) for user in users if user.application_is_approved]) }
+  applicant(s) have "yes" answers to the screeners on the 821.
+# TODO: add space to actually add the explanations here
+fields:
+  - Explain your answer to 8a:  users[i].q8a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q8a
+  - Explain your answer to 8b:  users[i].q8b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q8b
+  - Explain your answer to 8c:  users[i].q8c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q8c
+  - Explain your answer to 9a:  users[i].q9a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q9a
+  - Explain your answer to 9b:  users[i].q9b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q9b
+  - Explain your answer to 9c:  users[i].q9c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q9c
+  - Explain your answer to 10a: users[i].q10a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q10a
+  - Explain your answer to 10b: users[i].q10b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q10b
+  - Explain your answer to 10c: users[i].q10c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q10c
+  - Explain your answer to 11:  users[i].q11_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q11
+  - Explain your answer to 12a: users[i].q12a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q12a
+  - Explain your answer to 12b: users[i].q12b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q12b
+  - Explain your answer to 12c: users[i].q12c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q12c
+  - Explain your answer to 12d: users[i].q12d_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q12d
+  - Explain your answer to 12e: users[i].q12e_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q12e
+  - Explain your answer to 13a: users[i].q13a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q13a
+  - Explain your answer to 13b: users[i].q13b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q13b
+  - Explain your answer to 13c: users[i].q13c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q13c
+  - Explain your answer to 13d: users[i].q13d_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q13d
+  - Explain your answer to 14a: users[i].q14a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q14a
+  - Explain your answer to 14b: users[i].q14b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q14b
+  - Explain your answer to 14c: users[i].q14c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q14c
+  - Explain your answer to 14d: users[i].q14d_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q14d
+  - Explain your answer to 15a: users[i].q15a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q15a
+  - Explain your answer to 15b: users[i].q15b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q15b
+  - Explain your answer to 15c: users[i].q15c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q15c
+  - Explain your answer to 16:  users[i].q16_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q16
+  - Explain your answer to 17:  users[i].q17_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q17
+  - Explain your answer to 18a: users[i].q18a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q18a
+  - Explain your answer to 18b: users[i].q18b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q18b
+  - Explain your answer to 18c: users[i].q18c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q18c
+  - Explain your answer to 19:  users[i].q19_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q19
+  - Explain your answer to 20a: users[i].q20a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q20a
+  - Explain your answer to 20b: users[i].q20b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q20b
+  - Explain your answer to 20c: users[i].q20c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q20c
+  - Explain your answer to 20d: users[i].q20d_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q20d
+  - Explain your answer to 20e: users[i].q20e_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q20e
+  - Explain your answer to 21:  users[i].q21_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q21
+  - Explain your answer to 22:  users[i].q22_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q22
+  - Explain your answer to 23a: users[i].q23a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q23a
+  - Explain your answer to 23b: users[i].q23b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q23b
+  - Explain your answer to 23c: users[i].q23c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q23c
+  - Explain your answer to 24:  users[i].q24_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q24
+  - Explain your answer to 25:  users[i].q25_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q25
+  - Explain your answer to 26:  users[i].q26_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q26
+  - Explain your answer to 27:  users[i].q27_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q27
+  - Explain your answer to 28:  users[i].q28_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q28
+  - Explain your answer to 29:  users[i].q29_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q29
+  - Explain your answer to 30a: users[i].q30a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q30a
+  - Explain your answer to 30b: users[i].q30b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q30b
+  - Explain your answer to 30c: users[i].q30c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q30c
+  - Explain your answer to 30d: users[i].q30d_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q30d
+  - Explain your answer to 30e: users[i].q30e_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q30e
+  - Explain your answer to 31a: users[i].q31a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q31a
+  - Explain your answer to 31b: users[i].q31b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q31b
+  - Explain your answer to 32:  users[i].q32_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q32
+  - Explain your answer to 33:  users[i].q33_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q33
+  - Explain your answer to 34:  users[i].q34_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q34
+  - Explain your answer to 35:  users[i].q35_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q35
+  - Explain your answer to 36:  users[i].q36_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q36
+  - Explain your answer to 37a: users[i].q37a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q37a
+  - Explain your answer to 37b: users[i].q37b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q37b
+  - Explain your answer to 38a: users[i].q38a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q38a
+  - Explain your answer to 38b: users[i].q38b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q38b
+  - Explain your answer to 38c: users[i].q38c_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q38c
+  - Explain your answer to 38d: users[i].q38d_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q38d
+  - Explain your answer to 38e: users[i].q38e_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q38e
+  - Explain your answer to 39a: users[i].q39a_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q39a
+  - Explain your answer to 39b: users[i].q39b_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q39b
+  - Explain your answer to 40:  users[i].q40_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q40
+  - Explain your answer to 41:  users[i].q41_explanation
+    datatype: area
+    show if:
+      code: |
+        users[i].q41
+continue button field: users[i].explain_add_explanations
+---
+code: |
+  generate_downloads_task = background_action('create_downloads')
+
+---
+id: waiting screen
+question: |
+  Please wait while we generate your documents
+subquestion: |
+  This can take a few minutes.
+
+  <div class="spinner-border text-primary d-flex justify-content-center" role="status" style="border: 0.25rem solid #007bff;">
+    <span class="sr-only">Creating PDFs...</span>
+  </div>
+event: waiting_screen
+reload: True
+---
+event: create_downloads
+code: |
+  download_response = {}
+  for idx, user in enumerate(users):
+    download_response[idx] = user.document_bundle.as_pdf()
+  background_response_action('save_downloads', download_response=download_response)
+---
+event: save_downloads
+code: |
+  ans = action_argument('download_response')
+  for idx, user in enumerate(users):
+    user.cached_pdf = ans[idx]
+  background_response()
+---
+id: get_docs_screen
+event: download_completed_ea_application
+question: |
+  Download the completed application
+subquestion: |
+  % for user in users:
+  <h2 class="h4">${ user.name.first }'s application</h2>
+
+  ${ action_button_html(user.cached_pdf.url_for(), label=f"{ user}'s application", icon="file-pdf", size="lg", color="primary") }
+  % endfor
+
+  ${ action_button_html(url_of("new_session"), label="Start a new application", icon="square-plus", size="lg", color="secondary") }
+---
+objects:
+  - users[i].limited_scope_retainer: ALDocument.using(title=f"{users[i]} - Limited Scope Retainer", filename=space_to_underscore(f"{users[i]} - Limited Scope Retainer"), has_addendum=False)
+---
+objects:
+  - users[i].military_service_addendum: ALDocument.using(title=f"{users[i]} - Military Service Addendum", filename=space_to_underscore(f"{users[i]} - Military Service Addendum"), has_addendum=False)
+---
+objects:
+  - users[i].transit_through_ca_addendum: ALDocument.using(title=f"{users[i]} - Transit Through Central America Addendum", filename=space_to_underscore(f"{users[i]} - Transit Through Central America Addendum"), has_addendum=False)
+---
+objects:
+  - users[i].child_venezuelan_nationals_addendum: ALDocument.using(title=f"{users[i]} - Child of Venezuelan Nationals Addendum", filename=space_to_underscore(f"{users[i]} - Child of Venezuelan Nationals Addendum"), has_addendum=False)
+---
+objects:
+  - users[i].smuggling_addendum: ALDocument.using(title=f"{users[i]} - Smuggling Addendum", filename=space_to_underscore(f"{users[i]} - Smuggling Addendum"), has_addendum=False)
+---
+objects:
+  - users[i].continuous_residence_addendum: ALDocument.using(title=f"{users[i]} - Affidavit of Continuous Residence Addendum", filename=space_to_underscore(f"{users[i]} - Affidavit of Continuous Residence Addendum"), has_addendum=False)
+---
+objects:
+  - users[i].ead_interim_parole_addendum: ALDocument.using(title=f"{users[i]} - EAD Interim Parole Addendum", filename=space_to_underscore(f"{users[i]} - EAD Interim Parole Addendum"), has_addendum=False)
+---
+objects:
+  - users[i].ead_legal_screener: ALDocument.using(title=f"{users[i]} - EAD Legal Screener", filename=space_to_underscore(f"{users[i]} - EAD Legal Screener"), has_addendum=False)
+---
+objects:
+  - users[i].tps_legal_screener: ALDocument.using(title=f"{users[i]} - TPS Legal Screener", filename=space_to_underscore(f"{users[i]} - TPS Legal Screener"), has_addendum=False)
+---
+objects:
+  - users[i].applicant_intake_worksheet: ALDocument.using(title=f"{users[i]} - Applicant Intake Worksheet", filename=space_to_underscore(f"{users[i]} - Applicant Intake Worksheet"), has_addendum=False)
+---
+code: |
+  users[i].applicant_intake_worksheet.enabled = users[i].application_is_approved
+---
+objects:
+  - users[i].fee_waiver_ead: ALDocument.using(title=f"{users[i]} - Fee Waiver Request", filename=space_to_underscore(f"{users[i]} - Fee Waiver Request"), has_addendum=False)
+---
+objects:
+  - users[i].cover_page: ALDocument.using(title=f"Cover Page", filename="cover_page", has_addendum=False, enabled=True)
+  - users[i].ending_page: ALDocument.using(title=f"Ending Page", filename="ending_page", has_addendum=False, enabled=True)
+---
+code: |
+  users[i].fee_waiver_ead.enabled = users[i].application_is_approved and application_kind == "ead_only"
+---
+objects:
+  - users[i].fee_waiver_tps: ALDocument.using(title=f"{users[i]} - Fee Waiver Request", filename=space_to_underscore(f"{users[i]} - Fee Waiver Request"), has_addendum=False)
+---
+code: |
+  users[i].fee_waiver_tps.enabled = users[i].application_is_approved and not application_kind == "ead_only"
+---
+objects:
+  - al_user_bundle: ALDocumentBundle.using(title="All documents to print and file", filename="all_documents", enabled=True, elements=[])
+  - users[i].document_bundle: ALDocumentBundle.using(title=f"{users[i]} - All documents to print and file", filename=space_to_underscore(f"{users[i]} - all_documents"), enabled=True, elements=[
+        users[i].cover_page,
+        users[i].ead_legal_screener,
+        users[i].tps_legal_screener,
+        users[i].limited_scope_retainer,
+        users[i].applicant_intake_worksheet,
+        users[i].i_821_attachment,
+        users[i].military_service_addendum,
+        users[i].transit_through_ca_addendum,
+        users[i].child_venezuelan_nationals_addendum,
+        users[i].smuggling_addendum,
+        users[i].continuous_residence_addendum,
+        users[i].tps_yes_answer_addendum,
+        users[i].fee_waiver_tps,
+        users[i].i_765_attachment,
+        users[i].ead_interim_parole_addendum,
+        users[i].fee_waiver_ead,
+        users[i].ending_page,
+      ])
+---
+code: |
+  if users[i].age_in_years() > 13:
+    users[i].limited_scope_retainer.enabled = True
+  else:
+    users[i].limited_scope_retainer.enabled = False
+---
+code: |
+  users[i].military_service_addendum.enabled = users[i].application_is_approved and (application_kind != "ead_only" and users[i].addenda.get("military_service"))
+---
+code: |
+  users[i].transit_through_ca_addendum.enabled = users[i].application_is_approved and (application_kind != "ead_only" and users[i].addenda.get("transit_through_ca"))
+---
+code: |
+  users[i].child_venezuelan_nationals_addendum.enabled = users[i].application_is_approved and (application_kind != "ead_only" and users[i].addenda.get("child_venezuelan_nationals"))
+---
+code: |
+  users[i].smuggling_addendum.enabled = users[i].application_is_approved and (application_kind != "ead_only" and users[i].addenda.get("smuggling"))
+---
+code: |
+  users[i].continuous_residence_addendum.enabled = users[i].application_is_approved and (application_kind != "ead_only" and users[i].addenda.get("continuous_residence"))
+---
+code: |
+  users[i].ead_legal_screener.enabled = application_kind == "ead_only"
+---
+code: |
+  users[i].tps_legal_screener.enabled = not application_kind == "ead_only"
+---
+code: |
+  users[i].ead_interim_parole_addendum.enabled = users[i].application_is_approved and (application_kind == "ead_only")
+---
+attachment:
+  variable name: users[i].military_service_addendum[j]
+  name: ${ users[i] } - Military Service Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - Military Service Addendum") }
+  docx template file: TPS_addendum_military_service.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].transit_through_ca_addendum[j]
+  name: ${ users[i] } - Transit Through Central America Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - Transit Through Central America Addendum") }
+  docx template file: TPS_addendum_transit.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].child_venezuelan_nationals_addendum[j]
+  name: ${ users[i] } - Child of Venezuelan Nationals Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - Child of Venezuelan Nationals Addendum") }
+  docx template file: TPS_addendum_child_venezuelan_nationality.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].smuggling_addendum[j]
+  name: ${ users[i] } - Smuggling Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - Smuggling Addendum") }
+  docx template file: TPS_addendum_smuggling.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].continuous_residence_addendum[j]
+  name: ${ users[i] } - Affidavit of Continuous Residence Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - Affidavit of Continuous Residence Addendum") }
+  docx template file: TPS_affidavit_continuous_residence.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].ead_interim_parole_addendum[j]
+  name: ${ users[i] } - EAD Interim Parole Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - EAD Interim Parole Addendum") }
+  docx template file: EAD_addendum_interim_parole.docx
+  skip undefined: True
+---
+code: |
+  users[i].ead_legal_screener.enabled = application_kind == "ead_only"
+---
+code: |
+  users[i].tps_legal_screener.enabled = not application_kind == "ead_only"
+---
+attachment:
+  variable name: users[i].ead_legal_screener[j]
+  name: ${ users[i] } - EAD Legal Screener
+  filename: ${ space_to_underscore(f"{users[i]} - EAD Legal Screener") }
+  docx template file: EAD_legal_screener.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].tps_legal_screener[j]
+  name: ${ users[i] } - TPS Legal Screener
+  filename: ${ space_to_underscore(f"{users[i]} - TPS Legal Screener") }
+  docx template file: TPS_legal_screener.docx
+  skip undefined: True
+---
+reconsider:
+  - children_for_retainer
+attachment:
+  variable name: users[i].limited_scope_retainer[j]
+  name: ${ users[i] } - Limited Scope Retainer
+  filename: ${ space_to_underscore(f"{users[i]} - Limited Scope Retainer") }
+  docx template file: Limited_Scope_Retainer.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].fee_waiver_tps[j]
+  name: ${ users[i] } - Fee Waiver Request
+  filename: ${ space_to_underscore(f"{users[i]} - Fee Waiver Request") }
+  docx template file: Fee_Waiver_Cover_Letter_TPS.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].fee_waiver_ead[j]
+  name: ${ users[i] } - Fee Waiver Request
+  filename: ${ space_to_underscore(f"{users[i]} - Fee Waiver Request") }
+  docx template file: Fee_Waiver_Cover_Letter_EAD.docx
+  skip undefined: True
+---
+code: |
+  def uscis_countries_list():
+    """
+    Returns a list of countries as strings, without the extra verbiage like "Republic of".
+    We tweak the following entries:
+    - "Bolivia, Plurinational State of" becomes "Bolivia"
+    - Venezuela, Bolivarian Republic of becomes "Venezuela"
+    - Congo, the Democratic Republic of the becomes "Congo (D.R.C.)"
+    - Iran, Islamic Republic of becomes "Iran"
+    - Korea, Democratic People's Republic of becomes "North Korea"
+    - Korea, Republic of becomes "South Korea"
+    - Lao People's Democratic Republic becomes "Laos"
+    - Micronesia, Federated States of becomes "Micronesia"
+    - Moldova, Republic of becomes "Moldova"
+    - Palestine, State of becomes "Palestine"
+    - Saint Martin (French part) becomes "Saint Martin"
+    - Sint Maarten (Dutch part) becomes "Sint Maarten"
+    - Taiwan, Province of China becomes "Taiwan"
+    - Tanzania, United Republic of becomes "Tanzania"
+    - Åland Islands becomes "Aland Islands"
+    """
+    country_names = [next(iter(item.values())) for item in countries_list()]
+    country_names[country_names.index("Bolivia, Plurinational State of")] = "Bolivia"
+    country_names[country_names.index("Venezuela, Bolivarian Republic of")] = "Venezuela"
+    country_names[country_names.index("Congo, The Democratic Republic of the")] = "Congo (D.R.C.)"
+    country_names[country_names.index("Iran, Islamic Republic of")] = "Iran"
+    country_names[country_names.index("Korea, Democratic People's Republic of")] = "North Korea"
+    country_names[country_names.index("Korea, Republic of")] = "South Korea"
+    country_names[country_names.index("Lao People's Democratic Republic")] = "Laos"
+    country_names[country_names.index("Micronesia, Federated States of")] = "Micronesia"
+    country_names[country_names.index("Moldova, Republic of")] = "Moldova"
+    country_names[country_names.index("Palestine, State of")] = "Palestine"
+    country_names[country_names.index("Saint Martin (French part)")] = "Saint Martin"
+    country_names[country_names.index("Sint Maarten (Dutch part)")] = "Sint Maarten"
+    country_names[country_names.index("Taiwan, Province of China")] = "Taiwan"
+    country_names[country_names.index("Tanzania, United Republic of")] = "Tanzania"
+    country_names[country_names.index("Åland Islands")] = "Aland Islands"
+
+    # Move Venezuela and Haiti to the top
+    country_names.remove("Venezuela")
+    country_names.remove("Haiti")
+    country_names.insert(0, "Haiti")
+    country_names.insert(0, "Venezuela")
+    return country_names
+
+---
+attachment:
+  variable name: users[i].cover_page[j]
+  name: Cover Page
+  filename: cover_page
+  pdf template file: cover_page.pdf
+  skip undefined: True
+  editable: False
+  fields:
+    - "document_set_for": ${ users[i].name.full(middle="full") }
+---
+attachment:
+  variable name: users[i].ending_page[j]
+  name: Ending Page
+  filename: ending_page
+  pdf template file: ending_page.pdf
+  skip undefined: True
+  editable: False
+  fields:
+    - "document_set_for": ${ users[i].name.full(middle="full") }

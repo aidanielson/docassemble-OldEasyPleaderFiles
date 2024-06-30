@@ -1,0 +1,229 @@
+---
+comment: |
+  List of all people involved in the case, including witnesess, etc.
+  Purpose is reuse of the various people's names.
+  E.g.: deposition.
+  Who needs to get served
+---
+mandatory: True
+code: |
+  parties.gather()
+  oldest_person.name.first
+  oldest_person.role
+  interim_party_list
+  opposing_parties
+  all_unique_people_updated
+  final_screen
+---
+objects:
+  parties: DAList.using(object_type=Individual, there_are_any=True, complete_attribute='complete')
+  parties[i].lawyers: DAList.using(object_type=Individual)
+  oldest_person: Individual
+  lawyer_list: DAList.using(object_type=Individual, gathered=True)
+  all_unique_people: DASet.using(auto_gather=False, gathered=True)
+---
+code: |
+  parties[i].name.first
+  if parties[i].lawyers.there_are_any:
+    parties[i].lawyers.gather()
+  parties[i].complete = True
+---
+id: gather parties
+question: Parties
+fields:
+  - First Name: parties[i].name.first
+  - Last Name: parties[i].name.last
+  - Role: parties[i].role
+    datatype: radio
+    choices:
+      - Plaintiff
+      - Defendant
+      - Cross-Defendant
+  - Represented by counsel?: parties[i].lawyers.there_are_any
+    datatype: yesno
+---
+id: add another party
+question: Add another party?
+yesno: parties.there_is_another
+---
+id: gather party lawyers
+question: ${ parties[i] }'s Lawyer(s)
+fields:
+  - An ***Existing*** Lawyer: parties[i].lawyers[j]
+    datatype: object
+    choices: lawyer_list
+    disable others: True
+    exclude: parties[i].lawyers
+    show if:
+      code: |
+        len(lawyer_list) > 0
+  - First Name: parties[i].lawyers[j].name.first
+  - Last Name: parties[i].lawyers[j].name.last
+validation code: |
+  if parties[i].lawyers[j] not in lawyer_list:
+    lawyer_list.append(parties[i].lawyers[j])
+    lawyer_list.sort(key=lambda y: y.name.last)
+---
+id: add a party lawyer
+question: Does ${ parties[i] } have another lawyer?
+yesno: parties[i].lawyers.there_is_another
+---
+id: select oldest party
+question: Who is the oldest party?
+fields:
+  - An ***Existing*** Party: oldest_person
+    datatype: object
+    choices: parties
+    disable others: True
+  - First Name: oldest_person.name.first
+  - Last Name: oldest_person.name.last
+validation code: |
+  if oldest_person not in parties:
+    parties.appendObject()
+    parties[-1].name.first = oldest_person.name.first
+    parties[-1].name.last = oldest_person.name.last
+    oldest_person = parties[-1]
+---
+objects:
+  - old_people: ALIndividualList.using(there_are_any=True)
+---
+question: |
+  Name the old people
+fields:
+  - Someone you already mentioned: old_people[i]
+    datatype: object
+    choices: |
+      parties + witnesses + lawyers
+    disable others: True
+    none of the above: Someone else
+  - Someone else: old_people[i].name.first
+    show if:
+      variable: old_people[i]
+      is: null
+---
+id: add another old person
+question: Add another old person?
+yesno: old_people.there_is_another
+---
+question: |
+  Who do you want to serve?  
+comment: |
+  See Matt Newsted (ILAO) service interview
+  Probably in here? https://github.com/IllinoisLegalAidOnline/docassemble-ILAO
+fields:
+  - Pick the people to serve: served_parties
+    datatype: object_checkboxes
+    choices: |
+      parties + witnesses + lawyers
+    disable others: True
+    none of the above: Someone else
+  - Add someone else: served_parties.has_custom_entries
+    datatype: yesno
+# The has_custom_entries attribute would need to be handled
+# in a code block somewhere. Alternative to the review-screen below
+---
+# This block needs to come AFTER the question defining served_parties
+objects:
+  - served_parties: ALIndividualList.using(auto_gather=False)
+---
+question: |
+  Add another served party
+subquestion: |
+  You have already mentioned ${ served_parties.complete_elements() }
+fields:
+  - Name: served_parties[i].name.first
+---
+table: served_parties.table
+rows: served_parties
+columns:
+  - Name: |
+      row_item
+edit:
+  - name.first      
+---
+question: |
+  Overview of served parties
+subquestion: |
+  ${ served_parties.table }
+  ${ served_parties.add_action() }
+---
+id: interim party list
+question: Interim List of All Entered Parties
+subquestion: |
+  % for party in parties:
+  **${ party }**
+  % endfor
+continue button field: interim_party_list
+---
+id: select opposing parties
+question: Who are the parties opposing this filing?
+fields:
+  - Existing Parties: opposing_parties
+    datatype: object_checkboxes
+    choices: parties
+#  - First Name: opposing_parties.name
+#    show if:
+#      variable: opposing_parties
+#      is: null
+#  - Last Name: opposing_parties.name.last
+#   show if:
+#     variable: opposing_parties
+#     is: null
+#  - Some Variable: opposing_parties.some_variable
+---
+id: set opposing parties as object
+code: |
+  opposing_parties = DAList('opposing_parties', object_type=Individual)
+---
+id: update list of all people
+code: |
+  combined_all_people = DAList('combined_all_people', auto_gather=False, gathered=True)
+  combined_all_people.extend(parties)
+  combined_all_people.extend(lawyer_list)
+  all_unique_people_updated = True
+#  combined_all_people = parties + lawyer_list
+#  all_unique_people.add(combined_all_people)
+---
+id: final screen
+event: final_screen
+question: |
+  ***Party List***
+  % for party in parties:
+  1. ${ party }
+  % endfor
+  ***Lawyer List***
+  % for lawyer in lawyer_list:
+  1. ${ lawyer }
+  % endfor
+  ***Combined Party/Lawyer List***
+  [BR][BR]
+  % for party in parties:
+  ${ party.role } ${ party }
+    % if party.lawyers.there_are_any:
+    is represented by:
+    [BR]
+      % for lawyer in party.lawyers:
+      ${ lawyer }
+      [BR]
+      % endfor
+    % endif
+  [BR]
+  % endfor
+  [BR]
+  ***Oldest Party***
+  [BR][BR]
+  ${ oldest_person }
+  [BR][BR]
+  ***Opposing Parties***
+  % for party in opposing_parties.true_values():
+  1. ${ party }
+  % endfor
+  ***All Human Beings (Party or not)***
+  % for human in all_unique_people:
+  1. ${ human }
+  % endfor
+  [BR][BR]
+  ***'combined_all_people'***
+  % for person in combined_all_people:
+  1. ${ person }
+  % endfor

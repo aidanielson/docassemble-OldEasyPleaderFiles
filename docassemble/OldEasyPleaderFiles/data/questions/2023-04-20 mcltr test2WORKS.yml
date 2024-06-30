@@ -1,0 +1,282 @@
+features:
+  progress bar: False
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - docassemble.ALToolbox:multiselect.yml
+---
+imports:
+  - base64
+---
+modules:
+  - .load_data
+---
+id: language table
+variable name: language_table
+data:
+  Interrogatories:
+    singular: interrogatory
+    plural: interrogatories
+  Requests for Production:
+    singular: request
+    plural: document requests
+  Requests for Admission:
+    singular: request
+    plural: admission requests
+---
+objects:
+  - doc: DAObject
+  - discov: DAObject
+  - dataloader: DataLoader.using(filename="2023-04-20_disco_blurbs.xlsx")
+  - objection_categories: DADict.using(object_type=DAObject, auto_gather=False, gathered=True)
+  - objection_categories[i].ncr: DADict.using(object_type=DAObject)
+  - objection_categories[i].objections: DADict.using(object_type=DAObject)
+  - al_user_bundle: ALDocumentBundle.using(elements=[disco_attachment], filename="mcltr.docx", title="All forms to download for your records", enabled=True)
+  - disco_attachment: ALDocument.using(enabled=True, title="Disco", filename="mcltr")
+---
+mandatory: True
+id: interview order
+code: |
+  propounder_or_responder
+  discov.propounder_list
+  # gather all methods propounded
+  methods
+  several_methods
+  discov.propound_svc_date
+  mtc_deadline
+  # for each method, gather all noncompliant responses (ncr)
+  for method in methods.true_values():
+    #ask for some variables for every method
+    objection_categories[method].set_no
+    objection_categories[method].number_propounded
+    #collect all ncrs per selected method
+    for ncr in objection_categories[method].ncr.true_values():
+      # for each nrc, show catergory/label dropdown (CLP mimic)
+      objection_categories[method].objections[ncr].selected
+  language_table
+  show_all_variables
+  response_deadline
+  doc.sign_date
+  doc.date
+  download
+---
+id: are you propounder or responder
+question: |
+  Who propounded the discovery?
+fields:
+  - Choose your role: propounder_or_responder
+    datatype: checkboxes
+    choices:
+      - We propounded the discovery: user_is_propounder
+      - We responded to discovery: user_is_responder
+    none of the above: False
+---
+id: discovery propounded general attributes
+question: |
+  Propounding & Responding Parties
+fields:
+  - Propounding party(ies): discov.propounder_list
+    datatype: checkboxes
+    choices:
+      - Michael H. Anderson
+      - Ralph G. Wiggum
+      - Thelonius R. Monk
+    none of the above: False
+  - Responding party(ies): discov.responder_list
+    datatype: checkboxes
+    choices:
+      - Alexis Waterford
+      - Brent U. Lafferty
+      - Jeremy I. Gilmore
+    none of the above: False
+---
+id: timing
+question: |
+  Timing & Method of Service
+fields:
+  - Did you propound all discovery methods on the same day?: discov.propounded_same_day
+    datatype: yesnoradio
+    show if:
+      code: |
+        several_methods
+  - Date discovery propounded (served): discov.propound_svc_date
+    datatype: date
+  - Discovery service method: discov.svc_method
+    input type: radio
+    choices:
+      - mail
+      - overnight delivery
+      - email
+  - Did the responding party serve their responses to each method on the same day?: discov.responses_served_same_day
+    datatype: yesnoradio
+  - Date discovery responses served: discov.responses_svc_date
+    datatype: date
+  - Were the responses untimely?: discov.responses_untimely
+    datatype: yesnoradio
+---
+code: |
+  mtc_deadline = discov.responses_svc_date + date_interval(days=45)
+---
+id: discovery methods propounded
+question: |
+  Discovery method(s) propounded
+fields:
+  - no label: methods
+    datatype: checkboxes
+    code: |
+      unique_values(dataloader, search_column="Method")
+    none of the above: false
+---
+code: |
+  several_methods = True if len(methods.true_values()) > 1 else False
+---
+id: disco propounded request range
+question: |
+  What set and number of ${ i } did you serve, and what did you get back?
+fields:
+  - What is the ${ i } set number you served?: objection_categories[i].set_no
+    input type: radio
+    choices: 
+      - One
+      - Two
+      - Three
+      - Four
+      - Supplemental
+  - Beginning number: objection_categories[i].start_range
+    datatype: integer
+  - End number: objection_categories[i].end_range
+    datatype: integer
+  - What kind of responses were served to your ${ i }?: objection_categories[i].responses_type
+    input type: radio
+    choices: 
+      - objections only
+      - a hybrid mix of objections and verified substantive responses
+      - a hybrid mix of objections and unverified substantive responses
+      - substantive, unverified responses without objection
+      - substantive, verified responses without objection
+---
+id: noncompliant response number
+question: |
+  **${ i }** deficient responses
+subquestion: |
+  Check all responses that you consider deficient.
+fields: 
+  - no label: objection_categories[i].ncr
+    datatype: checkboxes
+    code: |
+      range(objection_categories[i].start_range, objection_categories[i].end_range + 1)
+    none of the above: false
+---
+code: |
+  objection_categories[i].number_propounded = nice_number(int(objection_categories[i].end_range) - int(objection_categories[i].start_range) + 1, use_word=True)
+---
+id: explain noncompliant responses
+question: |
+  Noncompliant **${ i }** Responses
+subquestion: |
+  How was Response No. **${ j }** noncompliant?
+fields:
+  - Select: objection_categories[i].objections[j].selected
+    datatype: multiselect
+    code: |
+      [{"label": result["Label"],
+         "group": result["Category"],
+         "value": index
+       }
+       for index, result
+       in dataloader._load_data()[dataloader._load_data()["Method"]==(i)].iterrows()
+      ]
+  - Add custom critique: objection_categories[i].objections[j].add_custom_critique
+    datatype: yesno
+  - Custom critique: objection_categories[i].objections[j].custom_critique
+    input type: area
+    rows: 4
+    show if: objection_categories[i].objections[j].add_custom_critique
+script: |
+  <script type="text/javascript">
+    /* Need to activate the multiselect JavaScript on each input, after base64 encoding the name
+     of the input (it is "objection_categories[i].objections[j].selected" here)
+     */  
+     $(document).ready(function() {
+       $("#${ base64.b64encode(str('objection_categories[i].objections[j].selected').encode()).decode().replace('=', '') } ").multiselect({enableCaseInsensitiveFiltering: true, inheritClass: true, enableClickableOptGroups: true, enableCollapsibleOptGroups: true, collapseOptGroupsByDefault: true});
+      });
+  </script>
+---
+id: options
+question: |
+  Other Meet-and-Confer Options
+fields:
+  - Propose setting a call or in-person meeting to review this letter?: propose_call_or_meeting
+    datatype: checkboxes
+    choices:
+      - Phone call
+      - Zoom call
+      - In-person meeting/conference
+  - To resolve the dispute, are you open to considering...: discov.proposal_list
+    datatype: checkboxes
+    choices:
+      - appointment of a discovery referee
+      - a stipulated protective order
+      - narrowing scope or revising/clarifying language
+---
+id: follow up dates
+question: |
+  Timeline & Follow-Up
+subquestion: |
+  Today is **${ format_date(today(), format='EEEE, MMMM d, yyyy') }**.
+  The 45-day deadline for filing/serving a Motion to Compel Further Responses is **${ nice_number(date_difference(starting=today(), ending=mtc_deadline).days) } days** from today, on **${ format_date(mtc_deadline, format='EEEE, MMMM d, yyyy') }**
+fields:
+  - Deadline for ${ discov.responder_list.true_values() } to respond to the letter: response_deadline
+    datatype: date
+  - Propose extension to MTC deadline?: request_to_extend_MTC_deadline
+    datatype: yesnoradio
+  - Proposed deadline extension date: proposed_MTC_extension_deadline
+    datatype: date
+    show if: request_to_extend_MTC_deadline
+---
+id: signature block
+question: |
+  Letter Date & Signature
+fields:
+  - Date of Letter: doc.sign_date
+    input type: radio
+    choices:
+      - Today
+      - Choose Different Date
+      - Leave Blank For Now
+  - Different Date: doc.sign_date_alternate
+    datatype: date
+    show if: 
+      variable: doc.sign_date
+      is: 'Choose Different Date'
+  - Sign the document?: doc.sign_yes
+    datatype: yesnowide
+---
+code: |
+  doc.date = today() if doc.sign_date == 'Today' else doc.sign_date_alternate if doc.sign_date_alternate else 'DATE'
+---
+question: |
+  xxxx
+subquestion: |
+  The variables defined in this interview are:
+  
+  ${ all_variables() }
+  
+continue button field: show_all_variables
+---
+need: language_table
+attachments:
+  - name: Disco
+    filename: disco.docx
+    variable name: disco_attachment[i]
+    skip undefined: True
+    docx template file: mcltr2.docx
+---
+id: download
+event: download
+question: |
+  Your form is ready to download.
+subquestion: |
+  Thank you. Your form is ready to download.
+  ${ al_user_bundle.download_list_html(format="docx") }
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }

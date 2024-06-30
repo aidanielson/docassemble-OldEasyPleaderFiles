@@ -1,0 +1,240 @@
+features:
+  css: 2023-01-26_flatly_with_sandstone_colors.css
+---
+metadata:
+  title: |
+    EasyPleader
+  short title: Generate polished legal pleadings quickly and easily!
+---
+mandatory: True
+code: |
+  author.name.first
+  doc.type
+  doc.title_full
+  doc.footer
+  attach_exhibits
+  contacts.gather()
+  case.court
+  if doc.has_hrg == True:
+    hrg.date
+  user_approves
+  final_screen
+---
+objects:
+  - author: Individual
+  - case: DAObject
+  - contacts: DAList.using(object_type=Individual, there_are_any=True)
+  - name: Name
+  - address: Address
+  - hrg: DAObject
+  - doc: DAObject
+---
+question: |
+  Enter the  author's contact info.
+fields:
+  - Is the author an attorney?: author.is_attorney
+    datatype: yesno
+  - First name: author.name.first
+  - Middle name: author.name.middle
+    required: False
+  - Last name: author.name.last
+  - Suffix: author.name.suffix
+    required: False
+  - Law Firm: author.law_firm
+    show if: author.is_attorney
+  - State Bar Number: author.sbn
+    show if: author.is_attorney
+    datatype: integer
+  - Address: author.address.address
+    address autocomplete: True
+  - Unit: author.address.unit
+    required: False
+  - City: author.address.city
+  - State: author.address.state
+  - Zip: author.address.zip
+  - Phone: author.phone_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Fax: author.fax_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Email Address: author.email
+    datatype: email
+---
+question:
+  Who is authoring this document?
+field: author.is_me
+buttons: 
+  - "Tony Danielson": True
+    color: primary
+  - "Someone Else": False
+    color: warning
+---
+code: |
+  if author.is_me: 
+    author.name.first = "Anthony"
+    author.name.middle = "I."
+    author.name.last = "Danielson"
+    author.law_firm = "Danielson Kim Law Group, P.C."
+    author.sbn = 285576
+    author.address.address = "5170 Golden Foothill Parkway"
+    author.address.city = "El Dorado Hills"
+    author.address.state = "CA"
+    author.address.zip = 95762
+    author.phone_number = 9165203977
+    author.fax_number = 9165431601
+    author.email = 'Anthony@DanielsonKim.com'
+---
+code: |
+  if author.is_me or author.is_attorney:
+    atty_info_in_caption = True
+  else:
+    atty_info_in_caption = False
+---
+question: |
+  Enter case contacts.
+fields:
+  - Is this person an attorney?: contacts[i].is_attorney
+    datatype: yesno
+  - First name: contacts[i].name.first
+  - Middle name: contacts[i].name.middle
+    required: False
+  - Last name: contacts[i].name.last
+  - Suffix: contacts[i].name.suffix
+    required: False
+  - Law Firm: contacts[i].law_firm
+    show if: contacts[i].is_attorney
+  - Address: contacts[i].address.address
+    address autocomplete: True
+  - Unit: contacts[i].address.unit
+    required: False
+  - City: contacts[i].address.city
+  - State: contacts[i].address.state
+  - Zip: contacts[i].address.zip
+  - Phone: contacts[i].phone_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Fax: contacts[i].fax_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Email Address: contacts[i].email
+    datatype: email
+---
+question: |
+  Enter another contact?
+subquestion:
+  You've entered ${contacts} so far.
+yesno: contacts.there_is_another
+---
+table: contacts.table
+rows: contacts
+columns:
+  - Name: |
+      row_item.contacts.name.full()
+  - Address: |
+      row_item.contacts.address.block()
+  - Email: |
+      row_item.contacts.email
+edit:
+  - receives
+---
+question: |
+  What type of document is this?
+field: doc.type
+choices:
+  - Generic Pleading
+  - Notice of Motion and Motion
+  - Declaration
+  - Memorandum of Points & Authorities
+  - Request for Judicial Notice
+  - Index of Exhibits
+  - Proposed Order
+  - Proof of Service
+---
+question: |
+  Does this document relate to a hearing?
+yesno: doc.has_hrg
+---
+question: |
+  What's the title of this document?
+subquestion:
+  The title you enter will go into the caption page.
+fields:
+  - Document Title: doc.title_full
+  - "Do you want a short title for the footer or for easier reference?": wants_shorthand_title
+    datatype: yesno
+  - Document Shorthand Title: doc.title_shorthand
+    show if: wants_shorthand_title
+---
+code: |
+  if wants_shorthand_title:
+    doc.footer = doc.title_shorthand
+  else:
+    doc.footer = doc.title_full
+---
+question:
+  Enter Case Information
+fields:
+  - Case Jurisdiction: case.court
+  - Case Number: case.number
+  - Original Filing Date: case.filing_date
+    datatype: date
+  - Trial Date: case.trial_date
+    datatype: date
+---
+modules:
+    .biz_days
+---
+question: |
+  Enter hearing information.
+fields:
+  - Hearing Date: hrg.date
+    datatype: date
+  - Hearing Time: hrg.time
+    datatype: time
+  - Hearing Dept.: hrg.dept
+  - Hearing Judge: hrg.judge
+under: |
+  Note: Under CCP § 1005, if the papers are served **TODAY**, ${today()}, 16 court days from now is:
+  
+  * **${sixteen_court_days_from_today_string}** for PERSONAL SERVICE;
+  * **${earliest_overnight_or_fax_service_date_string}** for OVERNIGHT DELIVERY or FAX SERVICE;
+  * **${eighteen_court_days_from_today_string}** for EMAIL or ELECTRONIC SERVICE;
+  * **${earliest_mail_service_date_string}** for REGULAR MAIL SERVICE
+   
+  Visit Los Angeles County Superior Court's [Court Date Calculator](https://www.lacourt.org/courtdatecalculator/ui/) website for an additional date validation check.
+---
+question: |
+  Document-Specific Info
+subquestion: |
+  Choose document options.
+fields:
+  - Attach exhibits to this document?: attach_exhibits
+    datatype: yesno
+  - Include Statutory Call-Out Under Doc Title in Caption Page?: include_stat_callout
+    datatype: yesno
+---
+question: |
+  Here is your ${doc.type}
+subquestion: |
+  Do you approve?
+yesno: user_approves
+attachment:
+  name: Pleading
+  filename: letter
+  docx template file: 2023-01-20_pleading_template.docx
+  valid formats:
+    - pdf
+    - docx
+include attachment notice: False
+---
+event: final_screen
+question: |
+  Well, ${author.name.full()}, 
+  % if user_approves:
+  Hope you liked your ${doc.type}!
+  % endif
+  We're all through here...
+buttons:
+  Exit: exit
+  Restart: restart

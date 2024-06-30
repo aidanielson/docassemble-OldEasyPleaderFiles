@@ -1,0 +1,61 @@
+mandatory: True
+code: |
+  view_regexed_input_string
+---
+question: View Regexed Input String
+subquestion: |
+  **Here's the raw input_string:**[BR][BR]
+  ${ repr(input_string) }[BR][BR]
+  **The regexed input_string with double backslashed newlines is:**[BR][BR]
+  ${ regexed_input_string_double_backslash_newline }[BR][BR]
+  **The regexed input_string without double backslashed newlines is:**[BR][BR]
+  ${ regexed_input_string_no_double_backslash_newline }
+continue button field: view_regexed_input_string
+---
+question: View Simplified newline and raw Regexed Input String
+subquestion: |
+  **Here's the raw input_string:**[BR][BR]
+  ${ repr(input_string) }[BR][BR]
+  **'regex_single_backslash_newline' is:**[BR][BR]
+  ${ regex_single_backslash_newline }[BR][BR]
+  **'regex_single_backslash_newline_with_raw' is:**[BR][BR]
+  ${ regex_single_backslash_newline_with_raw }[BR][BR]
+  **'regex_double_backslash_newline' is:**[BR][BR]
+  ${ regex_double_backslash_newline }[BR][BR]
+  **'regex_double_backslash_newline_with_raw' is:**[BR][BR]
+  ${ regex_double_backslash_newline_with_raw }[BR][BR]
+  **'regex_single_backslash_form_feed' is:**[BR][BR]
+  ${ regex_single_backslash_form_feed }[BR][BR]
+  **'regex_single_backslash_form_feed_with_raw' is:**[BR][BR]
+  ${ regex_single_backslash_form_feed_with_raw }[BR][BR]
+  **'regex_double_backslash_form_feed' is:**[BR][BR]
+  ${ regex_double_backslash_form_feed }[BR][BR]
+  **'regex_double_backslash_form_feed_with_raw' is:**[BR][BR]
+  ${ regex_double_backslash_form_feed_with_raw }[BR][BR]
+continue button field: view_regexed_simplified_input_string
+---
+code: |
+  input_string = 'n any form of\nrecordation whatsoever, including digital, electronic, photographic or magnetic recording of\nany kind.\n\n“COMMUNICATION(S)” “Communication(s)” refers to any and all personal\nconferences, meetings, telephone calls, and correspondence in any form whatsoever, including\nbut not limited to written (e.g. notes, letters, and any other writings), electronic (e.g. Internet\ncommunications such as e-mail, instant messaging platforms, such as Gmail messenger, MSN\n\n-2-\n\n \n\nREQUESTS FOR PRODUCTION, SET ONE\n\n \n\x0c\x0cOAKLAND, CA 94612\n(415) 882-5000\n\nDENTONS US LLP\n1999 HARRISON STREET, SUITE 1300,\n\n10\n11\n12\n13\n14\n15\n16\n17\n18\n19\n20\n21\n22\n23\n24\n25\n26\n27\n28\n\n \n\n \n\nmessenger, and any other instant messaging; social media messaging platforms, such as\nFacebook post comments, Facebook Messenger, Instagram post comments, Instagram Direct\nMessenger, Twitter communications, including Twitter Direct Messenger; cell-phone\napplication messengers, such as Telegram, Slack, Viber, WhatsApp; text messages, including\niMessages; voice notes; voicemails; Zoom chat), or any other medium (e.g. telephone\nconversation'
+---
+code: |
+  regex_single_backslash_newline = re.sub('\n', '%%%', input_string)
+  regex_single_backslash_newline_with_raw = re.sub(r'\n', '%%%', input_string)
+  regex_double_backslash_newline = re.sub('\\n', '%%%', input_string)
+  regex_double_backslash_newline_with_raw = re.sub(r'\\n', '%%%', input_string)
+  regex_single_backslash_form_feed = re.sub('\x0c', '%%%', input_string)
+  regex_single_backslash_form_feed_with_raw = re.sub(r'\x0c', '%%%', input_string)
+  regex_double_backslash_form_feed = re.sub('\\x0c', '%%%', input_string)
+  regex_double_backslash_form_feed_with_raw = re.sub(r'\\x0c', '%%%', input_string)
+---
+code: |
+  regexed_input_string_no_double_backslash_newline = re.sub(r'(?<=\S)(?:[\n\/\-\|]*\n\n \n\n|\n\n\W*\d{1,3}\W*\n).{25,160}(?:\n\n \n\x0c\x0c).{75,250}?(?:\n\n[\/\n]*)(?=[A-Za-z 0-9.]{5,}|\d+[.:]|[\(\/]+)', '\n', input_string, flags=re.DOTALL)
+#  regexed_input_string_double_backslash_newline = re.sub('(?<=\S)(?:[\n\/\-\|]*\\n\\n \\n\\n|\\n\\n\W*\d{1,3}\W*\\n).{25,160}(?:\\n\\n \\n\\x0c\\x0c).{75,250}?(?:\\n\\n[\/\n]*)(?=[A-Za-z 0-9.]{5,}|\d+[.:]|[\(\/]+)', '\n', input_string)
+---
+#code: |
+#  def remove_footer_string(input_text_string):
+#    convert_all_capitalized_footer_text_and_surrounding_newlines_to_space = '(?<=\S)(?:[\\n\/\-\|]*\\n\\n \\n\\n|\\n\\n\W*\d{1,3}\W*\\n).{25,160}(?:\\n\\n \\n\\x0c\\x0c).{75,250}?(?:\\n\\n[\/\\n]*)(?=[A-Za-z 0-9.]{5,}|\d+[.:]|[\(\/]+)'
+#    convert_all_errant_vertical_line_numbers_and_garble_to_space = r'(?:\n(?:[12]\d|\d)[ \-|]*)+(?=\n|[A-Za-z])'
+#    first_stage_text = re.sub(convert_all_capitalized_footer_text_and_surrounding_newlines_to_space, ' ', input_text_string)
+#    second_stage_text = re.sub(convert_all_errant_vertical_line_numbers_and_garble_to_space, ' ', first_stage_text)
+#    return second_stage_text
+---

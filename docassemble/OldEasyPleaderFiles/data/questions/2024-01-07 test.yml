@@ -1,0 +1,59 @@
+objects:
+  - g: DAGlobal.using(key="user_profile2", scope="user")
+---
+objects:
+  - g.person: Person
+  - the_person: Person
+---
+mandatory: True
+code: |
+  g.person # need to trigger the global before checking with `defined` otherwise it's never defined yet in the interview answers
+  if not defined("g.person.name.text"):
+    edit_profile
+---
+initial: True
+code: |
+  menu_items = [action_menu_item("Edit profile", action="edit_profile")]
+---
+continue button field: edit_profile
+question: |
+  % if not defined("g.person.name.text"):
+  Hey, it looks like you're new here. Let's add a profile!
+  % else:
+  Edit profile
+  % endif
+subquestion: |
+  % if defined("g.the_value"):
+  The current value is ${ g.the_value }
+  % endif
+fields:
+  - Choose a value: g.the_value
+    code: range(5)
+  - Zip code: g.zip_code
+  - Your name: g.person.name.text
+validation code: |
+  # You could put any "refresh" logic here
+  pass
+---
+mandatory: True
+question: |
+  Let's start here
+continue button field: intro
+---
+mandatory: True
+question: |
+  What name do you want on the docs?
+fields:
+  - Full name: the_person.name.text
+    default: |
+      ${ showifdef("g.person.name.text") }
+---
+mandatory: True
+question: |
+  Done
+subquestion: |
+  The value is ${ g.the_value }
+  
+  Your profile name: ${ g.person }
+  
+  Your chosen name for this run: ${ the_person }

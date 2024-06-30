@@ -1,0 +1,125 @@
+objects:
+  - first_char: DADict
+  - second_char: DADict
+  - third_char: DADict
+  - third_char_custom: DADict
+  - new_dict: DADict.using(there_are_any=True, complete_attribute='something')
+---
+mandatory: True
+question: |
+  Fruits you like.
+subquestion: |
+  % if first_thing.any_true():
+  You selected ${ comma_and_list(first_thing.true_values()) }.
+  % for thing in first_thing.true_values():
+    With respect to ${ thing }:
+  
+    First characteristic is: **${ first_char[thing] }**
+  
+    Second characteristic is: **${ second_char[thing].true_values() }**
+    
+      Second characteristic service date was: **${ second_char[thing].service_date }**
+  
+    Third characteristic is: 
+    % if not defined('third_char_custom[thing]'): 
+    **${ third_char[thing] }** 
+    % else: 
+    **${ third_char_custom[thing] }** 
+    % endif
+  
+  % endfor
+  % else:
+  You didn't select any "first" things.
+  % endif
+  
+  % if second_thing.any_true():
+  You selected ${ comma_and_list(second_thing.true_values()) }.
+  % for thing in second_thing.true_values():
+    With respect to ${ thing }:
+  
+    First characteristic is: **${ first_char[thing] }**
+  
+    Second characteristic is: **${ second_char[thing].true_values() }**
+  
+    Third characteristic is: 
+    % if not defined('third_char_custom[thing]'): 
+    **${ third_char[thing] }** 
+    % else: 
+    **${ third_char_custom[thing] }** 
+    % endif
+  
+  % endfor
+  % else:
+  You didn't select any "second" things.
+  % endif
+  
+  new_dict is composed of ${ new_dict }
+---
+question: |
+  What is the first thing?
+fields:
+  - Fruits: first_thing
+    datatype: checkboxes
+    choices:
+      - Form Interrogatories
+      - Special Interrogatories
+      - Requests for Admission
+      - Requests for Production of Documents
+---
+question: |
+  What is the second thing?
+fields:
+  - Methods: second_thing
+    datatype: checkboxes
+    choices:
+      - Deposition
+      - Business Records Subpoena
+      - Hearing/Trial Appearance Subpoena
+---
+question: |
+  Set characteristics of the thing.
+fields:
+  - Full Description: first_char[i]
+    datatype: area
+    label above field: True
+  - Service Method: second_char[i]
+    datatype: checkboxes
+    choices:
+      - USPS First-Class Mail
+      - USPS Express Mail or Overnight Delivery
+      - Certified Mail
+      - Email
+      - Fax
+      - Personal Delivery
+  - Set No: third_char[i]
+    input type: radio
+    choices:
+      - One
+      - Two
+      - Three
+      - Other
+  - Something else: third_char_custom[i]
+    show if:
+      variable: third_char[i]
+      is: 'Other'
+---
+question: |
+  What date was ${ i } service method carried out?
+fields:
+  Date of service: second_char[i].service_date
+  datatype: date
+---
+question: |
+  Let's populate a new dictionary by entering the key for the new kv pair.
+fields:
+  - Enter the key of this new key-value pair: new_dict.new_item_name
+---
+question: |
+  Now let's enter the value corresponding to the new key.
+fields:
+  - Value: new_dict[i].something
+---
+question: |
+  Is there another kv pair you want to add to new_dict?
+fields:
+  yesno: new_dict.there_is_another

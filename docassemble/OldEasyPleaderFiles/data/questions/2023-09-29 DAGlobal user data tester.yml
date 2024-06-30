@@ -1,0 +1,230 @@
+include:
+  - docassemble.AssemblyLine:assembly_line_unstyled.yml
+---
+objects:
+  - profile: DAGlobal.using(key='profile')
+  - profile.author: ALPeopleList.using(object_type=ALIndividual, there_are_any=True, there_is_another=False, complete_attribute=['law_firm', 'address.address'])
+  - profile.preferences: DADict
+  - profile.motions: DAList.using(object_type=Thing, gathered=True)
+---
+mandatory: True
+code: |
+  multi_user = True
+  profile
+  screen = {item: True for item in ['name', 'address', 'preferences']}
+---
+mandatory: True
+question: |
+  This is interview A.
+subquestion: |
+  Go to your [Profile](${ url_action('profile_page') }).
+buttons:
+  - Restart: restart
+---
+event: profile_page
+question: |
+  Your profile
+review:
+  - label: Edit
+    field: screen['name']
+    button: |
+      #### Name
+      % if defined('profile.author[0].name.first'):
+      ${ profile.author[0] }
+      % else:
+      <span class="text-body-secondary">Your name has not been defined.</span>
+      % endif
+  - label: Edit
+    field: screen['address']
+    button: |
+      #### Address
+
+      % if defined('profile.author[0].address.address'):
+      ${ profile.author[0].address.block() }
+      % else:
+      <span class="text-body-secondary">You have not yet provided your address.</span>
+      % endif
+  - label: Edit
+    field: screen['caption']
+    button: |
+      #### Attorney/Law Firm Caption
+
+      % if defined('profile.caption'):
+      ${ profile.caption }
+      % else:
+      <span class="text-body-secondary">You have not yet provided your caption.</span>
+      % endif
+  - label: Edit
+    fields: screen['preferences']
+    button: |
+      #### Preferences
+
+      % if defined('profile.preferences.favorite_fruit'):
+      Favorite fruit: ${ profile.preferences.favorite_fruit }.
+
+      Favorite vegetable: ${ profile.preferences.favorite_vegetable }.
+
+      Screen mode: ${ profile.preferences.screen_mode }.
+      % else:
+      <span class="text-body-secondary">Your preferences have not been set yet.</span>
+      % endif
+skip undefined: False
+---
+question: Your name
+fields:
+  - '**First**': profile.author[0].name.first
+    grid: 4
+    label above field: True
+  - '**Middle**': profile.author[0].name.middle
+    required: False
+    grid: 2
+    label above field: True
+  - '**Last**': profile.author[0].name.last
+    grid: 4
+    label above field: True
+  - '**Suffix**': profile.author[0].name.suffix
+    code: name_suffix()
+    required: False
+    grid: 2
+    label above field: True
+  - '**Law Firm Name**': profile.author[0].law_firm
+  - '**Law Firm Role/Title**': profile.author[0].law_firm_role
+  - note: e.g., *managing partner...associate attorney...shareholder* 
+  - '**Law Firm Website**': profile.author[0].law_firm_website
+    required: False
+  - '**Bar License State**': profile.author[0].bar_state
+    default: 'CA'
+    grid:
+      width: 2
+      label width: 3
+  - '**Bar License No.**': profile.author[0].bar_number
+    datatype: integer
+    grid:
+      width: 3
+      label width: 3
+continue button field: screen['name']
+---
+question: Service Address & Contact Info
+fields:
+  - '**Address**': profile.author[0].address.address
+    address autocomplete: True
+  - '**Unit/Suite**': profile.author[0].address.unit
+    required: False
+  - '**City**': profile.author[0].address.city
+  - '**State**': profile.author[0].address.state
+  - '**Zip Code**': profile.author[0].address.zip
+  - note: |
+      #### ---Phone, Fax & Email---
+  - '**Phone No.**': profile.author[0].phone_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+  - '**Add Second Phone**': profile.author[0].add_second_phone
+    datatype: yesno
+  - '**Second Phone No.**': profile.author[0].second_phone_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    show if: profile.author[0].add_second_phone
+  - '**Second Phone Description**': profile.author[0].second_phone_description
+    show if: profile.author[0].add_second_phone
+  - note: e.g., *cell...work...home...secretary*
+    show if: profile.author[0].add_second_phone
+  - '**Fax No.**': profile.author[0].fax_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+  - '**Email**': profile.author[0].email
+    datatype: email
+    required: False
+  - '**Add Second Email**': profile.author[0].add_second_email
+    datatype: yesno
+  - '**Second Email Address**': profile.author[0].second_email
+    datatype: email
+    show if: profile.author[0].add_second_email
+  - '**Second Email Recipient**': x.second_email_recipient
+    show if: profile.author[0].add_second_email
+  - note: e.g., *Admin...Secretary Debbie Thompson...eService*
+    show if: profile.author[0].add_second_email
+validation code: |
+  if profile.author[0].add_second_email:
+    if profile.author[0].email == profile.author[0].second_email:
+      validation_error("'Second Email Address:' must be different from 'Email:' above.", field='profile.author[0].second_email')
+      
+  for attr in ['phone_number', 'fax_number', 'email', 'second_phone_number', 'second_email']:
+    if not getattr(x, attr, False):
+      setattr(x, attr, 'none/unknown')
+    else:
+        if attr in ['phone_number', 'fax_number', 'second_phone_number']:
+            setattr(x, attr, phone_number_formatted(getattr(x, attr)))
+continue button field: screen['address']
+---
+question: Your Attorney/Law Firm Caption
+subquestion: |
+  Your EasyPleader-automated caption is:[BR][BR]
+  ${ proposed_caption }[BR][BR]
+  **Do you want to modify it?**
+fields:
+  - xxxxx: use_proposed_caption
+    input type: radio
+    choices:
+      - Keep it: keep
+      - Modify it: modify
+  - Revise Your Caption: custom_caption
+    input type: area
+    rows: 10
+    default: proposed_caption
+    show if:
+      variable: use_proposed_caption
+      is: 'modify'
+continue button field: screen['caption']
+---
+question: Preferences
+fields:
+  - Favorite fruit: profile.preferences.favorite_fruit
+  - Favorite vegetable: profile.preferences.favorite_vegetable
+  - Screen mode: profile.preferences.screen_mode
+    choices:
+      - Dark
+      - Light
+continue button field: screen['preferences']
+---
+code: |
+  proposed_caption = f"""{author[0].name.full()}\n{author[0].law_firm}\n{author[0].address.address}\n{author[0].address.city}, {author[0].address.state} {author[0].address.zip}\nPhone: {author[0].phone_number}\nFax: {author[0].fax_number}\nEmail: {author[0].email}
+  """
+---
+#id: gather parties
+#check in: name_preview
+#question: Attorney/Law Firm Caption
+#subquestion: Contact Info
+#right: |
+#  <div class="da-page-header"><h1 class="h3">Name Preview</h1></div>
+#  [TARGET name_preview_text]
+#fields:
+#  - xxx: xxx
+#---
+#template: name_preview
+#content: |
+#  ##### ${ action_argument('x[i].party_role' if any(word in x[i].instanceName for word in ['clients', #'parties']) else 'x[i].nonparty_role') + ' ' + action_argument('x[i].name.first') } ${ #action_argument('x[i].name.middle') or '' } ${ action_argument('x[i].name.last') } (${ #action_argument('x[i].short_name') })
+#target: name_preview_text
+---
+id: set aid as author
+if: not aid_not_author
+code: |
+  author[0].name.first = "Anthony"
+  author[0].name.middle = "I"
+  author[0].name.last = "Danielson"
+  author[0].law_firm = "Danielson Kim Law Group, P.C."
+  author[0].law_firm_role = "Managing Partner"
+  author[0].bar_state = "CA"
+  author[0].bar_number = "285576"
+  author[0].address.address = "5170 Golden Foothill Parkway"
+  author[0].address.city = "El Dorado Hills"
+  author[0].address.state = "CA"
+  author[0].address.zip = "95762"
+  author[0].phone_number = "(916) 520-3977"
+  author[0].fax_number = "(916) 543-1601"
+  author[0].email = "Anthony@DanielsonKim.com"
+  author[0].law_firm_website = "www.DanielsonKim.com"
+  author.gathered = True
+  set_aid_author = True
+---

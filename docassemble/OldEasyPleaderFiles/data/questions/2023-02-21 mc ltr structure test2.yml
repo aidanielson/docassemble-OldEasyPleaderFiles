@@ -1,0 +1,32 @@
+objects: 
+  - methods: DAList.using(object_type=Thing, auto_gather=False, complete_attribute='complete')
+  - methods[i].bad_resps: DAList.using(object_type=Thing, there_are_any=True, complete_attribute='complete')
+  - methods.[i].bad_resps[j].ways_each_is_bad: DAList.using(object_type=Thing, there_are_any=True, complete_attribute='complete')
+---
+question: |
+  Which disco methods did you propound?
+fields:
+  - no label: methods_list
+    datatype: checkboxes
+    none of the above: False
+    minlength: 1
+    choices:
+      - General Form Interrogatories
+      - Special Interrogatories
+      - Requests for Admission
+      - Requests for Production
+---
+code: |
+  print_chosen_methods = comma_and_list(methods_list.true_values())
+---
+code: |
+  methods[i].new(methods_list.true_values())
+---
+question: |
+  Which of the responses to your ${ methods[i] } are noncompliant?
+fields:
+  - Type interrogatory number: methods[i].bad_resps
+---
+mandatory: True
+question: |
+  You propounded ${ print_chosen_methods } and response number ${ int_number } is not compliant.

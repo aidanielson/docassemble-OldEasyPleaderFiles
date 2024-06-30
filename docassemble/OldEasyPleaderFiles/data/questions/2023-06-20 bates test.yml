@@ -1,0 +1,48 @@
+mandatory: True
+code: |
+  exhibits.gather()
+  review_doc_upload
+  final_screen
+---
+objects:
+  - exhibits: DAFileList.using(there_are_any=True, there_is_another=False)
+---
+question: |
+  Upload a file
+fields:
+  - File: exhibits[i]
+    datatype: files
+---
+mandatory: True
+code: |
+  bundle = pdf_concatenate(exhibits)
+  bundle.bates_number(start=3, prefix='FRUIT', area='BOTTOM_LEFT')
+  bundle.bates_number(start=3, prefix='FRUIT', area='BOTTOM_RIGHT', color='red')
+---
+table: exhibits.table
+rows: exhibits
+allow reordering: True
+columns:
+  - File name: showifdef(row_item.attr_name('filename'))
+  - Size: f"{round(row_item.size_in_bytes()/1024)}KB"
+  - Thumbnail: row_item.show(width="100px")  
+delete buttons: True
+---
+id: review documents
+question: |
+  Review your documents.
+subquestion: |
+  Look at the documents below. If you want to change the order, use the arrows
+  to move an exhibit up or down in the list. Click "delete" or "add another"
+  to change which documents you send to the court.
+  
+  ${ exhibits.table }
+  
+  ${ exhibits.add_action() }
+continue button field: review_doc_upload
+---
+event: final_screen
+question: |
+  Your file
+subquestion: |
+  ${ bundle }

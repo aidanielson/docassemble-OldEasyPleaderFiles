@@ -1,0 +1,38 @@
+objects:
+  - students: DAList.using(object_type=Individual, there_are_any=True)
+  - informants: DAList.using(object_type=Thing, auto_gather=False)
+---
+question: Students
+fields:
+  - What is the first name of the ${ ordinal(i) } student?: students[i].name.first
+---
+question: Is there a ${ ordinal(len(students)) } student?
+yesno: students.there_is_another
+---
+question: Best Student in Class
+fields:
+  - Who is the best student in class?: best_student
+    datatype: object
+    choices: students
+---
+question: Two FBI Informants
+fields:
+  - Who are the two FBI informants?: informants
+    datatype: object_checkboxes
+    choices: students
+---
+question: Age of ${ informants[i] }
+fields:
+  - How old is the ${ ordinal(i) } informant?: informants[i].age
+---
+code: |
+  informants.there_are_any = informants.number() > 0
+---
+mandatory: True
+question: Results
+subquestion: |
+  The students you've entered are: ${ students }.
+  The best student in the class is: ${ best_student }.
+  % for informant in informants:
+  An informant is: ${ informant }, who is ${ informant.age }.
+  % endfor

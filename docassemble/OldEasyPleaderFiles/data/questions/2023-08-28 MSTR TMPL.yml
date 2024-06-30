@@ -1,0 +1,881 @@
+include:
+  - docassemble.playground1:2023-08-28_EP_Universal_Questions.yml
+---
+metadata:
+  title: Master Pleading Template
+  short title: Polished legal documents. Zero hassle.
+  time format: 'h:mm a'
+---
+imports:
+  - re
+---
+mandatory: True
+code: |
+  version = 0
+---
+event: new_version
+code: |
+  version += 1
+---
+modules:
+  - .POS_Builder
+  - .ocr_processing
+  - .gfrogs_dict
+---
+mandatory: True
+code: |
+  welcome_screen
+  doc.type
+  if doc.type == 'Separate Statement':
+    ocr_responses
+  conduct_data_intake
+  set_various_party_lists
+  if doc.type == 'Memorandum of Points & Authorities':
+    memo_headings_lvl_1.gather()
+    memo_heading_review
+  if doc.type == 'Declaration':
+    doc.declarant
+    set_doc_declarant_unique_party
+  if doc.type == 'Separate Statement':
+     methods.gather()
+  if doc.type == 'Proof of Service':
+    pick_server
+    if pick_server != 'Me':
+      server[0].name.first
+    set_servees
+    if not same_service:
+      for servee in all_servees:
+        servee.pick_service_methods
+    else:
+      same_service_method
+    show_service_list
+  if attach_exhibits:
+    exhibits_yaml
+  if doc.type not in ['Generic Pleading', 'Proposed Order', 'Proof of Service']:
+    set_doc_support_oppose_string
+    doc.lm_proceeding_title
+    doc.wants_proposed_title
+  else:
+    doc.title_full
+  if doc.has_hrg:
+    hrg.date
+  if doc.type != 'Proposed Order':
+    sig_block_type
+    sig_block_date_field
+    if doc.sign:
+      signature
+  lead_filing_party
+  court.short_name
+  build_case_strings
+  atty_info_in_caption
+  doc.footer
+  user_approves
+  final_screen
+---
+objects:
+  - court: DAObject
+  - case: DAObject
+  - hrg: DAObject
+  - doc: DAObject
+  - memo_headings_lvl_1: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False)
+  - dataloader: DataLoader.using(filename="2023-04-26_disco_blurbs.xlsx")
+  - methods: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False, complete_attribute='complete')
+  - methods[i].responses: DAList.using(object_type=Thing, there_is_another=False, complete_attribute='complete')
+  - methods[i].ncr: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False, complete_attribute='complete')
+  - combined_qa_list: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False)
+---
+code: |
+  #pick which method is at issue, pick beginning/end numbers
+  methods[i].name.text
+  if len(clients) < 2:
+    methods[i].propounding_parties = clients[0] 
+  methods[i].responding_parties
+  #use beginning/end numbers from above screen to populate the initial 'name.text' attributes of ALL requests/interrogatories, 'methods[i].responses'
+  if methods[i].name.text == 'Interrogatories' and methods[i].interrogatories_type == 'sprogs':
+    sprogs_ocrd
+    if sprogs_ocrd.ready() and responses_ocrd.ready():
+      #troubleshoot_sprogs
+      populate_qa_dict_from_sprogs
+    else:
+      waiting_screen
+  if methods[i].name.text == 'Interrogatories' and methods[i].interrogatories_type == 'g_frogs':
+    methods[i].frogs_propounded
+    if responses_ocrd.ready():
+      ocr_completion_screen
+    else:
+      waiting_screen
+    clean_the_text
+    qa_dict = extract_and_filter_qa_with_buffer(gfrogs_served, responses_clean_text)
+    error_sprogs = scan_for_error_sprogs(qa_dict)
+    #troubleshoot_frogs
+  set_combined_qa_list
+  sprogs_reviewed
+  methods[i].pick_challenged_responses
+  #use all selected checkboxes from 'methods[i].pick_challenged_responses' to initialize and populate the first '.name.text' attribute of each challenged request/interrogatory Thing object in the 'methods[i].ncr' DAList
+  #select all applicable request/interrogatory numbers being contested/challenged
+  set_challenged_responses_list
+  sort_ncrs
+  methods[i].ncr.gather()
+  methods[i].complete = True
+---
+code: |
+  methods[i].ncr[j].name.text
+  methods[i].ncr[j].deficiencies
+  if showifdef('methods[i].ncr[j].custom_critique'):
+    methods[i].ncr[j].custom_critique_added_to_list
+  methods[i].ncr[j].complete = True
+---
+code: |
+  responses_ocrd = ocr_file_in_background(responses_file, 'refresh', language='en', psm='3')
+  ocr_responses = True
+---
+code: |
+  sprogs_ocrd = ocr_file_in_background(methods[i].sprogs_file, 'refresh', language='en', psm='3')
+  ocr_sprogs = True
+---
+question: xxxxx
+subquestion: |
+  Your OCR completed!
+continue button field: ocr_completion_screen
+---
+event: waiting_screen
+question: |
+  Please wait.
+subquestion: |
+  Your document is being processed.
+  This may take several minutes.
+
+  The text of your document will be
+  shown on the screen when the
+  processing is finished.
+---
+id: choose method, pp, rp, set no, and range
+question: The Discovery At Issue
+fields:
+  - '**What did you serve?**': methods[i].name.text
+    datatype: radio
+    code: |
+      unique_values(dataloader, search_column="Method")
+  - '**Type of Interrogatories**': methods[i].interrogatories_type
+    input type: radio
+    choices:
+      - General Form Interrogatories (DISC-001): g_frogs
+      #- Unlawful Detainer Form Interrogatories (DISC-003): ud_frogs
+      #- Economic Litigation Form Interrogatories (DISC-004): el_frogs
+      #- Construction Litigation Form Interrogatories (DISC-005): cl_frogs
+      #- Employment Law Form Interrogatories (DISC-002): emp_frogs
+      - Special Interrogatories: sprogs
+    show if:
+      variable: methods[i].name.text
+      is: 'Interrogatories'    
+  - '**Upload Your Rogs/Requests**': methods[i].sprogs_file
+    datatype: files
+    js show if: |
+      val("methods[i].name.text") === 'Interrogatories' && val("methods[i].interrogatories_type") === 'sprogs'
+validation code: |
+  if methods[i].name.text == "Interrogatories":
+    methods[i].short_unit = 'interrogatory'
+    if methods[i].interrogatories_type == 'sprogs':
+      methods[i].full_method = "Special Interrogatories"
+      methods[i].formal_unit = 'special interrogatory'
+    else:
+      methods[i].full_method = "Form Interrogatories"
+      methods[i].formal_unit = 'form interrogatory'
+  elif methods[i].name.text == 'Requests for Admission':
+    methods[i].full_method = methods[i].name.text
+    methods[i].short_unit = 'request'
+    methods[i].formal_unit = 'request for admission'
+  else:
+    methods[i].full_method = methods[i].name.text
+    methods[i].short_unit = 'request'
+    methods[i].formal_unit = 'request for production'
+---
+id: set propounding party, responding party, set no, and range
+question: Parties & Set No.
+reconsider:
+  - set_all_parties
+fields:
+  - '**Propounding Party(ies)**': methods[i].propounding_parties
+    datatype: object_checkboxes
+    choices: clients
+    show if: 
+      code: |
+        len(clients) > 1 
+  - '**Responding Party(ies)**': methods[i].responding_parties
+    datatype: object_checkboxes
+    choices: parties_sorted_list
+    none of the above: False
+  - '**Set Number**': methods[i].set_no
+    input type: combobox
+    choices: 
+      - One
+      - Two
+      - Three
+      - Four
+      - Supplemental
+  - '**Starting ${ methods[i].short_unit.capitalize() } No.**': methods[i].start_range
+    datatype: integer
+    show if: 
+      code: |
+        methods[i].name.text == 'Interrogatories' and methods[i].interrogatories_type == 'sprogs'
+  - '**Ending ${ methods[i].short_unit.capitalize() } No.**': methods[i].end_range
+    datatype: integer
+    show if: 
+      code: |
+        methods[i].name.text == 'Interrogatories' and methods[i].interrogatories_type == 'sprogs'
+validation code: |
+  if showifdef('methods[i].start_range'):
+    if methods[i].start_range > methods[i].end_range:
+      validation_error('The Ending No. must be greater than the Starting No.', field='methods[i].end_range')
+---
+id: pick propounded form rogs
+question: Select the Form Interrogatories You Propounded
+fields:
+  - no label: methods[i].frogs_propounded
+    datatype: checkboxes
+    code: get_gfrogs_dict_keys_list()
+    none of the above: False
+    all of the above: True
+    default:
+      code: |
+        ['1.1', '2.1', '2.2', '2.5', '2.6', '2.7', '2.8', '2.9', '2.10']
+validation code: |
+  gfrogs_served = methods[i].frogs_propounded.true_values().sort(key=lambda x: (int(x.split('.')[0]), int(x.split('.')[1]) if '.' in x else 0))
+---
+#id: display propounded gfrogs
+#question: The GFROGS you served are
+#subquestion: |
+#  ${ get_formatted_values_by_keys(gfrogs_served) }
+#continue button field: display_served_gfrogs
+---
+###################### FROGS Code #####################################
+---
+code: |
+  # Clean text string returned from responses_ocrd.get().content
+  responses_clean_text = re.sub(r'(?<=[a-z,])\n(?=[A-Za-z])', ' ', re.sub(r'[ \t]+\n', '\n', responses_ocrd.get().content))
+  clean_the_text = True
+---
+#code: |
+#  def extract_and_filter_qa_with_buffer(gfrogs_served, responses_clean_text, gfrogs_dict):
+#      """
+#      Extracts and filters question and answer pairs from OCR'd text, using a buffer for unrecognized questions.
+#      
+#      Args:
+#        gfrogs_served (list): A list of question numbers (as strings) that were actually asked.
+#        responses_clean_text (string): A 'cleaned' text string returned from OCR.
+#        gfrogs_dict (dict): A dictionary containing question numbers as keys and question texts as values.
+#          
+#      Returns:
+#        dict: A dictionary containing the filtered question and answer pairs. 
+#      """
+#    
+#      # Regex pattern for extracting question and answer pairs
+#      pattern = r'(?i)(?:Response\s+to\s+)?Form\s+Interrogatory\s+No\.\s+(\d+\.\d+):(.*?)(?=(?:Response\s+to\s+)?Form\s+Interrogatory\s+No\.\s+\d+\.\d+:|$)'
+#      
+#      # Execute the regex to find all matches in the OCR'd text
+#      matches = re.findall(pattern, responses_clean_text, re.DOTALL)
+#      
+#      # Initialize a dictionary with nested dictionaries for each question in gfrogs_served
+#      qa_dict = {q: {'question': gfrogs_dict.get(q, 'Unknown Question'), 'answer': 'Answer not found'} for q in gfrogs_served}
+#      
+#      # Initialize a buffer to hold answers for unrecognized questions
+#      buffer = []
+#      
+#      for match in matches:
+#        question_number = match[0]
+#        answer = match[1].strip()
+#        
+#        # Update the answer in qa_dict only if the question is in gfrogs_served, else add to buffer
+#        if question_number in gfrogs_served:
+#          qa_dict[question_number]['answer'] = answer
+#        else:
+#          buffer.append(answer)
+#      
+#      # Assign buffered answers to the lowest numbered questions lacking an answer
+#      for q in gfrogs_served:
+#        if qa_dict[q]['answer'] == 'Answer not found' and buffer:
+#          qa_dict[q]['answer'] = buffer.pop(0)
+#          
+#      return qa_dict
+#      
+#  qa_dict_filtered2 = extract_and_filter_qa_with_buffer(gfrogs_served, responses_clean_text, gfrogs_dict)
+#
+#  build_qa_dict = True
+---
+####################### FROGS CODE #####################################################
+---
+id: troubleshoot frogs
+question: Troubleshoot Frogs
+subquestion: |
+  It is this:[BR]
+  ${ gfrogs_served }[BR]
+  'repr responses_ocrd.get().content' is:[BR][BR]
+  ${ repr(responses_ocrd.get().content) }
+  [BR][BR]
+  'responses_clean_text is:[BR][BR]
+  ${ responses_clean_text }
+  ${ qa_dict }
+continue button field: troubleshoot_frogs
+---
+id: troubleshoot sprogs
+question: Troubleshoot Sprogs
+subquestion: |
+  'responses_ocrd.get().content' is:[BR][BR]
+  **${ repr(responses_ocrd.get().content) }**[BR][BR]
+  'repr(found_answers)' is:[BR][BR]
+  ${ repr(found_answers) }[BR][BR]
+  and 'found_answers' is:[BR][BR]
+  ${ found_answers }
+  'responses_clean_text is:[BR][BR]
+continue button field: troubleshoot_sprogs
+---
+code: |
+  start_number = methods[0].start_range
+  end_number = methods[0].end_range
+
+  def create_qa_dict(start_number, end_number):
+    return {str(number): {'question': 'Question not detected/extracted', 'answer': 'Answer not detected/extracted'} for number in range(start_number, end_number + 1)}
+    
+  sprogs_regex_capture_pattern = r'(?:[Ss][Pp][Ee][Cc][Ii][Aa][Ll]\W*)?[Ii][Nn][Tt][Ee][Rr][Rr][Oo][Gg][Aa][Tt][Oo][Rr](?:[Yy]|[Ii][Ee][Ss])?\W*(?:[Nn][Oo]\.?:?|#)\W*(\d+)[^\w]*(.*?)(?=\n\n|\n\d+\W+[A-Z]|\n[A-Z]{3,})'
+  
+  responses_regex_capture_pattern = r'(?:response|answer|objection)s?\s{1,2}to\s{1,2}(?:special |general |form |general form )?interrogator(?:y|ies)\s{1,2}(?:no\.?:?|#|number)\W*(\d{1,3}\.\d{1,2}|\d{1,3})[-:;\s]+(\(\w.*?|.*?)(?=\n\d+\.\s+[A-Z]|\n\n[!@#%^&*)/\\{}_\-=+\]|<>?.]|\s+(?:FORM |RESPONSE |SPECIAL )INTERROGATORY No[\d\., ]{1,7}[-:;.]+|\n{4,}|\.\n{3,})'
+  
+  def extract_text(content, pattern):
+    '''
+    Captures the responses to each individual interrogatory as separate text by running a regex findall pattern with capture groups against the entire text string returned from OCR.
+    Args:
+      content: variable containing the OCR'd text string to search against.
+      pattern: the regex pattern with capture groups that is run against the content.
+    Returns:
+      a list of tuples, with the number of elements in each tuple equal to the number of capture groups in the regex match pattern.
+    '''
+    return re.findall(pattern, content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
+  
+  def validate_content(found_questions, found_answers, start_number, end_number):
+    total_expected = end_number - start_number + 1
+    total_found = len(set(number for number, _ in found_questions + found_answers))
+  
+    # Check if the total found is significantly different from the total expected
+    if abs(total_found - total_expected) > total_expected * 0.1: # 10% tolerance
+      print(f"Warning: Mismatch detected. Expected {total_expected} questions/answers, but found {total_found}. Check the variables and content.")
+  
+    # Check if a large proportion of the question numbers don't match the range
+    unexpected_numbers = [int(number) for number, _ in found_questions + found_answers if int(number) < start_number or int(number) > end_number]
+    if len(unexpected_numbers) > total_expected * 0.1: # 10% tolerance
+      print(f"Warning: {len(unexpected_numbers)} question/answer numbers are out of the expected range ({start_number} to {end_number}). Check the variables and content.")
+  
+  def populate_dictionary(found_items, qa_dict, start_number, item_type):
+    '''
+    Unpacks list of tuples returned by extract_text and assigns them to the keys (interrogatory number) and values (xxxxx) of the qa_dict, overwriting the placeholder values.
+    Args: 
+      - found_items (xxxx): xxxxx
+      - qa_dict (dict): a dictionary prepopulated with placeholder text for each interrogatory in the range of sprogs served
+      - start_number: (int) the beginning interrogatory number of the sprogs set
+      - item_type: stand-in for the nested dictionary key ('question') and value ('answer')
+    Returns:
+      - nothing, but modifies the qa_dict by overwriting the placeholder values with the actual text sprogs and responses captured by regex from the ocr'd files
+    '''
+    for number, text in found_items:
+      number = int(number)
+      if str(number) in qa_dict:
+        qa_dict[str(number)][item_type] = text.strip()
+          
+  qa_dict = create_qa_dict(start_number, end_number)
+  
+  def clean_ocrd_text(ocrd_text):
+    regex_convert_extraneous_newlines_to_space = r'(?<=[a-z,])\n(?=[A-Za-z])'
+    regex_strip_whitespace_before_newline = r'[ \t]+\n'
+    clean_text = re.sub(regex_strip_whitespace_before_newline, '\n', re.sub(regex_convert_extraneous_newlines_to_space, ' ', ocrd_text))
+    return clean_text
+    
+  found_questions = extract_text(clean_ocrd_text(sprogs_ocrd.get().content), sprogs_regex_capture_pattern)
+  found_answers = extract_text(clean_ocrd_text(responses_ocrd.get().content), responses_regex_capture_pattern)
+  
+  #validate_content(found_questions, found_answers, methods[i].start_range, methods[i].end_range) # Validation step
+  
+  populate_dictionary(found_questions, qa_dict, start_number, 'question')
+  populate_dictionary(found_answers, qa_dict, start_number, 'answer')
+  
+  # Check the qa_dict for any question or answer that was not overwritten...error_sprogs will contain the numbers for which either the question or the answer was not detected/extracted
+  error_sprogs = [number for number, item in qa_dict.items() if item['question'] == 'Question not detected/extracted' or item['answer'] == 'Answer not detected/extracted']
+  
+  populate_qa_dict_from_sprogs = True
+---
+id: build DAList out of keys and values from qa_dict for sprogs
+code: |
+  for key, value in qa_dict.items():
+    combined_qa_list.appendObject()
+    combined_qa_list[-1].name.text = f"{key}"
+    combined_qa_list[-1].question = f"{value['question']}"
+    combined_qa_list[-1].answer = f"{value['answer']}"
+  set_combined_qa_list = True
+---
+id: pick all challenged responses
+question: Choose Disputed ${ methods[i].full_method } Responses
+fields: 
+  - no label: methods[i].pick_challenged_responses
+    datatype: checkboxes
+    code: |
+      combined_qa_list
+    all of the above: True
+    none of the above: False
+---
+code: |
+  for number_picked in methods[i].pick_challenged_responses.true_values().sort(key=lambda y: float(y)):
+    for sprog in combined_qa_list:
+      if sprog.name.text == number_picked:
+        methods[i].ncr.appendObject()
+        methods[i].ncr[-1].name.text = sprog.name.text
+        methods[i].ncr[-1].question = sprog.question
+        methods[i].ncr[-1].answer = sprog.answer
+        break
+  set_challenged_responses_list = True
+---
+code: |
+  methods[i].ncr.elements.sort(key=lambda y: float(y.name.text))
+  sort_ncrs = True
+---
+#question: xxx
+#subquestion: |
+#  ${ methods[i].ncr.elements }
+#continue button field: troubleshoot_sort_ncrs
+---
+id: explain noncompliant responses
+question: |
+  <span style="color: red;">Challenge to Interrogatory No. ${ methods[i].ncr[j] }</span>
+subquestion: |
+  <span style="color: yellow;">**Interrogatory:**</span>[BR]
+  
+  ${ methods[i].ncr[j].question }[BR]
+  
+  <span style="color: orange;">**Response:**</span>[BR]
+  
+  ${ methods[i].ncr[j].answer }[BR][BR]
+fields:
+  - '**Select all deficiencies**': methods[i].ncr[j].deficiencies
+    datatype: multiselect
+    code: |
+      [{"label": result["Label"], "group": result["Category"], "value": index} for index, result in dataloader._load_data()[dataloader._load_data()["Method"]==(methods[i].name.text)].iterrows()]
+  - note: |
+      [BR][BR][BR][CENTER]**-----Option: Add Custom-Typed Criticism------**[BR]
+  - '**Add custom criticism**': methods[i].ncr[j].add_custom_critique
+    datatype: yesno
+  - note: |
+      e.g., *There is no question that the interrogatory seeks information relevant to respondent's defense that plaintiff failed to mitigate her damages.*     
+  - '**Custom criticism**': methods[i].ncr[j].custom_critique
+    input type: area
+    rows: 6
+    show if: methods[i].ncr[j].add_custom_critique
+script: |
+  <script type="text/javascript">
+    /* Need to activate the multiselect JavaScript on each input, after base64 encoding the name
+     of the input (it is "objection_categories[i].objections[j].selected" here) */  
+     $(document).ready(function() {$("#${base64.b64encode(str('methods[i].ncr[j].deficiencies').encode()).decode().replace('=', '') } ").multiselect({enableCaseInsensitiveFiltering: true, inheritClass: true, enableClickableOptGroups: true, enableCollapsibleOptGroups: true, collapseOptGroupsByDefault: true});}); </script>
+under: |
+  % if defined('custom_critique_list'):
+    **Custom Criticism (last three):**
+    
+    % for item in custom_critique_list[-3:]:
+    * ${ item }
+      
+    % endfor
+  % endif
+---
+id: create and maintain custom critique list for display
+code: |
+  if not defined('custom_critique_list'):
+    custom_critique_list = []
+  if methods[i].ncr[j].custom_critique:
+    custom_critique_list.append(methods[i].ncr[j].custom_critique)
+  methods[i].ncr[j].custom_critique_added_to_list = True
+---
+id: review sprogs
+question: Review Interrogatories
+subquestion: |
+  % if error_sprogs:
+    <span style="color: red;">**Alert: Interrogatory/ies No. ${ comma_and_list(error_sprogs) }** was/were not properly captured.</span>
+  % endif
+  ${ sprogs_table }
+continue button field: sprogs_reviewed
+---
+table: sprogs_table
+rows: combined_qa_list
+columns:
+  - No.: bold(row_item)
+  - Rog: row_item.question
+  - Response: row_item.answer
+edit:
+  - question
+---
+id: question block for editing of sprogs
+question: Revise/Confirm Interrogatory No. ${ combined_qa_list[i] }
+fields:
+  - '**Interrogatory**': combined_qa_list[i].question
+    input type: area
+    rows: 6
+  - '**Response**': combined_qa_list[i].answer
+    input type: area
+    rows: 20
+---
+id: language table
+variable name: language_table
+data:
+  Interrogatories:
+    singular: interrogatory
+    plural: interrogatories
+  Requests for Production:
+    singular: request
+    plural: document requests
+  Requests for Admission:
+    singular: request
+    plural: admission requests
+---
+id: court and case info
+question: Court & Case Info
+fields:
+  - '**Court**': court.short_name
+    code: get_court_names()
+  - '**Case Number**': case.number
+  - '**Original Filing Date**': case.filing_date
+    datatype: date
+  - '**Is trial date set?**': case.trial_date_set_yes
+    datatype: yesnoradio
+  - '**Trial Date**': case.trial_date
+    datatype: date
+    show if: case.trial_date_set_yes
+  - '**For the case *caption*, what are the litigant *roles*?**': action_type
+    default: Plaintiff v. Defendant
+    choices:
+      - Plaintiff v. Defendant
+      - Petitioner v. Respondent
+      - Something Else
+  - '**Filing Party**': other_filing_party_role
+    input type: combobox
+    choices:
+      - Claimant
+      - Applicant
+      - Creditor
+      - Appellant
+    show if:
+      variable: action_type
+      is: 'Something Else'
+  - '**More than one filing party?**': pluralize_filing_party_yes
+    datatype: yesno
+    note: |
+      This appends "et al." to the first filing party and it adds an "s" to plaintiff, petitioner, etc.
+  - '**More than one responding/defending party?**': pluralize_responding_party_yes
+    datatype: yesno
+  - '**Responding/Defending Party**': other_responding_party_role
+    input type: combobox
+    choices:
+      - Debtor
+      - Accused
+      - Appellee
+    show if:
+      variable: action_type
+      is: 'Something Else'
+  - '**Cross-action or counterclaim filed?**': counteraction_filed
+    datatype: yesno
+---
+code: |
+  filing_party_role = 'Plaintiff' if action_type == 'Plaintiff v. Defendant' else 'Petitioner' if action_type == 'Petitioner v. Respondent' else other_filing_party_role
+  responding_party_role = 'Defendant' if action_type == 'Plaintiff v. Defendant' else 'Respondent' if action_type == 'Petitioner v. Respondent' else other_responding_party_role
+---
+id: parties in case caption
+question: Parties in Case Caption
+subquestion: |
+  Select the **first** (top) named party on each side for the case caption page.
+  The parties are: 
+  % for party in all_parties:
+  
+  * ${ party }
+  % endfor
+fields:
+  - '**Lead Filing Party**': lead_filing_party
+    datatype: object
+    choices: all_parties_sorted_list
+  - '**Lead Responding Party**': lead_responding_party
+    datatype: object
+    choices: all_parties_sorted_list
+---
+id: build case strings
+code: |
+  case.short_name_inline = f"{court.short_name} Case No. {case.number} - *{lead_filing_party}{' et al.' if pluralize_filing_party_yes else ''} v. {lead_responding_party or ''}{' et al.' if pluralize_responding_party_yes else ''}*"
+  case.basic_info_block = f"{court.short_name}[BR]Case No. {case.number}[BR]*{lead_filing_party}{' et al.' if pluralize_filing_party_yes else ''} v. {lead_responding_party or ''}{' et al.' if pluralize_responding_party_yes else ''}*[BR]Filing Date: {case.filing_date}"
+  build_case_strings = True
+---
+id: declaration info
+depends on: version
+question: Declaration Info
+subquestion: |
+  'json.dumps(author[0].name.full())' is: ${ json.dumps(author[0].name.full()) }.
+fields:
+  - '**Declarant Name**': doc.declarant
+    datatype: object
+    choices: everyone_sorted_list
+  - '**Declarant Role**': doc.declarant_role
+    choices: 
+      - Author
+      - Named Party
+      - Other
+    js hide if: |
+      val('doc.declarant') === ${ json.dumps(author[0].name.full()) }
+  - '**Declarant Role in the Case**': doc.declarant_capacity
+    input type: area
+    rows: 4
+    show if:
+      variable: doc.declarant_role
+      is: 'Other'
+    note: |
+      Describe what relation or involvement the declarant has to the lawsuit.[BR]e.g., *I personally witnessed the vehicle collision involving the Plaintiff and Defendant that is the subject of this lawsuit...I inspected and evaluated the physical condition of the property that is the subject of this lawsuit...*
+---
+id: run code to determine if the declarant party role is unique
+code: |
+  selected_declarant_role = doc.declarant.party_role
+  same_role_parties = [party for party in parties if party.party_role == selected_declarant_role]
+  doc.declarant.unique_party = True if len(same_role_parties) < 2 else False
+  set_doc_declarant_unique_party = True
+---
+id: set support oppose verbiage
+code: |
+  if doc.support_oppose == 'in support of':
+    doc.support_oppose_string_for_body = f"{doc.support_oppose} {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title} ({doc.lm_proceeding_title_short})"
+    doc.support_oppose_string_for_title = f"{doc.support_oppose} {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title}"
+  if doc.support_oppose == 'in opposition to':
+    doc.support_oppose_string_for_body= f"{doc.support_oppose} the {doc.lm_proceeding_title} ({doc.lm_proceeding_title_short}) brought by {doc.lm_proceeding_movant.party_role.lower()} {doc.lm_proceeding_movant.name.full()} ({doc.lm_proceeding_movant.short_name})"
+    doc.support_oppose_string_for_title= f"{doc.support_oppose} {doc.lm_proceeding_movant.party_role} {doc.lm_proceeding_movant.name.full()}'s {doc.lm_proceeding_title}"
+  if doc.support_oppose == 'in reply to':
+    doc.support_oppose_string_for_body = f"{doc.support_oppose} the opposition of {doc.lm_opposition_party.party_role.lower()} {doc.lm_opposition_party} ({doc.lm_opposition_party.short_name}) to {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title} ({doc.lm_proceeding_title_short})"
+    doc.support_oppose_string_for_title = f"{doc.support_oppose} {doc.lm_opposition_party.party_role.lower()} {doc.lm_opposition_party}'s opposition to {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title}"
+  set_doc_support_oppose_string = True
+---
+id: memorandum point headings
+depends on: version
+question: Memo Point Headings
+fields:
+  - '**{ capitalize(ordinal(i)) } Point Heading**': memo_headings_lvl_1[i].name.text
+    note: |
+      If you don't want headings entered now, enter 'xxxxx' for one or more headings to have placeholders.[BR][BR]Use full sentence case, plus period at end.[BR][BR]Ex.: *Defendant's Responses to Plaintiff's Special Interrogatories Fails to Comply with the Civil Discovery Act.*[BR][BR]
+---
+id: memo point heading review
+depends on: version
+question: Review Memo Point Headings
+subquestion: |
+    **Point Headings**
+    ${ memo_headings_lvl_1.table }
+    ${ memo_headings_lvl_1.add_action(label='Add Heading', color='warning') }
+continue button field: memo_heading_review
+---
+table: memo_headings_lvl_1.table
+rows: memo_headings_lvl_1
+columns:
+  - Heading: |
+      row_item
+edit:
+  - row_item
+allow reordering: True
+---
+depends on: version
+code: |
+  if doc.type in ['Declaration', 'Proof of Service']:
+    sig_block_type = 'declarant'
+  elif doc.type == 'Proposed Order':
+    sig_block_type = 'judge'
+  else:
+    sig_block_type = 'author'
+---
+id: law and motion proceeding info
+depends on: version
+question: Law & Motion Proceeding Info
+fields:
+  - '**Title of Law & Motion/Litigation Proceeding**': doc.lm_proceeding_title
+    note: |
+      e.g., *Motion to Compel Further Responses to Special Interrogatories* 
+  - '**Shorthand Reference to the Proceeding**': doc.lm_proceeding_title_short 
+    input type: combobox
+    choices:
+      - Motion
+      - Application
+      - Request
+      - OSC
+      - Petition
+      - Stipulation
+  - '**Who is the movant?**': doc.lm_proceeding_movant
+    datatype: object
+    choices: all_parties_sorted_list
+  - '**Does this document support/oppose/reply to the RFO?**': doc.support_oppose
+    input type: radio
+    choices:
+      - in support of
+      - in opposition to
+      - in reply to
+      - objecting to
+      - regarding
+  - '**Whose opposition does the reply address?**': doc.lm_opposition_party
+    datatype: object
+    choices: parties_sorted_list
+    show if:
+      variable: doc.support_oppose
+      is: 'in reply to'
+comment:
+  revise the variable name 'all_served_parties' to the more accurate 'other_parties' or 'nonclient_parties'
+---
+id: non-lm document title
+if: doc.type in ['Generic Pleading', 'Proposed Order', 'Proof of Service']
+depends on: version
+question: Non-LM Document Title
+fields:
+  - '**Document Title**': doc.custom_title_full
+    input type: area
+    rows: 3
+    default: |
+      ${doc.type if doc.type != 'Generic Pleading' else ''}
+  - '**Short Title (optional)**': doc.custom_title_shorthand
+    input type: area
+    rows: 2
+    required: False
+---
+id: lm document title
+if: doc.type not in ['Generic Pleading', 'Proposed Order', 'Proof of Service']
+depends on: version
+question: Law & Motion Document Title
+subquestion: |
+  **Proposed Title:**[BR]**<span style="color:Red">${ doc.proposed_title }</span>**
+fields:
+  - '**Use Proposed Title**': doc.wants_proposed_title
+    datatype: yesno
+  - '**Custom Document Title**': doc.custom_title_full
+    input type: area
+    rows: 3
+    default: ${ doc.proposed_title }
+    disable if: doc.wants_proposed_title
+    required: False
+  - '**Short Title (optional)**': doc.custom_title_shorthand
+    input type: area
+    rows: 2
+    required: False
+---
+depends on: version
+code: |
+  if doc.type == 'Declaration':
+    doc.proposed_title = doc.type + ' of ' + str(doc.declarant) + ' ' + title_case(doc.support_oppose_string_for_title)
+  elif doc.type == 'Notice of Motion and Motion':
+    doc.proposed_title = 'Notice of Motion and ' + doc.lm_proceeding_title
+  elif doc.type in ['Memorandum of Points & Authorities', 'Request for Judicial Notice', 'Index of Exhibits', 'Separate Statement']:
+    doc.proposed_title = doc.type + ' ' + title_case(doc.support_oppose_string_for_title)
+---
+depends on: version
+code: |
+  doc.title_full = doc.proposed_title if defined('doc.wants_proposed_title') else doc.custom_title_full
+---
+depends on: version
+code: |
+  if doc.custom_title_shorthand:
+    doc.footer = doc.custom_title_shorthand
+  else:
+    doc.footer = doc.title_full
+---
+id: document feature options
+depends on: version
+question: Document Options
+fields:
+  - note: |
+      [BOLDCENTER]--Additional Text/Notations on Caption Page--[BR]
+  - '**Include Statutory Ref. Under Doc Title**': include_stat_callout
+    datatype: yesno
+  - '**Enter the statutory call-out text**': stat_callout
+    show if: include_stat_callout
+    note: |
+      The contents of this box will appear on the caption page, one line beneath the document's title, in braces.[BR][BR]Ex: [CCP § 568, HSC § 17980.7]
+  - '**Include "Concurrently filed with..." notice**': include_concurrently_filed_docs_notice
+    datatype: yesno
+  - '**Enter short titles of concurrently filed documents**': custom_entered_concurrently_filed_docs
+    input type: area
+    show if: include_concurrently_filed_docs_notice
+    note: |
+      Ex: *Memorandum of Points & Authorities; Declarations of XXXXX and YYYYY; Index of Exhibits; Request for Judicial Notice; [Proposed] Order*
+  - note: |
+      [BOLDCENTER]--Document Attachments & Acknowledgments--[BR]
+  - '**Attach exhibits to this document**': attach_exhibits
+    datatype: yesno
+  - '**Attach notary acknowledgement**': include_notary_acknowledgment_form
+    datatype: yesno
+---
+id: POS Server, Server Address, & Service Location
+question: Who is serving the documents and from where
+fields:
+  - '**Title of document being served**': documents_served
+  - '**Who is being served in this POS?**': choose_party_servees
+    datatype: radio
+    choices:
+      - All Parties
+      - Only Certain Parties
+  - '**Choose parties being served**': party_servees
+    datatype: object_checkboxes
+    choices: parties_sorted_list
+    show if:
+      variable: choose_party_servees
+      is: 'Only Certain Parties'
+  - '**Nonparties are being served as well**': nonparties_being_served
+    datatype: yesno
+  - '**Choose nonparties being served**': nonparty_servees
+    datatype: object_checkboxes
+    choices: nonparties.complete_elements()
+    show if: nonparties_being_served
+  - '**Everyone is being served *the same way on the same day***': same_service
+    datatype: yesno    
+  - '**Who is serving the documents?**': pick_server
+    datatype: radio
+    choices:
+      - Me
+      - Someone Else
+---
+code: |
+  server_address = author[0].address.on_one_line() if pick_server == 'Me' else '1234 Main Street, Honolulu, HI 20347'
+---
+id: determine servees
+code: |
+  if choose_party_servees == 'All Parties':
+    all_servees = parties.complete_elements()
+  else:
+    all_servees = party_servees
+  if nonparties_being_served:
+    all_servees = all_servees.extend(nonparty_servees)
+  set_servees = True
+---
+id: same service - choose service date and method
+question: How is service being carried out?
+fields:
+  - '**Service Method**': same_service_method
+    datatype: checkboxes
+    code: |
+      list(service_method_dict.keys())
+  - '**Date of Service**': same_service_date
+    datatype: date
+---
+id: different service - choose service date and method for each servee
+generic object: ALPeopleList
+question: "Service on ${ x[i] }: Method and Date"
+fields:
+  - '**Methods**': x[i].pick_service_methods
+    datatype: checkboxes
+    code: |
+      list(service_method_dict.keys())
+  - '**Date**': x[i].service_date
+    datatype: date
+validation code: |
+  x[i].service_methods = x[i].pick_service_methods.true_values()
+---
+id: generate service list
+question: Show POS
+subquestion: |
+  ${ build_POS(all_servees, documents_served, server_address) }
+continue button field: show_service_list
+---
+code: |
+  atty_info_in_caption = True
+---
+id: full client recitation string
+code: |
+  client_string = comma_and_list(client.party_plus_whole_name for client in clients)
+  client_plus_short_name_string = comma_and_list(client.party_plus_whole_name_plus_short for client in clients)

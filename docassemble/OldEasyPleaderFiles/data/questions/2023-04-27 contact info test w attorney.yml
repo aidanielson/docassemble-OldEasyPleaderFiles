@@ -1,0 +1,41 @@
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+---
+mandatory: True
+code: |
+  al_form_type = 'letter'
+  end_screen
+---
+objects:
+  - user: ALPeopleList.using(target_number=1, ask_number=True)
+  - clients: ALPeopleList
+  - parties: ALPeopleList
+  - nonparties: ALPeopleList
+---
+#code: |
+#  if x[i].repd_by_attorney:  
+---
+id: end screen
+event: end_screen
+question: |
+  xxx
+subquestion: |
+  Here are the people involved in this case:
+  
+  Users:
+  
+  % for attorney in user:
+  ${ attorney } who resides at ${ attorney.address.block() }
+  % endfor
+  
+  Clients:
+  
+  % for client in clients:
+  ${ client } who resides at ${ client.address.block() }
+  % endfor
+  
+  Litigants:
+
+  % for party in parties:
+  ${ party } who resides at ${ party.address.block() }
+  % endfor

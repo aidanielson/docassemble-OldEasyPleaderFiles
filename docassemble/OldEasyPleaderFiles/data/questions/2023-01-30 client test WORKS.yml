@@ -1,0 +1,87 @@
+features:
+  css: 2023-01-26_flatly_with_sandstone_colors.css
+---
+metadata:
+  title: |
+    Logo title
+  short title: Generate polished legal pleadings quickly and easily!
+---
+mandatory: True
+code: |
+  client[0].name.text
+  client_contact_review
+  user_approves
+  final_screen
+---
+objects:
+  - client: DAList.using(object_type=Person, there_are_any=True, there_is_another=False)
+---
+question: |
+  Client Info
+subquestion: |
+  Enter your client's information.
+fields:
+  - Select Party Role: client[i].role
+    input type: combobox
+    choices:
+      - Plaintiff
+      - Petitioner
+      - Claimant
+      - Defendant
+      - Respondent
+  - Is the client a person/human or a company/entity?: client[i].human_or_entity
+    input type: radio
+    choices:
+      - Person/Human
+      - Company/Entity
+  - Company/Entity Name: client[i].name.text
+    show if:
+      variable: client[i].human_or_entity
+      is: 'Company/Entity'
+  - Full Name: client[i].name.text
+    show if:
+      variable: client[i].human_or_entity
+      is: 'Person/Human'
+  - Shorthand Name: client[i].short_name
+---
+question: |
+  Client Review
+subquestion: |
+    The ${client.number_as_word()} client you've entered thusfar are:
+    
+    ${ client.table }
+    
+    ${ client.add_action() }
+continue button field: client_contact_review
+---
+table: client.table
+rows: client
+columns:
+  - Role: |
+      row_item.role
+  - Name: |
+      row_item.name.full()
+edit:
+  - role
+allow reordering: True
+---
+question: |
+  Here is your document.
+subquestion: |
+  Do you approve?
+yesno: user_approves
+attachment:
+  name: Pleading
+  filename: letter
+  docx template file: 2023-01-30_client_test.docx
+  valid formats:
+    - pdf
+    - docx
+include attachment notice: False
+---
+event: final_screen
+question: |
+  We're all through here...
+buttons:
+  Exit: exit
+  Restart: restart

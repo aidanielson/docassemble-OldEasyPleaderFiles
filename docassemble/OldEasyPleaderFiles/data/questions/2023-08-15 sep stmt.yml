@@ -1,0 +1,287 @@
+include:
+  - docassemble.playground1:2023-08-14_EP_Universal_Questions.yml
+---
+imports:
+  - re
+---
+modules:
+  - .ocr_processing
+---
+mandatory: True
+code: |
+  version = 0
+---
+mandatory: True
+code: |
+  intro_screen
+  conduct_data_intake
+  methods.gather()
+  user_approves
+  final_screen
+---
+objects:
+  - dataloader: DataLoader.using(filename="2023-04-26_disco_blurbs.xlsx")
+  - methods: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False, complete_attribute='complete')
+  - methods[i].responses: DAList.using(object_type=Thing, there_is_another=False, complete_attribute='complete')
+  - methods[i].ncr: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False, complete_attribute='complete')
+  - methods[i].custom_definitions: DAList
+  - ocrd_responses: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False, complete_attribute='complete')
+  - new_file: DAFile
+---
+code: |
+  #pick which method is at issue, pick beginning/end numbers
+  methods[i].name.text
+  #use beginning/end numbers from 'methods' to populate the initial 'name.text' attributes of ALL requests/interrogatories, 'methods[i].responses'
+  populate_ocrd_responses
+  ocrd_responses.gather()
+  set_responses_list
+  if import_dummy_discovery_data:
+    dummy_discovery_data_imported
+  #enter the question and answer of ALL requests/interrogatories in the entire set
+  methods[i].responses.gather()
+  #select all applicable request/interrogatory numbers being contested/challenged
+  methods[i].pick_challenged_responses
+  #use all selected checkboxes from 'methods[i].pick_challenged_responses' to initialize and populate the first '.name.text' attribute of each challenged request/interrogatory Thing object in the 'methods[i].ncr' DAList
+  set_challenged_responses_list
+  methods[i].complete = True
+  #as to each ncr, select all applicable deficiencies from the DB and add custom deficiencies 
+  methods[i].ncr.gather()
+---
+code: |
+  methods[i].responses[j].name.text
+  methods[i].responses[j].answer
+  methods[i].responses[j].complete = True
+---
+code: |
+  methods[i].ncr[j].name.text
+  methods[i].ncr[j].deficiencies
+  methods[i].ncr[j].complete = True
+---
+code: |
+  ocrd_responses[i].name.text
+  ocrd_responses[i].other
+  ocrd_responses[i].complete = True
+---
+id: intro screen
+question: Intro Screen
+fields:
+  - Use Dummy Discovery Data?: import_dummy_discovery_data
+    datatype: yesno
+continue button field: intro_screen
+---
+id: choose method, pp, rp, set no, and range
+reconsider:
+  - set_all_parties
+question: Discovery Method Propounded
+subquestion: |
+  ${ all_parties }
+fields:
+  - What did you serve?: methods[i].name.text
+    datatype: radio
+    code: |
+      unique_values(dataloader, search_column="Method")
+  - Upload Responses: methods[i].responses_file
+    datatype: file
+  - Propounding Party(ies): methods[i].propounding_parties
+    datatype: object_checkboxes
+    choices: all_parties
+  - Responding Party(ies): methods[i].responding_parties
+    datatype: object_checkboxes
+    choices: all_parties
+  - What set number were they?: methods[i].set_no
+    input type: radio
+    choices: 
+      - One
+      - Two
+      - Three
+      - Four
+      - Supplemental
+  - Beginning number: methods[i].start_range
+    datatype: integer
+  - End number: methods[i].end_range
+    datatype: integer
+---
+id: gather ocrd_responses
+code: |
+  #processed_file = preprocess_pdf(methods[i].responses_file.path())
+  #new_file.initialize(filename="file.pdf")
+  #processed_file.save(new_file.path())
+  text = ocr_file(methods[i].responses_file, language='en', psm='3')
+  clean_text = re.sub(r'(?<=[a-z])\n+(?=[a-z])', ' ', re.sub(r'[ \t]+\n', '\n', text))
+  pattern = r'[R][Ee][Ss][Pp][Oo][Nn][Ss][Ee]\W*[Tt][Oo]\W*(?:[Ss][Pp][Ee][Cc][Ii][Aa][Ll]\W*)?(?:[Ff][Oo][Rr][Mm]\W*)?[Ii][Nn][Tt][Ee][Rr][Rr][Oo][Gg][Aa][Tt][Oo][Rr](?:[Yy]|[Ii][Ee][Ss])?\W*(?:[Nn][Oo]\.?:?|#)\W*(\d+)[^\w]*(.*?)(?=\n\n|\n\d+\W+[A-Z])'
+  found_responses = re.findall(pattern, clean_text, re.DOTALL)
+  response_objects = [{'interrogatory_number': int(k), 'response': v.strip()} for k, v in found_responses]
+  for k, v in found_responses:
+    ocrd_responses.appendObject()
+    ocrd_responses[-1].name.text = f"{ k }"
+    ocrd_responses[-1].text = f"{ v }"
+  populate_ocrd_responses = True
+---
+id: ocr results
+question: Display OCR Text
+subquestion: |
+  The OCR'd text is:[BR]${ clean_text }
+continue button field: check_ocr_results
+---
+id: edit or confirm any extracted responses
+question: Extracted Response to Interrogatory No. ${ ocrd_responses[i] }
+subquestion: |
+  Either Confirm or Revise the Response Text
+fields:
+  - Response Text: ocrd_responses[i].text
+    input type: area
+    rows: 14
+  - Response Other Thing: ocrd_responses[i].other
+right: |
+  Extracted OCR'd text:[BR]
+  ${ text }
+---
+code: |
+  methods[i].number_propounded = (methods[i].end_range) - ((methods[i].start_range) - 1)
+---
+code: |
+  for index in range((methods[i].start_range - 1), methods[i].end_range):
+    methods[i].responses.appendObject()
+    methods[i].responses[-1].name.text = f"{index + 1}"
+  set_responses_list = True
+---
+id: method word definitions
+question: Defined Words & Phrases
+subquestion: |
+  Enter all defined words and phrases in ${ methods[i] }, Set No. { methods[i].set_no }
+fields:
+  - Common Definitions: methods[i].common_definitions
+    datatype: checkboxes
+    choices:
+      - YOU
+      - INCIDENT
+      - PERSON
+      - DOCUMENT
+      - RELATED TO
+      - IDENTIFY
+  - note: |
+      [BR]
+      [BOLDCENTER]--- Additional Context ---
+      [BR][BR]
+  - Include Custom Definitions: methods[i].custom_definitions.there_are_any
+    datatype: yesno
+  - Incorporate other requests/responses: methods[i].incorporate_other_responses
+    datatype: yesno
+---
+id: incorporation of other requests and responses for context
+question: Which other discovery requests/responses should be incorporated?
+fields:
+  - xxxxx: xxxxx
+---
+id: challenged response number
+question: Select all deficient ${ methods[i] } responses
+fields: 
+  - no label: methods[i].pick_challenged_responses
+    datatype: checkboxes
+    code: |
+      [str(x) for x in range(methods[i].start_range, (methods[i].end_range + 1))]
+    none of the above: false
+---
+code: |
+  for response in methods[i].pick_challenged_responses.true_values():
+    methods[i].ncr.appendObject()
+    methods[i].ncr[-1].name.text = f"{ response }"
+  set_challenged_responses_list = True
+---
+id: explain noncompliant responses
+question: Response to ${ methods[i] } **No. ${ methods[i].ncr[j] }**
+fields:
+  - Check all applicable deficiencies: methods[i].ncr[j].deficiencies
+    datatype: multiselect
+    code: |
+      [{"label": result["Label"], "group": result["Category"], "value": index} for index, result in dataloader._load_data()[dataloader._load_data()["Method"]==(methods[i].name.text)].iterrows()]
+  - note: |
+      [BR][CENTER]**-----Option: Add Custom-Typed Criticism------**[BR]e.g., *There is no question that the interrogatory seeks information relevant to respondent's defense that plaintiff failed to mitigate her damages.*     
+  - Add custom criticism: methods[i].ncr[j].add_custom_critique
+    datatype: yesno
+  - Custom criticism: methods[i].ncr[j].custom_critique
+    input type: area
+    rows: 4
+    show if: methods[i].ncr[j].add_custom_critique
+script: |
+  <script type="text/javascript">
+    /* Need to activate the multiselect JavaScript on each input, after base64 encoding the name
+     of the input (it is "objection_categories[i].objections[j].selected" here) */  
+     $(document).ready(function() {$("#${base64.b64encode(str('methods[i].ncr[j].deficiencies').encode()).decode().replace('=', '') } ").multiselect({enableCaseInsensitiveFiltering: true, inheritClass: true, enableClickableOptGroups: true, enableCollapsibleOptGroups: true, collapseOptGroupsByDefault: true});}); </script>
+right: |
+  [BR][BR]
+  % for method in methods:
+  % for response in method.responses:
+  % if response.name.text == methods[i].ncr[j].name.text:
+  Interrogatory No. ${ response } Text:[BR][BR]
+  **${ response.question }**[BR][BR]
+  Interrogatory Response:[BR][BR]
+  **${ response.answer }**
+  % endif
+  % endfor
+  % endfor
+---
+question:  Question & Answer #${ methods[i].responses[j] }
+fields:
+  - Interrogatory No.: methods[i].responses[j].name.text
+  - Interrogatory Text: methods[i].responses[j].question
+  - Response: methods[i].responses[j].answer
+---
+######################################################################################
+---
+id: dummy discovery data
+if: import_dummy_discovery_data
+code: |
+  methods[0].responses[0].question = 'State ALL facts in support of YOUR contention that YOU were not negligent in the operation of YOUR vehicle in the moments surrounding the collision.'
+  methods[0].responses[0].answer = 'Objection. The interrogatory is vague, ambiguous, and overbroad as to the term "negligence." The interrogatory also improperly calls for a legal conclusion and for Responding Party to admit the ultimate issue in this lawsuit.'
+  methods[0].responses[1].question = 'Identify ALL witnesses having knowledge or information relating to any facts identified in YOUR previous response.'
+  methods[0].responses[1].answer = 'Objection. The interrogatory is compound and overbroad. Responding Party incorporates its objection to the prior interrogatory as if fully set forth herein.'
+  methods[0].responses[2].question = 'Identify ALL documents evidencing or relating to any facts identified in YOUR response to the prior interrogatory.'
+  methods[0].responses[2].answer = 'Objection. The interrogatory is compound and overbroad. Responding Party incorporates its objection to the prior interrogatory as if fully set forth herein.'
+  methods[0].responses[3].question = 'Identify ALL witnesses having knowledge or information relating to any facts identified in YOUR previous response.'
+  methods[0].responses[3].answer = 'Objection. The interrogatory is compound and overbroad. Responding Party incorporates its objection to the prior interrogatory as if fully set forth herein.'
+  dummy_discovery_data_imported = True
+---
+id: language table
+variable name: language_table
+data:
+  Interrogatories:
+    singular: interrogatory
+    plural: interrogatories
+  Requests for Production:
+    singular: request
+    plural: document requests
+  Requests for Admission:
+    singular: request
+    plural: admission requests
+---
+code: |
+  short_filename = f"{format_date(today(), format='yyyy-MM-dd')} Disco SEP STMT [draft]"
+---
+id: generate document
+depends on: version
+need: short_filename
+question: Your Separate Statement is below.
+subquestion: Do you approve?
+yesno: user_approves
+attachment:
+  name: Disco Separate Statement
+  filename: ${ short_filename }
+  docx template file: 2023-08-14_sep_stmt.docx
+  valid formats:
+    - pdf
+    - docx
+include attachment notice: False
+---
+event: new_version
+code: |
+  version += 1
+---
+id: final screen
+depends on: version
+event: final_screen
+question: Well, ${author[0].name.first}, hope you liked your Separate Statement!
+action buttons:
+  - label: Try again
+    action: new_version
+    color: primary

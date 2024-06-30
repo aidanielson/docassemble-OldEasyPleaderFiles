@@ -1,0 +1,25 @@
+---
+mandatory: True
+code: |
+  the_font_files
+---
+id: install fonts
+question: |
+  Upload the fonts you want to install
+subquestion: |
+  You can upload multiple fonts at once. The fonts will be installed on the server and will be available for use in your interviews.
+
+  ${ action_button_html(url_action("list_fonts_task"), label="View installed fonts") }
+
+  [TARGET displayed_fonts]
+
+fields:
+  - Font files: the_font_files
+    datatype: files
+---
+code: |
+  list_fonts_task = background_action("display_fonts", 'backgroundresponse')
+---
+event: display_fonts
+code: |
+  background_response(target='displayed_fonts', content="Hello World")

@@ -1,0 +1,167 @@
+features:
+  centered: False
+---
+objects:
+  - author: DAList.using(object_type=Individual, target_number=1, complete_attribute='complete')
+  - clients: DAList.using(object_type=Individual, there_are_any=True, complete_attribute='complete')
+  - litigants: DAList.using(object_type=Individual, there_are_any=True, complete_attribute='complete')
+  - litigants[i].attorneys: DAList.using(object_type=Individual, there_are_any='litigants[i].is_represented', complete_attribute='complete')
+  - third_parties: DAList.using(object_type=Individual, complete_attribute='complete')
+---
+code: |
+  litigants[i].person_type
+  if litigants[i].is_represented:
+    litigants[i].attorneys.gather()
+  else:
+    litigants[i].address.address
+  litigants[i].complete = True
+---
+code: |
+  litigants[i].attorneys[j].name.first
+  litigants[i].attorneys[j].address.address
+  litigants[i].attorneys[j].complete = True
+---
+id: contact type name role
+check in: question_food
+generic object: DAList
+question: What is the ${ ordinal(i) } ${ x.object_name() }'s name and litigation role?
+right: |
+  <div class="da-page-header">
+    <h1 class="h3">Name Preview</h1>
+  </div>
+  [TARGET food_section_text]
+fields:
+  - Litigation Role: x[i].party_role
+    datatype: combobox
+    choices:
+      - Plaintiff
+      - Defendant
+      - Receiver
+  - Person or Entity: x[i].person_type
+    datatype: radio
+    choices:
+      - Human: human
+      - Someone in a Specific Capacity/Role: person_specific_capacity
+      - Legal Entity (Company or Governmental Org): entity
+  - First Name: x[i].name.first
+    show if: 
+      variable: x[i].person_type
+      is: human
+  - Middle Name: x[i].name.middle
+    required: False
+    show if: 
+      variable: x[i].person_type
+      is: human
+  - Last Name: x[i].name.last
+    show if: 
+      variable: x[i].person_type
+      is: human
+  - Representative Name: x[i].name.first
+    show if: 
+      variable: x[i].person_type
+      is: person_specific_capacity
+  - Representing in what capacity?: x[i].capacity
+    input type: combobox
+    choices:
+      - trustee
+      - co-trustee
+      - executive director and designated representative
+      - administrator
+    show if: 
+      variable: x[i].person_type
+      is: person_specific_capacity
+  - Represented Trust/Entity Name: x[i].representee
+    show if: 
+      variable: x[i].person_type
+      is: person_specific_capacity
+  - Entity **Name**: x[i].name.first
+    show if: 
+      variable: x[i].person_type
+      is: entity
+  - Entity **Type**: x[i].entity_type
+    input type: combobox
+    choices:
+      - a California corporation
+      - a California limited liability company
+      - a California professional corporation
+      - a municipal corporation
+    show if: 
+      variable: x[i].person_type
+      is: entity
+  - Short Name: x[i].short_name
+  - Gender: x[i].gender
+    input type: radio
+    choices:
+      - Male: male
+      - Female: female
+      - Other: other
+    js show if:
+      val('x[i].person_type') == 'human' || val('x[i].person_type') == 'person_specific_capacity'
+  - Is the party represented by counsel?: x[i].is_represented
+    datatype: yesno
+---
+id: attorney contact info
+question: Attorney Info
+fields:
+  - First Name: litigants[i].attorneys[j].name.first
+  - Middle Name: litigants[i].attorneys[j].name.middle
+    required: False
+  - Last Name: litigants[i].attorneys[j].name.last
+  - Law Firm: litigants[i].attorneys[j].law_firm
+  - Bar Number: litigants[i].attorneys[j].bar_number
+    default: 'CA'
+  - Bar State: litigants[i].attorneys[j].bar_state
+---  
+template: question_food
+content: |
+  The full, formal, captioned name of this party is:[BR]
+  % if action_argument('x[i].person_type') == 'human':
+  **${ action_argument('x[i].party_role') + ' ' + action_argument('x[i].name.first') } ${ action_argument('x[i].name.middle') or '' } ${ action_argument('x[i].name.last') }**
+  % elif action_argument('x[i].person_type') == 'person_specific_capacity':
+  **${ action_argument('x[i].party_role') + ' ' + action_argument('x[i].name.first') + ', ' + action_argument('x[i].capacity') + ' of ' + action_argument('x[i].representee') }**
+  % else:
+  **${ action_argument('x[i].party_role') + ' ' + action_argument('x[i].name.first') + ', ' + action_argument('x[i].entity_type') }**
+  % endif
+target: food_section_text
+---
+generic object: DAList
+question: What is ${ x[i] }'s address?
+fields:
+  - Address: x[i].address.address
+  - Suite/Apt/Unit/Room/Floor: x[i].address.unit
+    required: False
+  - City: x[i].address.city
+  - State: x[i].address.state
+  - Zip Code: x[i].address.zip
+  - note: |
+      [BOLDCENTER]----Other Contact Info----
+  - Phone: x[i].phone
+  - Second Phone?: x[i].add_second_phone
+    datatype: yesno
+  - Second Phone Number: x[i].second_phone
+    show if: x[i].add_second_phone
+  - Fax: x[i].fax
+  - Email: x[i].email
+  - Second Email?: x[i].add_second_email
+    datatype: yesno
+  - Second Email Address: x[i].second_email
+    show if: x[i].add_second_email
+---
+generic object: DAList
+question: Is there another ${ x.object_name() }?
+yesno: x.there_is_another
+---
+question: xxx
+fields:
+  - Which party opposed the motion?: xyz
+    datatype: object
+    choices: litigants
+---
+mandatory: True
+question: xxx
+subquestion: |
+  % for litigant in litigants:
+  ${ litigant.address_block() }
+  
+  % endfor
+  The party that opposed the motion is: ${ xyz }

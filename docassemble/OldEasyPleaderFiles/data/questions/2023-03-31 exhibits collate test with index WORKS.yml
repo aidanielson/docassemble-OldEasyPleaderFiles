@@ -1,0 +1,85 @@
+mandatory: True
+code: |
+  information_gathered
+  bundle
+  final_screen
+---
+objects:
+  - exhibit: DADict.using(object_type=DAObject, there_are_any=True)
+  - exhibit_divider_page: DAList
+---
+question: |
+  Enter Your Exhibits
+fields:
+  - Short Title: exhibit.new_item_name
+  - note: |
+      Example Short Titles:
+      
+      * January 1997 Grant Deed to Jane Doe
+      * Anderson's June 17 Meet-and-Confer Letter
+---
+question: |
+  Enter the full description of the ${ i }.
+fields:
+  - Name: exhibit[i].full_desc
+  - "Upload the exhibit now?": exhibit[i].has_documentation
+    datatype: yesnoradio
+    note: |
+      If the exhibit's not ready for upload, EasyPleader will create an exhibit divider page where you can later insert the exhibit itself.
+  - "Upload the exhibit:": exhibit[i].documentation
+    datatype: file
+    show if: exhibit[i].has_documentation
+---
+question: |
+  Exhibit Review
+subquestion: |
+  You've entered ${ exhibit.number_as_word() } exhibits:
+  
+  % for x in exhibit:
+  
+  * **${ x }**
+  
+  % endfor
+    
+  Are there more?
+yesno: exhibit.there_is_another
+---
+question: |
+  Exhibit Options
+fields:
+  - Do you want to include an exhibit **index** page?: include_exhibit_index
+    datatype: yesnoradio
+---
+attachment:
+  variable name: exhibit_index_page
+  docx template file: exhibit_index_page.docx
+---
+attachment:
+  variable name: exhibit_divider_page[i]
+  docx template file: exhibit_divider_page.docx
+---
+code: |
+  indexno = 0
+  for item in exhibit.values():
+    item.full_desc
+    item.documentation_reference = indexno
+    indexno += 1
+    if item.has_documentation:
+      item.documentation
+  information_gathered = True
+---
+code: |
+  document_list = list()
+  if include_exhibit_index:
+    document_list.append(exhibit_index_page)
+  for refname, item in exhibit.items():
+    document_list.append(exhibit_divider_page[item.documentation_reference])
+    if item.has_documentation:
+      document_list.append(item.documentation)
+  bundle = pdf_concatenate(document_list, filename="Exhibit Bundle.pdf")
+---
+event: final_screen
+question: |
+  Your Exhibit Bundle is Complete
+subquestion: |
+  ${ action_button_html(bundle.url_for(), color='link', label='Download Exhibit Bundle', icon='file-pdf') }

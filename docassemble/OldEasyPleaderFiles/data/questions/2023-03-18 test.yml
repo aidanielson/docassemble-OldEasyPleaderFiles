@@ -1,0 +1,129 @@
+mandatory: True
+code: |
+  responses.mc_conferred_yes
+  responses.wants_sanctions_yes
+  responses.sanctions_types
+  now_what
+  user_approves
+---
+objects:
+  responses: Thing
+---
+code: |
+  responses.motion_deadline = cal.find_following_working_day(date(responses.service_plus_45))
+  responses.service_plus_45 = responses.service_date + date_interval(days=45) cal.find_following_working_day(date(2018, 7, 7))
+---
+id: responses options
+question: |
+  Motion Information
+fields:
+  - What did the responses consist of?: responses.consist_of
+    choices:
+      - objections only
+      - part objections, part substantive responses (hybrid)
+      - substantive responses without objection
+      - something else
+    - Describe the nature of the responses: responses.consist_of_custom
+      show if: 
+        variable: responses.consist_of
+        is: 'something else'
+  - Were the responses properly verified?: responses.properly_verified_yes
+    show if: 
+      variable: responses.consist_of
+      is not: 'objections only'      
+  - When did xxxx serve their responses?: responses.service_date
+    datatype: date
+  - Did the parties agree to extend the 45-day deadline?: responses.motion_deadline_extension_agmt_yes
+  - What is the agreed-upon deadline?: responses.motion_deadline_extension_agmt_date
+    datatype: date
+  - Did you meet and confer?: responses.mc_conferred_yes
+    input type: yesnoradio
+  - Select all efforts you made to meet-and-confer before bringing this motion: responses.mc_efforts
+    datatype: checkboxes
+    choices:
+      - meet-and-confer correspondence (email(s) or letter(s))
+      - telephone call(s)
+      - legal research on specific points raised by counsel
+      - offered to withdraw, narrow, or modify some of the requests
+  - What date did you send your meet-and-confer letter?: responses.mc_ltr_date
+  - Has there been a prior discovery dispute?: responses.prior_dispute_yes
+    datatype: yesnoradio
+  - Do you want to seek sanctions for discovery misuse/abuse?: responses.wants_sanctions_yes
+    datatype: yesnoradio
+---
+id: sanctions
+question: |
+  Sanctions
+subquestion: |
+  Enter information about your sanctions request.
+fields:
+  - Select the type(s) of sanctions you are seeking: responses.sanctions_types
+    datatype: checkboxes
+    choices:
+      - Monetary (Money) Sanctions
+      - Evidentiary/Issue Sanctions
+      - Terminating Sanctions
+      - Other (Specify)
+  - Describe the nature of the sanctions you're seeking: responses.sanctions_types_other
+    show if: 
+      variable: responses.sanctions_types['Other (Specify)']
+      is: True
+---
+id: monetary sanctions
+question: |
+  Monetary Sanctions
+subquestion: |
+  Enter info about your monetary sanctions request.
+fields:
+  - Who are you seeking sanctions against?: responses.sanctions_sought_against
+    datatype: checkboxes
+    choices:
+      - Defendant John Smith
+      - Defendant Mary Smith
+      - Daniel Dangerfield, counsel for the Smiths
+  - note: |
+      How many hours did you expend on efforts from initial review of the responses, all the way through the hearing on the motion?
+  - Hours expended pre-motion (review of responses and meet-and-confer proceedings)?: responses.sanctions_hours_expended_pre_motion
+    datatype: number
+  - Hours expended from commencement of motion preparation to now: responses.sanctions_hours_expended_motion_to_now
+    datatype: number
+  - Hours _to be_ expended now through hearing on the motion: responses.sanctions_hours_expended_in_future
+    datatype: number
+  - What's your claimed hourly rate?: responses.sanctions_hourly_rate
+    datatype: number
+---
+question: |
+  Monetary Sanctions Amount
+subquestion: |
+  In total, you will have expended ${ responses.sanctions_hours_total } hours on efforts to enforce compliance with the discovery you propounded, times a reasonable hourly rate of ${ currency(responses.sanctions_hourly_rate) } per hour, totaling ${ currency(responses.sanctions_calculated_monetary_fee_amount) } in monetary sanctions sought against the other side.
+fields: 
+  - Do you want a different monetary sanctions amount?: responses.sanctions_custom_monetary_fee_amount_yes
+  - Enter the monetary sanctions amount you are seeking: responses.sanctions_custom_monetary_fee_amount
+    datatype: number
+    show if: responses.sanctions_custom_monetary_fee_amount_yes
+---
+code: |
+  responses.sanctions_hours_total = (responses.sanctions_hours_expended_pre_motion + responses.sanctions_hours_expended_motion_to_now + responses.sanctions_hours_expended_in_future)
+---
+code: |
+  responses.sanctions_calculated_monetary_fee_amount = (responses.sanctions_hours_total * responses.sanctions_hourly_rate)
+---
+question: |
+  You are asking for ${ comma_and_list(responses.sanctions_types.true_values()) } sanctions.
+fields:
+  - Now what?: now_what
+---
+id: docx template
+question: |
+  Here is your document.
+subquestion: |
+  The current date is ${ today(format='yyyy-MM-dd') } xxxxx.
+  Does it meet your approval?
+yesno: user_approves
+attachment:
+  name: Sanctions
+  filename: ${ today(format='yyyy-MM-dd') } REQ For SANC
+  docx template file: sanctions_template.docx
+  valid formats:
+    - pdf
+    - docx

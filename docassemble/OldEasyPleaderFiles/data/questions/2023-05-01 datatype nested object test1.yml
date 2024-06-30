@@ -1,0 +1,51 @@
+objects:
+  - applicants: DAList.using(object_type=Individual, there_are_any=True, complete_attribute='complete')
+  - applicants[i].children: DAList.using(object_type=Individual, there_are_any=applicants[i].has_children, complete_attribute='complete')
+---
+code: |
+  applicants[i].name
+  applicants[i].children.gather()
+  applicants[i].complete = True
+---
+code: |
+  applicants[i].children[j].name.first
+  applicants[i].children[j].complete = True
+---
+question: What is the ${ ordinal(i) } applicant's name?
+fields:
+  - Applicant Name: applicants[i].name.first
+  - Does Applicant have children?: applicants[i].has_children
+    datatype: yesnoradio
+---
+question: Are there more applicants?
+yesno: applicants.there_is_another
+---
+question:  What is the name of ${ applicants[i].possessive(ordinal(j) + ' child') }?
+fields:
+  - An existing child: applicants[i].children[j].name.first
+    datatype: object_radio
+    choices: |
+      [applicants[i].children.complete_elements()]
+    disable others: True
+    show if:
+      code: |
+        len(applicants[i].children.complete_elements()) > 0
+  - Child's Name: applicants[i].children[j].name.first
+---
+question: Does ${ applicants[i] } have another another child?
+yesno: applicants[i].children.there_is_another
+---
+mandatory: True
+question: Review
+subquestion: |
+  % for applicant in applicants:
+      ${ applicant } 
+  % if applicant.has_children:
+      has ${ applicant.children.number_as_word() } child named
+    % for child in applicant.children:
+      ${ child }
+    % endfor
+  % else:
+      has no children.
+  % endif
+  % endfor

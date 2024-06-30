@@ -1,0 +1,45 @@
+include:
+  - docassemble.playground1:2023-08-14_EP_Universal_Questions.yml
+---
+features: 
+  progress bar: False
+  centered: False
+---
+mandatory: True
+code: |
+  aid_not_author
+  conduct_data_intake
+  opposing_parties
+  final_screen
+---
+objects:
+  - opposing_parties: DAList(object_type=Individual, auto_gather=False, gathered=True)
+---
+question: Select Opposing Parties
+fields:
+  - Existing Parties: opposing_parties
+    datatype: object_checkboxes
+    choices: parties.complete_elements()
+---
+generic object: DAList
+question: How was ${ x[i] } served?
+fields:
+  - Method: x[i].service_methods
+    datatype: checkboxes
+    choices: 
+      - Regular Mail
+      - Email
+      - Fax
+      - Overnight Delivery
+  - Date: x[i].service_date
+    datatype: date
+---
+event: final_screen
+question: Results
+subquestion: |
+  **Opposing Parties**
+  [BR]
+  The parties opposing is/are 
+  % for party in opposing_parties:
+  ${ party } was served via ${ party.service_methods.true_values() } on ${ party.service_date }[BR]
+  % endfor

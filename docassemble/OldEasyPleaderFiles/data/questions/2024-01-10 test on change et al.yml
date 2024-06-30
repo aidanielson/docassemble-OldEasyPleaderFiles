@@ -1,0 +1,76 @@
+mandatory: True
+code: |
+  initialize_counters
+  variable_a
+  profile_initialized = True
+  #if task_performed('fruit_gathered', persistent=True):
+  menu_items = [action_menu_item("Edit Profile", "edit_profile")]
+  #run_code_block_aaa
+  final_screen
+---
+on change:
+  profile_edited_counter: |
+    on_change_counter += 1 
+    variable_c = 'howdy'
+---
+code: |
+  profile_edited_counter = 0
+  on_change_counter = 0
+  code_block_a_run_counter = 0
+  initialize_counters = True
+---
+question: Profile Variables
+fields:
+  - Profile Variable A: variable_a
+  - Profile Variable B: variable_b
+  - Profile Variable C: variable_c
+  - Profile Variable D: variable_d
+---
+#id: code block aaa
+#code: |
+#  variable_c = 'xxxxx'
+#  variable_d = variable_c
+#  code_block_a_run_counter += 1
+#  run_code_block_aaa = True
+---
+code: |
+  edit_profile_screen
+  undefine('edit_profile_screen')
+  profile_edited_counter += 1
+  edit_profile = True
+  edit_profile = False
+---
+question: Edit/Revise/Revisit Variable
+subquestion: |
+  Session: **${ user_info().session }**  Filename: **${ user_info().filename }**[BR]
+  Package: **${ user_info().package }**  Question ID: **${ user_info().question_id }**[BR]
+  Current Filename: **${ user_info().current_filename }**  Current Package: **${ user_info().current_package }**[BR]
+  Variable: **${ user_info().variable }**[BR]
+  Current Session: **${ user_info().current_section }**[BR]
+  'user_info()' is: **${ user_info() }**[BR]
+review:
+  - label: Edit
+    field: variable_a
+    button: |
+      #### First Child:
+      
+      ${ variable_a }
+continue button field: edit_profile_screen
+continue button label: Save Profile & Proceed
+skip undefined: False
+tabular: table table-striped
+---
+event: final_screen
+question: Final Screen
+subquestion: |
+  'variable_a' is: **${ variable_a }**
+  
+  'variable_b' is: **${ variable_b }**
+    
+  'variable_c' is: **${ variable_c }**
+
+  'variable_d' is: **${ variable_d }**
+  
+  'profile_edited_counter' object type is: ${ print(type('profile_edited_counter')) }
+  
+  'repr(profile_edited_counter)' is: ${ repr(profile_edited_counter) }

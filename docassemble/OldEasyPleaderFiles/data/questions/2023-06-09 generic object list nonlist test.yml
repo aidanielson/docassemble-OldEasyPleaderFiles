@@ -1,0 +1,19 @@
+objects:
+  - contact_list: DAList.using(object_type=Individual, there_are_any=True)
+---
+generic object: DAList
+question: What is ${ x[i].object_name() }?
+fields:
+  - Name: x[i].name.first
+  - Age: x[i].age
+---
+generic object: DAList
+question: Is there another?
+yesno: x.there_is_another
+---
+mandatory: True
+question: xxx
+subquestion: |
+  % for y in contact_list:
+  ${ y.name.first } is ${ y.age }
+  % endfor

@@ -1,0 +1,595 @@
+include:
+  - docassemble.playground1:2023-08-21_EP_Universal_Questions.yml
+---
+metadata:
+  title: Master Pleading Template
+  short title: Polished legal documents. Zero hassle.
+---
+mandatory: True
+code: |
+  version = 0
+---
+event: new_version
+code: |
+  version += 1
+---
+modules:
+  - .POS_Builder
+---
+mandatory: True
+code: |
+  aid_not_author
+  conduct_data_intake
+  atty_info_in_caption
+  lead_filing_party
+  court.short_name
+  build_case_strings
+  #troubleshooting_screen
+  #show_service_list
+  doc.type
+  if doc.type not in ['Generic Pleading', 'Proposed Order', 'Proof of Service']:
+    set_doc_support_oppose_string
+    doc.lm_proceeding_title
+    doc.wants_proposed_title
+  else:
+    doc.title_full
+  if doc.has_hrg:
+    hrg.date
+  if doc.type == 'Memorandum of Points & Authorities':
+    memo_headings_lvl_1.gather()
+    memo_heading_review
+  if doc.type == 'Declaration':
+    doc.declarant
+    set_doc_declarant_unique_party
+  doc.footer
+  if attach_exhibits:
+    exhibits_yaml
+  if doc.type != 'Proposed Order':
+    if doc.type == 'Proof of Service':
+      pick_server
+      if pick_server != 'Me':
+        server[0].name.first
+      set_servees
+      if not same_service:
+        for servee in all_servees:
+          servee.pick_service_methods
+      else:
+        same_service_method
+      troubleshoot_servees
+    show_service_list
+    sig_block_type
+    sig_block_date_field
+    if doc.sign:
+      signature
+  user_approves
+  final_screen
+---
+objects:
+  - court: DAObject
+  - case: DAObject
+  - hrg: DAObject
+  - doc: DAObject
+  - memo_headings_lvl_1: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False)
+---
+code: |
+  atty_info_in_caption = True
+---
+id: court and case info
+question: Court & Case Info
+fields:
+  - Case Jurisdiction: court.short_name
+    code: get_court_names()
+  - Case Number: case.number
+  - Original Filing Date: case.filing_date
+    datatype: date
+  - Is there a set trial date?: case.trial_date_set_yes
+    datatype: yesnoradio
+  - Trial Date: case.trial_date
+    datatype: date
+    show if: case.trial_date_set_yes
+  - For the case **caption**, what are the litigant **roles**?: action_type
+    default: Plaintiff v. Defendant
+    choices:
+      - Plaintiff v. Defendant
+      - Petitioner v. Respondent
+      - Something Else
+  - Filing Party: other_filing_party_role
+    input type: combobox
+    choices:
+      - Claimant
+      - Applicant
+      - Creditor
+      - Appellant
+    show if:
+      variable: action_type
+      is: 'Something Else'
+  - More than one filing party?: pluralize_filing_party_yes
+    datatype: yesno
+    note: |
+      This appends "et al." to the first filing party and it adds an "s" to plaintiff, petitioner, etc.
+  - More than one responding/defending party?: pluralize_responding_party_yes
+    datatype: yesno
+  - Responding/Defending Party: other_responding_party_role
+    input type: combobox
+    choices:
+      - Debtor
+      - Accused
+      - Appellee
+    show if:
+      variable: action_type
+      is: 'Something Else'
+  - Has anyone filed a cross-action or counterclaim in this case?: counteraction_filed
+    datatype: yesno
+---
+code: |
+  filing_party_role = 'Plaintiff' if action_type == 'Plaintiff v. Defendant' else 'Petitioner' if action_type == 'Petitioner v. Respondent' else other_filing_party_role
+  responding_party_role = 'Defendant' if action_type == 'Plaintiff v. Defendant' else 'Respondent' if action_type == 'Petitioner v. Respondent' else other_responding_party_role
+---
+id: parties in case caption
+question: Parties in Case Caption
+subquestion: Select the **first** (top) named party on each side for the case caption page.
+fields:
+  - Lead Filing Party: lead_filing_party
+    datatype: object
+    choices: all_parties
+  - Lead Responding Party: lead_responding_party
+    datatype: object
+    choices: all_parties
+---
+question: blank screen
+continue button field: show_blank_screen
+---
+id: build case strings
+code: |
+  case.short_name_inline = f"{court.short_name} Case No. {case.number} - *{lead_filing_party}{' et al.' if pluralize_filing_party_yes else ''} v. {lead_responding_party or ''}{' et al.' if pluralize_responding_party_yes else ''}*"
+  case.basic_info_block = f"{court.short_name}[BR]Case No. {case.number}[BR]*{lead_filing_party}{' et al.' if pluralize_filing_party_yes else ''} v. {lead_responding_party or ''}{' et al.' if pluralize_responding_party_yes else ''}*[BR]Filing Date: {case.filing_date}"
+  build_case_strings = True
+---
+id: choose document type
+depends on: version
+question: Document Type
+fields:
+  - What kind of document are you drafting?: doc.type
+    input type: radio
+    choices:
+      - Generic Pleading
+      - Notice of Motion and Motion
+      - Declaration
+      - Memorandum of Points & Authorities
+      - Request for Judicial Notice
+      - Index of Exhibits
+      - Proposed Order
+      - Proof of Service
+  - note: |
+     [BOLDCENTER]Is this document part of a law and motion proceeding with a HEARING?
+  - Document relates to a hearing: doc.has_hrg
+    datatype: yesno
+---
+id: hearing info
+depends on: version
+question: Hearing Info
+fields:
+  - Hearing Date: hrg.date
+    datatype: date
+    required: False
+  - Hearing Date is Uncertain: hrg.date_is_uncertain
+    datatype: yesno
+  - Hearing Time: hrg.time_bad_format
+    datatype: time
+  - Hearing Dept.: hrg.dept
+  - Hearing Judge: hrg.judge
+    input type: combobox
+    choices:
+      - Christopher E. Krueger
+      - Richard K. Sueyoshi
+under: |
+  Per CCP § 1005, if the papers are served **Today**, ${today()}, 16 court days from now is:
+  * **${sixteen_court_days_from_today_string}** for **Personal Service**
+  * **${earliest_overnight_or_fax_service_date_string}** for **Overnight Delivery or Fax Service**
+  * **${eighteen_court_days_from_today_string}** for **Email or Electronic Service**
+  * **${earliest_mail_service_date_string}** for **Regular U.S. Mail Service**[BR]   
+  Visit Los Angeles County Superior Court's [Court Date Calculator](https://www.lacourt.org/courtdatecalculator/ui/) website for an additional date validation check.
+---
+id: declaration info
+depends on: version
+question: Declaration Info
+subquestion: |
+  'json.dumps(author[0].name.full())' is: ${ json.dumps(author[0].name.full()) }.
+fields:
+  - Declarant Name: doc.declarant
+    datatype: object
+    choices: everyone
+  - Declarant Role: doc.declarant_role
+    choices: 
+      - Author
+      - Named Party
+      - Other
+    js hide if: |
+      val('doc.declarant') === ${ json.dumps(author[0].name.full()) }
+  - Declarant Role in the Case: doc.declarant_capacity
+    input type: area
+    rows: 4
+    show if:
+      variable: doc.declarant_role
+      is: 'Other'
+    note: |
+      Describe what relation or involvement the declarant has to the lawsuit.[BR]e.g., *I personally witnessed the vehicle collision involving the Plaintiff and Defendant that is the subject of this lawsuit...I inspected and evaluated the physical condition of the property that is the subject of this lawsuit...*
+---
+id: run code to determine if the declarant party role is unique
+code: |
+  selected_declarant_role = doc.declarant.party_role
+  same_role_parties = [party for party in parties if party.party_role == selected_declarant_role]
+  doc.declarant.unique_party = True if len(same_role_parties) < 2 else False
+  set_doc_declarant_unique_party = True
+---
+id: set support oppose verbiage
+code: |
+  if doc.support_oppose == 'in support of':
+    doc.support_oppose_string_for_body = f"{doc.support_oppose} {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title} ({doc.lm_proceeding_title_short})"
+    doc.support_oppose_string_for_title = f"{doc.support_oppose} {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title}"
+  if doc.support_oppose == 'in opposition to':
+    doc.support_oppose_string_for_body= f"{doc.support_oppose} the {doc.lm_proceeding_title} ({doc.lm_proceeding_title_short}) brought by {doc.lm_proceeding_movant.party_role.lower()} {doc.lm_proceeding_movant.name.full()} ({doc.lm_proceeding_movant.short_name})"
+    doc.support_oppose_string_for_title= f"{doc.support_oppose} {doc.lm_proceeding_movant.party_role} {doc.lm_proceeding_movant.name.full()}'s {doc.lm_proceeding_title}"
+  if doc.support_oppose == 'in reply to':
+    doc.support_oppose_string_for_body = f"{doc.support_oppose} the opposition of {doc.lm_opposition_party.party_role.lower()} {doc.lm_opposition_party} ({doc.lm_opposition_party.short_name}) to {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title} ({doc.lm_proceeding_title_short})"
+    doc.support_oppose_string_for_title = f"{doc.support_oppose} {doc.lm_opposition_party.party_role.lower()} {doc.lm_opposition_party}'s opposition to {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title}"
+  set_doc_support_oppose_string = True
+---
+id: memorandum point headings
+depends on: version
+question: Memo Point Headings
+fields:
+  - "${ capitalize(ordinal(i)) } Point Heading": memo_headings_lvl_1[i].name.text
+    note: |
+      If you don't want headings entered now, enter 'xxxxx' for one or more headings to have placeholders.[BR][BR]Use full sentence case, plus period at end.[BR][BR]Ex.: *Defendant's Responses to Plaintiff's Special Interrogatories Fails to Comply with the Civil Discovery Act.*[BR][BR]
+---
+id: memo point heading review
+depends on: version
+question: Review Memo Point Headings
+subquestion: |
+    **Point Headings**
+    ${ memo_headings_lvl_1.table }
+    ${ memo_headings_lvl_1.add_action(label='Add Heading', color='warning') }
+continue button field: memo_heading_review
+---
+table: memo_headings_lvl_1.table
+rows: memo_headings_lvl_1
+columns:
+  - Heading: |
+      row_item
+edit:
+  - row_item
+allow reordering: True
+---
+depends on: version
+code: |
+  if doc.type in ['Declaration', 'Proof of Service']:
+    sig_block_type = 'declarant'
+  elif doc.type == 'Proposed Order':
+    sig_block_type = 'judge'
+  else:
+    sig_block_type = 'author'
+---
+id: law and motion proceeding info
+depends on: version
+question: Law & Motion Proceeding Info
+fields:
+  - Title of Law & Motion/Litigation Proceeding: doc.lm_proceeding_title
+    note: |
+      e.g., *Motion to Compel Further Responses to Special Interrogatories* 
+  - Shorthand Reference to the Proceeding: doc.lm_proceeding_title_short 
+    input type: combobox
+    choices:
+      - Motion
+      - Application
+      - Request
+      - OSC
+      - Petition
+      - Stipulation
+  - Who is the movant?: doc.lm_proceeding_movant
+    datatype: object
+    choices: all_parties
+  - Does this document support/oppose/reply to the RFO?: doc.support_oppose
+    input type: radio
+    choices:
+      - in support of
+      - in opposition to
+      - in reply to
+      - objecting to
+      - regarding
+  - Whose opposition does the reply address?: doc.lm_opposition_party
+    datatype: object
+    choices: all_served_parties
+    show if:
+      variable: doc.support_oppose
+      is: 'in reply to'
+comment:
+  revise the variable name 'all_served_parties' to the more accurate 'other_parties' or 'nonclient_parties'
+---
+id: non-lm document title
+if: doc.type in ['Generic Pleading', 'Proposed Order', 'Proof of Service']
+depends on: version
+question: Non-LM Document Title
+fields:
+  - Document Title: doc.custom_title_full
+    input type: area
+    rows: 3
+    default: |
+      ${doc.type if doc.type != 'Generic Pleading' else ''}
+  - Short Title (optional): doc.custom_title_shorthand
+    input type: area
+    rows: 2
+    required: False
+---
+id: lm document title
+if: doc.type not in ['Generic Pleading', 'Proposed Order', 'Proof of Service']
+depends on: version
+question: Law & Motion Document Title
+subquestion: |
+  **PROPOSED TITLE:**[BR]**<span style="color:Red">${ doc.proposed_title }</span>**
+fields:
+  - Use PROPOSED TITLE: doc.wants_proposed_title
+    datatype: yesno
+  - Custom Document Title: doc.custom_title_full
+    input type: area
+    rows: 3
+    default: ${ doc.proposed_title }
+    disable if: doc.wants_proposed_title
+    required: False
+  - Short Title (optional): doc.custom_title_shorthand
+    input type: area
+    rows: 2
+    required: False
+---
+depends on: version
+code: |
+  if doc.type == 'Declaration':
+    doc.proposed_title = doc.type + ' of ' + str(doc.declarant) + ' ' + title_case(doc.support_oppose_string_for_title)
+  elif doc.type == 'Notice of Motion and Motion':
+    doc.proposed_title = 'Notice of Motion and ' + doc.lm_proceeding_title
+  elif doc.type in ['Memorandum of Points & Authorities', 'Request for Judicial Notice', 'Index of Exhibits']:
+    doc.proposed_title = doc.type + ' ' + title_case(doc.support_oppose_string_for_title)
+---
+depends on: version
+code: |
+  doc.title_full = doc.proposed_title if defined('doc.wants_proposed_title') else doc.custom_title_full
+---
+depends on: version
+code: |
+  if doc.custom_title_shorthand:
+    doc.footer = doc.custom_title_shorthand
+  else:
+    doc.footer = doc.title_full
+---
+depends on: version
+code: |
+  hrg.time = format_time(hrg.time_bad_format, format='h:mm a')
+---
+depends on: version
+code: |
+  hrg.date_with_weekday = format_date(hrg.date, format='EEEE, MMMM d, yyyy')
+---
+id: document feature options
+depends on: version
+question: Document Options
+fields:
+  - Include Statutory Ref. Under Doc Title: include_stat_callout
+    datatype: yesno
+  - Enter the statutory call-out text: stat_callout
+    show if: include_stat_callout
+    note: |
+      The contents of this box will appear on the caption page, one line beneath the document's title, in braces.[BR][BR]Ex: [CCP § 568, HSC § 17980.7]
+  - Include "Concurrently filed with..." notice: include_concurrently_filed_docs_notice
+    datatype: yesno
+  - Enter short titles of concurrently filed documents: custom_entered_concurrently_filed_docs
+    input type: area
+    show if: include_concurrently_filed_docs_notice
+    note: |
+      Ex: *Memorandum of Points & Authorities; Declarations of XXXXX and YYYYY; Index of Exhibits; Request for Judicial Notice; [Proposed] Order*
+  - Attach exhibits to this document: attach_exhibits
+    datatype: yesno
+  - Attach notary acknowledgement: include_notary_acknowledgment_form
+    datatype: yesno
+---
+#id: standalone party_servees block
+#question: Who are the parties being served?
+#fields:
+#  - Choose the parties being served: party_servees
+#    datatype: object_checkboxes
+#    choices: parties.complete_elements()
+---
+id: POS Server, Server Address, & Service Location
+question: Who is serving the documents and from where
+fields:
+  - Title of document being served: documents_served
+  - Who is being served in this POS?: choose_party_servees
+    datatype: radio
+    choices:
+      - All Parties
+      - Only Certain Parties
+  - Choose the parties being served: party_servees
+    datatype: object_checkboxes
+    choices: parties.complete_elements()    
+    show if:
+      variable: choose_party_servees
+      is: 'Only Certain Parties'
+  - Nonparties are being served as well: nonparties_being_served
+    datatype: yesno
+  - Choose nonparties being served: nonparty_servees
+    datatype: object_checkboxes
+    choices: nonparties.complete_elements()
+    show if: nonparties_being_served
+  - Everyone is being served **the same way on the same day**: same_service
+    datatype: yesno    
+  - Who is serving the documents?: pick_server
+    datatype: radio
+    choices:
+      - Me
+      - Someone Else
+---
+code: |
+  server_address = author[0].address.on_one_line() if pick_server == 'Me' else '1234 Main Street, Honolulu, HI 20347'
+---
+id: determine servees
+code: |
+  if choose_party_servees == 'All Parties':
+    all_servees = parties.complete_elements()
+  else:
+    all_servees = party_servees
+  if nonparties_being_served:
+    all_servees = all_servees.extend(nonparty_servees)
+  set_servees = True
+---
+id: troubleshoot servees
+question: Troubleshoot Servees
+subquestion: |
+  % if choose_party_servees != 'All Parties':
+  The variable 'party_servees' is:[BR]
+  ${ party_servees }[BR]
+  and the 'repr' of that variable is:[BR]
+  ${ repr(party_servees) }[BR]
+  and the 'instanceName' of that variable is:[BR]
+  ${ party_servees.instanceName }[BR]
+  And the 'for loop' for party_servees is:[BR]
+  % for servee in party_servees:
+  ${ servee }, served via ${ servee.pick_service_methods.true_values() } on ${ servee.service_date }[BR]
+  % endfor
+  % endif
+  And the variable 'all_servees' is:[BR]
+  ${ all_servees }[BR]
+  and the 'repr' of that variable is:[BR]
+  ${ repr(all_servees) }
+  and the 'instanceName' of that variable is:[BR]
+  ${ all_servees.instanceName }[BR]
+  and here's the for loop for 'all_servees:[BR]
+  % for servee in all_servees:
+    plain 'servee' is: ${ servee }[BR]
+    the repr of 'servee' is: ${ repr(servee) }[BR]
+    the instanceName of 'servee' is: ${ servee.instanceName }[BR]
+    the service method of service on servee is:[BR]
+    via ${ servee.pick_service_methods.true_values() } on ${ servee.service_date }.[BR]
+  % endfor
+continue button field: troubleshoot_servees
+---
+id: same service - choose service date and method
+question: How is service being carried out?
+fields:
+  - Service Method: same_service_method
+    datatype: checkboxes
+    code: |
+      list(service_method_dict.keys())
+  - Date of Service: same_service_date
+    datatype: date
+---
+id: different service - choose service date and method for each servee
+generic object: ALPeopleList
+question: "Service on ${ x[i] }: Method and Date"
+fields:
+  - Methods: x[i].pick_service_methods
+    datatype: checkboxes
+    code: |
+      list(service_method_dict.keys())
+  - Date: x[i].service_date
+    datatype: date
+validation code: |
+  x[i].service_methods = x[i].pick_service_methods.true_values()
+---
+#objects:
+#  - all_servees: ALPeopleList.using(object_type=ALIndividual, auto_gather=False, #gathered=True)
+---
+id: document date and signature
+depends on: version
+question: Signature Block
+fields:
+  - What date goes in the signature block?: sig_block_date_field
+    datatype: radio
+    choices:
+      - Today
+      - Different Date
+      - Leave Blank
+  - Different Date: sig_block_alternate_date
+    datatype: date
+    show if: 
+      variable: sig_block_date_field
+      is: 'Different Date'
+  - Sign the document?: doc.sign
+    datatype: yesno
+---
+id: sign name
+depends on: version
+question: Sign your name
+signature: user_signature
+under: |
+  ${ author[0].name.full() }
+---
+depends on: version
+code: |
+  signature = user_signature if aid_not_author else aid_signature
+---
+id: generate document
+depends on: version
+question: Your ${doc.type} is below.
+subquestion: |
+  Do you approve?
+yesno: user_approves
+attachment:
+  name: Pleading
+  filename: ${short_filename}
+  docx template file: 2023-08-11_pleading_template.docx
+  valid formats:
+    - pdf
+    - docx
+include attachment notice: False
+---
+depends on: version
+code: |
+  if doc.type == 'Generic Pleading':
+    short_filename = f"{format_date(today(), format='yyyy-MM-dd')} {doc.title_full} [draft]"
+  elif doc.type == 'Declaration':
+    short_filename = f"{format_date(today(), format='yyyy-MM-dd')} {short_filename_acronyms[doc.type]} {doc.declarant.name.first.split(' ')[0]} {doc.declarant.name.last or ''} [draft]"
+  else:
+    short_filename = f"{format_date(today(), format='yyyy-MM-dd')} {short_filename_acronyms[doc.type]} [draft]"
+---  
+id: generate service list
+question: Show POS
+subquestion: |
+  ${ build_POS(all_servees, documents_served, server_address) }
+continue button field: show_service_list
+---
+id: troubleshooting screen
+question: Troubleshoot
+subquestion: |
+  'case.short_name_inline' is: ${ case.short_name_inline }[BR]
+  'case.basic_info_block' is: ${ case.basic_info_block }[BR]
+   Apostrophe plaintext: Plaintiff Susan Sontag's Motion.[BR]Apostrophe text returned in variable: ${ text }[BR]Apostrophe text returned via convert_apostrophe function: ${ convert_apostrophe(text) }[BR]
+  'parties[2].lawyers[0].add_second_phone' is: ${ parties[2].lawyers[0].add_second_phone }
+  'parties[2].lawyers[0].add_second_phone' repr is: ${ repr(parties[2].lawyers[0].add_second_phone) }
+  'json.dumps(${ author[0].name.full() })' is: ${ json.dumps(author[0].name.full()) }
+  'party.whole_name' is:[BR]
+  % for party in parties.complete_elements():
+    ${ party.whole_name }[BR]
+    ${ party.party_plus_whole_name }[BR]
+    ${ party.party_plus_whole_name_plus_short }[BR]
+    [BR]
+  % endfor
+continue button field: troubleshooting_screen
+---
+code: |
+  def convert_apostrophe(text):
+    return text.replace("'", u"\u2019")
+---
+code: |
+  text = "Plaintiff Susan Sontag's Motion"
+---
+depends on: version
+event: final_screen
+question: |
+  Well, ${author[0].name.first}, 
+  % if user_approves:
+  Hope you liked your ${doc.type}!
+  % endif
+  We're all through here...
+action buttons:
+  - label: Try again
+    action: new_version
+    color: primary

@@ -1,0 +1,947 @@
+---
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+---
+metadata:
+  title: >-
+    I-765 Employment Authorization
+  short title: >-
+    I-765
+  description: |-
+    This interview helps someone in Illinois apply for permission to work.
+  tags:
+    - "IM-00-00-00-00"
+  authors:
+    - Quinten Steenhuis
+    - Tony Danielson
+  allowed_courts: []
+  typical_role: "na"
+  al_weaver_version: "playground"
+  generated_on: "2024-02-04"
+---
+code: |
+  # This controls the default country and list of states in address field questions
+  AL_DEFAULT_COUNTRY = "US"
+---
+code: |
+  # This controls the default state in address field questions
+  AL_DEFAULT_STATE = "IL"
+---
+code: |
+  github_repo_name =  'docassemble-I765EmploymentAuthorization'
+---
+code: |
+  interview_short_title = "Apply for permission to work"
+---
+code: |
+  al_form_type = "other_form" 
+---
+objects:
+  - preparer: ALPeopleList.using(ask_number=True,target_number=1)
+  - mother: ALPeopleList.using(ask_number=True,target_number=1)
+  - interpreter: ALPeopleList.using(ask_number=True,target_number=1)
+  - father: ALPeopleList.using(ask_number=True,target_number=1)
+  - users: ALPeopleList.using(ask_number=True,target_number=1)
+---
+sections:
+  - review_I765_Employment_Authorization: Review your answers
+---
+#################### Interview order #####################
+comment: |
+  Controls order and branching logic for questions specific to this form
+id: interview_order_I765_Employment_Authorization
+code: |
+  # Set the allowed courts for this interview
+  nav.set_section("review_I765_Employment_Authorization")
+  user_role = "na"
+  user_ask_role = "na"
+  users.gather()
+  set_parts(subtitle=str(users))
+  is_form_g28_attached
+  preparer_organization
+  users[0].mailing_address.address
+  father.gather()
+  set_progress(12)
+  users[0].address.address
+  mother.gather()
+  users[0].gender
+  set_progress(24)
+  users[0].birthdate
+  preparer.gather()
+  users[0].phone_number
+  signature_date
+  users[0].mobile_number
+  set_progress(36)
+  users[0].email
+  interpreter.gather()
+  interpreter[0].mailing_address.address
+  set_progress(48)
+  set_progress(60)
+  interpreter[0].phone_number
+  interpreter[0].mobile_number
+  interpreter[0].email
+  preparer[0].phone_number
+  set_progress(72)
+  preparer[0].mobile_number
+  preparer[0].email
+  interview_order_I765_Employment_Authorization = True
+---
+###################### Main order ######################
+comment: |
+  This block includes the logic for standalone interviews.
+  Delete mandatory: True to include in another interview
+mandatory: True
+code: |
+  al_intro_screen
+  I765_Employment_Authorization_intro
+  interview_order_I765_Employment_Authorization
+  signature_date
+  # Store anonymous data for analytics / statistics
+  store_variables_snapshot(
+      persistent=True,
+      data={
+          "zip": showifdef("users[0].address.zip"),
+          "reached_interview_end": True,
+      },
+  )
+  I765_Employment_Authorization_download
+---
+comment: |
+  This question is used to introduce your interview. Please customize
+id: I765_Employment_Authorization
+continue button field: I765_Employment_Authorization_intro
+question: |
+  I-765 Employment Authorization
+subquestion: |
+  This interview will help you apply for permission to work.
+  
+  Before you get started, please gather:
+  
+  1. 
+  1. 
+  1. 
+  
+  When you are finished, you will need to:
+  
+  1. 
+  1. 
+  
+  Most people take about _______ minutes to finish this interview.
+---
+id: Screen one
+question: |
+  Screen one
+fields:
+  - "Is form g28 attached": is_form_g28_attached
+    datatype: yesno
+  - "Attorney online account number": attorney_online_account_number
+    maxlength: 28
+  - "Application reason employment": application_reason_employment
+    datatype: yesno
+  - "Application reason replacement": application_reason_replacement
+    datatype: yesno
+  - "Application reason renewal": application_reason_renewal
+    datatype: yesno
+  - "Users1 ssn": users1_ssn
+    maxlength: 21
+  - "Users1 mailing address in care of": users1_mailing_address_in_care_of
+    maxlength: 38
+  - "Users1 wants ssn": users1_wants_ssn
+    input type: radio
+    choices:
+      - Yes 4: Yes_4
+      - No 4: No_4
+      - Yes 5: Yes_5
+      - No 5: No_5
+  - "Users1 mailing address is apt": users1_mailing_address_is_apt
+    datatype: yesno
+  - "Users1 mailing address is suite": users1_mailing_address_is_suite
+    datatype: yesno
+  - "Users1 mailing address is floor": users1_mailing_address_is_floor
+    datatype: yesno
+  - "Mailing address is physical address": mailing_address_is_physical_address
+    datatype: yesno
+  - "Users1 address is apt": users1_address_is_apt
+    datatype: yesno
+  - "Users1 address is suite": users1_address_is_suite
+    datatype: yesno
+  - "Users1 address is floor": users1_address_is_floor
+    datatype: yesno
+  - "Users1 a number": users1_a_number
+    maxlength: 21
+  - "Users1 uscis account number": users1_uscis_account_number
+    maxlength: 28
+  - "Marital status single": marital_status_single
+    datatype: yesno
+  - "Marital status married": marital_status_married
+    datatype: yesno
+  - "Marital status divorced": marital_status_divorced
+    datatype: yesno
+  - "Marital status widowed": marital_status_widowed
+    datatype: yesno
+  - "Citizen country 1": citizen_country_1
+    maxlength: 38
+  - "Previously filed i765": previously_filed_i765
+    input type: radio
+    choices:
+      - No: No_2
+      - Yes: Yes_2
+  - "Citizen country 2": citizen_country_2
+    maxlength: 38
+  - "Has ssn": has_ssn
+    input type: radio
+    choices:
+      - Yes: Yes_3
+      - No: No_3
+  - "City of birth": city_of_birth
+    maxlength: 38
+  - "State of birth": state_of_birth
+    maxlength: 38
+  - "Country of birth": country_of_birth
+    maxlength: 38
+  - "I94 arrival number": i94_arrival_number
+    maxlength: 24
+  - "Passport number": passport_number
+    maxlength: 38
+  - "Travel document number": travel_document_number
+    maxlength: 38
+  - "Passport country of issue": passport_country_of_issue
+    maxlength: 38
+  - "Date of passport expiration": passport_expiration_date
+    datatype: date
+  - "Date of last arrival": date_of_last_arrival
+    maxlength: 15
+  - "Place of last arrival": place_of_last_arrival
+    maxlength: 38
+  - "Immigration status at last arrival": immigration_status_at_last_arrival
+    maxlength: 38
+  - "Current immigration status": current_immigration_status
+    maxlength: 38
+  - "Sevis number": sevis_number
+    maxlength: 21
+  - "User reads english": user_reads_english
+    datatype: yesno
+  - "User used interpreter": user_used_interpreter
+    datatype: yesno
+  - "Interpreter spoke language": interpreter_spoke_language
+    maxlength: 34
+  - "User used preparer": user_used_preparer
+    datatype: yesno
+  - "Is abc salvadoran guatemalan national": is_abc_salvadoran_guatemalan_national
+    datatype: yesno
+  - "Interpreter organization": interpreter_organization
+    maxlength: 38
+  - "Interpreter mailing address is apt": interpreter_mailing_address_is_apt
+    datatype: yesno
+  - "Interpreter mailing address is suite": interpreter_mailing_address_is_suite
+    datatype: yesno
+  - "Interpreter mailing address is floor": interpreter_mailing_address_is_floor
+    datatype: yesno
+---
+id: Screen two For appendix ignore these
+question: |
+  Screen two (For appendix, ignore these)
+fields:
+  - "Preparer organization": preparer_organization
+    maxlength: 38
+  - "Preparer is attorney": preparer_is_attorney
+    datatype: yesno
+  - "Preparer full rep": preparer_full_rep
+    datatype: yesno
+  - "Preparer limited rep": preparer_limited_rep
+    datatype: yesno
+  - "Page number 3": Page_Number_3
+    maxlength: 8
+  - "Part number 3": Part_Number_3
+    maxlength: 8
+  - "Item number 3": Item_Number_3
+    maxlength: 8
+  - "Sign and date each sheet": sign_and_date_each_sheet
+    maxlength: 28
+  - "First name 7": First_Name_7
+    maxlength: 28
+  - "Middle name 5": Middle_Name_5
+    maxlength: 28
+  - "Page number 4": Page_Number_4
+    maxlength: 8
+  - "Part number 4": Part_Number_4
+    maxlength: 8
+  - "Item number 4": Item_Number_4
+    maxlength: 8
+  - "A 2": A_2
+    maxlength: 21
+  - "Page number": Page_Number
+    maxlength: 8
+  - "Part number": Part_Number
+    maxlength: 8
+  - "Item number": Item_Number
+    maxlength: 8
+  - "Page number 5": Page_Number_5
+    maxlength: 8
+  - "Part number 5": Part_Number_5
+    maxlength: 8
+  - "Item number 5": Item_Number_5
+    maxlength: 8
+  - "Page number 2": Page_Number_2
+    maxlength: 8
+  - "Part number 2": Part_Number_2
+    maxlength: 8
+  - "Item number 2": Item_Number_2
+    maxlength: 8
+---
+id: preview I765_Employment_Authorization
+question: |
+  Preview your form before you sign it
+subquestion: |
+  Here is a preview of the form you will sign on the next page.   
+  
+  ${ al_recipient_bundle.as_pdf(key='preview') }
+
+  Click the image to open it in a new tab. Click the "Edit answers" button
+  to edit your answers.
+
+  ${ action_button_html(url_action('review_I765_Employment_Authorization'), label='Edit answers', color='info') }
+  
+  Remember to come back to this window to continue and sign your form.
+continue button field: I765_Employment_Authorization_preview_question    
+---
+code: |
+  signature_fields = []
+---
+code: |
+  US_Citizenship_and_Immigration_Services = DAEmpty()
+---
+id: I765 Employment Authorization review screen
+event: review_I765_Employment_Authorization
+question: |
+  Review your answers
+review:
+  - Edit: is_form_g28_attached
+    button: |
+      **Is form g28 attached**:
+      ${ word(yesno(is_form_g28_attached)) }
+  - Edit: attorney_online_account_number
+    button: |
+      **Attorney online account number**:
+      ${ attorney_online_account_number }
+  - Edit: application_reason_employment
+    button: |
+      **Application reason employment**:
+      ${ word(yesno(application_reason_employment)) }
+  - Edit: application_reason_replacement
+    button: |
+      **Application reason replacement**:
+      ${ word(yesno(application_reason_replacement)) }
+  - Edit: users.revisit
+    button: |
+      **Users**
+
+      % for item in users:
+        * ${ item }
+      % endfor
+  - Edit: application_reason_renewal
+    button: |
+      **Application reason renewal**:
+      ${ word(yesno(application_reason_renewal)) }
+  - Edit: users1_ssn
+    button: |
+      **Users1 ssn**:
+      ${ users1_ssn }
+  - Edit: users1_mailing_address_in_care_of
+    button: |
+      **Users1 mailing address in care of**:
+      ${ users1_mailing_address_in_care_of }
+  - Edit: users1_wants_ssn
+    button: |
+      **Users1 wants ssn**:
+      ${ users1_wants_ssn }
+  - Edit: users1_mailing_address_is_apt
+    button: |
+      **Users1 mailing address is apt**:
+      ${ word(yesno(users1_mailing_address_is_apt)) }
+  - Edit: users1_mailing_address_is_suite
+    button: |
+      **Users1 mailing address is suite**:
+      ${ word(yesno(users1_mailing_address_is_suite)) }
+  - Edit: users1_mailing_address_is_floor
+    button: |
+      **Users1 mailing address is floor**:
+      ${ word(yesno(users1_mailing_address_is_floor)) }
+  - Edit: mailing_address_is_physical_address
+    button: |
+      **Mailing address is physical address**:
+      ${ word(yesno(mailing_address_is_physical_address)) }
+  - Edit: father.revisit
+    button: |
+      **Father**
+
+      % for item in father:
+        * ${ item }
+      % endfor
+  - Edit: users1_address_is_apt
+    button: |
+      **Users1 address is apt**:
+      ${ word(yesno(users1_address_is_apt)) }
+  - Edit: users1_address_is_suite
+    button: |
+      **Users1 address is suite**:
+      ${ word(yesno(users1_address_is_suite)) }
+  - Edit: users1_address_is_floor
+    button: |
+      **Users1 address is floor**:
+      ${ word(yesno(users1_address_is_floor)) }
+  - Edit: mother.revisit
+    button: |
+      **Mother**
+
+      % for item in mother:
+        * ${ item }
+      % endfor
+  - Edit: users1_a_number
+    button: |
+      **Users1 a number**:
+      ${ users1_a_number }
+  - Edit: users1_uscis_account_number
+    button: |
+      **Users1 uscis account number**:
+      ${ users1_uscis_account_number }
+  - Edit: marital_status_single
+    button: |
+      **Marital status single**:
+      ${ word(yesno(marital_status_single)) }
+  - Edit: marital_status_married
+    button: |
+      **Marital status married**:
+      ${ word(yesno(marital_status_married)) }
+  - Edit: marital_status_divorced
+    button: |
+      **Marital status divorced**:
+      ${ word(yesno(marital_status_divorced)) }
+  - Edit: marital_status_widowed
+    button: |
+      **Marital status widowed**:
+      ${ word(yesno(marital_status_widowed)) }
+  - Edit: citizen_country_1
+    button: |
+      **Citizen country 1**:
+      ${ citizen_country_1 }
+  - Edit: previously_filed_i765
+    button: |
+      **Previously filed i765**:
+      ${ previously_filed_i765 }
+  - Edit: citizen_country_2
+    button: |
+      **Citizen country 2**:
+      ${ citizen_country_2 }
+  - Edit: has_ssn
+    button: |
+      **Has ssn**:
+      ${ has_ssn }
+  - Edit: city_of_birth
+    button: |
+      **City of birth**:
+      ${ city_of_birth }
+  - Edit: state_of_birth
+    button: |
+      **State of birth**:
+      ${ state_of_birth }
+  - Edit: country_of_birth
+    button: |
+      **Country of birth**:
+      ${ country_of_birth }
+  - Edit: i94_arrival_number
+    button: |
+      **I94 arrival number**:
+      ${ i94_arrival_number }
+  - Edit: passport_number
+    button: |
+      **Passport number**:
+      ${ passport_number }
+  - Edit: travel_document_number
+    button: |
+      **Travel document number**:
+      ${ travel_document_number }
+  - Edit: passport_country_of_issue
+    button: |
+      **Passport country of issue**:
+      ${ passport_country_of_issue }
+  - Edit: passport_expiration_date
+    button: |
+      **Date of passport expiration**:
+      ${ passport_expiration_date }
+  - Edit: date_of_last_arrival
+    button: |
+      **Date of last arrival**:
+      ${ date_of_last_arrival }
+  - Edit: place_of_last_arrival
+    button: |
+      **Place of last arrival**:
+      ${ place_of_last_arrival }
+  - Edit: immigration_status_at_last_arrival
+    button: |
+      **Immigration status at last arrival**:
+      ${ immigration_status_at_last_arrival }
+  - Edit: current_immigration_status
+    button: |
+      **Current immigration status**:
+      ${ current_immigration_status }
+  - Edit: sevis_number
+    button: |
+      **Sevis number**:
+      ${ sevis_number }
+  - Edit: user_reads_english
+    button: |
+      **User reads english**:
+      ${ word(yesno(user_reads_english)) }
+  - Edit: user_used_interpreter
+    button: |
+      **User used interpreter**:
+      ${ word(yesno(user_used_interpreter)) }
+  - Edit: interpreter_spoke_language
+    button: |
+      **Interpreter spoke language**:
+      ${ interpreter_spoke_language }
+  - Edit: user_used_preparer
+    button: |
+      **User used preparer**:
+      ${ word(yesno(user_used_preparer)) }
+  - Edit: preparer.revisit
+    button: |
+      **Preparer**
+
+      % for item in preparer:
+        * ${ item }
+      % endfor
+  - Edit: signature_date
+    button: |
+      **Date of signature**:
+      ${ signature_date }
+  - Edit: is_abc_salvadoran_guatemalan_national
+    button: |
+      **Is abc salvadoran guatemalan national**:
+      ${ word(yesno(is_abc_salvadoran_guatemalan_national)) }
+  - Edit: interpreter.revisit
+    button: |
+      **Interpreter**
+
+      % for item in interpreter:
+        * ${ item }
+      % endfor
+  - Edit: interpreter_organization
+    button: |
+      **Interpreter organization**:
+      ${ interpreter_organization }
+  - Edit: interpreter_mailing_address_is_apt
+    button: |
+      **Interpreter mailing address is apt**:
+      ${ word(yesno(interpreter_mailing_address_is_apt)) }
+  - Edit: interpreter_mailing_address_is_suite
+    button: |
+      **Interpreter mailing address is suite**:
+      ${ word(yesno(interpreter_mailing_address_is_suite)) }
+  - Edit: interpreter_mailing_address_is_floor
+    button: |
+      **Interpreter mailing address is floor**:
+      ${ word(yesno(interpreter_mailing_address_is_floor)) }
+  - Edit: preparer_organization
+    button: |
+      **Preparer organization**:
+      ${ preparer_organization }
+  - Edit: preparer_is_attorney
+    button: |
+      **Preparer is attorney**:
+      ${ word(yesno(preparer_is_attorney)) }
+  - Edit: preparer_full_rep
+    button: |
+      **Preparer full rep**:
+      ${ word(yesno(preparer_full_rep)) }
+  - Edit: preparer_limited_rep
+    button: |
+      **Preparer limited rep**:
+      ${ word(yesno(preparer_limited_rep)) }
+  - Edit: Page_Number_3
+    button: |
+      **Page number 3**:
+      ${ Page_Number_3 }
+  - Edit: Part_Number_3
+    button: |
+      **Part number 3**:
+      ${ Part_Number_3 }
+  - Edit: Item_Number_3
+    button: |
+      **Item number 3**:
+      ${ Item_Number_3 }
+  - Edit: sign_and_date_each_sheet
+    button: |
+      **Sign and date each sheet**:
+      ${ sign_and_date_each_sheet }
+  - Edit: First_Name_7
+    button: |
+      **First name 7**:
+      ${ First_Name_7 }
+  - Edit: Middle_Name_5
+    button: |
+      **Middle name 5**:
+      ${ Middle_Name_5 }
+  - Edit: Page_Number_4
+    button: |
+      **Page number 4**:
+      ${ Page_Number_4 }
+  - Edit: Part_Number_4
+    button: |
+      **Part number 4**:
+      ${ Part_Number_4 }
+  - Edit: Item_Number_4
+    button: |
+      **Item number 4**:
+      ${ Item_Number_4 }
+  - Edit: A_2
+    button: |
+      **A 2**:
+      ${ A_2 }
+  - Edit: Page_Number
+    button: |
+      **Page number**:
+      ${ Page_Number }
+  - Edit: Part_Number
+    button: |
+      **Part number**:
+      ${ Part_Number }
+  - Edit: Item_Number
+    button: |
+      **Item number**:
+      ${ Item_Number }
+  - Edit: Page_Number_5
+    button: |
+      **Page number 5**:
+      ${ Page_Number_5 }
+  - Edit: Part_Number_5
+    button: |
+      **Part number 5**:
+      ${ Part_Number_5 }
+  - Edit: Item_Number_5
+    button: |
+      **Item number 5**:
+      ${ Item_Number_5 }
+  - Edit: Page_Number_2
+    button: |
+      **Page number 2**:
+      ${ Page_Number_2 }
+  - Edit: Part_Number_2
+    button: |
+      **Part number 2**:
+      ${ Part_Number_2 }
+  - Edit: Item_Number_2
+    button: |
+      **Item number 2**:
+      ${ Item_Number_2 }
+---
+continue button field: users.revisit
+question: |
+  Edit users
+subquestion: |
+  ${ users.table }
+
+  ${ users.add_action() }
+---
+table: users.table
+rows: users
+columns:
+  - Previous names[0]: |
+      row_item.previous_names[0] if defined("row_item.previous_names[0].middle") else ""
+  - Previous names[1]: |
+      row_item.previous_names[1] if defined("row_item.previous_names[1].middle") else ""
+  - Previous names[2]: |
+      row_item.previous_names[2] if defined("row_item.previous_names[2].middle") else ""
+  - Name: |
+      row_item.name.full() if defined("row_item.name.middle") else ""
+  - Mailing address: |
+      row_item.mailing_address.block() if defined("row_item.mailing_address.zip") else ""
+  - Address: |
+      row_item.address.block() if defined("row_item.address.zip") else ""
+  - Gender: |
+      row_item.gender if defined("row_item.gender") else ""
+  - Birthdate: |
+      row_item.birthdate if defined("row_item.birthdate") else ""
+  - Phone number: |
+      row_item.phone_number if defined("row_item.phone_number") else ""
+  - Mobile number: |
+      row_item.mobile_number if defined("row_item.mobile_number") else ""
+  - Email: |
+      row_item.email if defined("row_item.email") else ""
+edit:
+  - previous_names[0].middle
+  - previous_names[1].middle
+  - previous_names[2].middle
+  - name.middle
+  - mailing_address.zip
+  - address.zip
+  - gender
+  - birthdate
+  - phone_number
+  - mobile_number
+  - email
+confirm: True
+
+---
+continue button field: father.revisit
+question: |
+  Edit father
+subquestion: |
+  ${ father.table }
+
+  ${ father.add_action() }
+---
+table: father.table
+rows: father
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+edit:
+  - name.first
+confirm: True
+
+---
+continue button field: mother.revisit
+question: |
+  Edit mother
+subquestion: |
+  ${ mother.table }
+
+  ${ mother.add_action() }
+---
+table: mother.table
+rows: mother
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+edit:
+  - name.first
+confirm: True
+
+---
+continue button field: preparer.revisit
+question: |
+  Edit preparer
+subquestion: |
+  ${ preparer.table }
+
+  ${ preparer.add_action() }
+---
+table: preparer.table
+rows: preparer
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+  - Phone number: |
+      row_item.phone_number if defined("row_item.phone_number") else ""
+  - Mobile number: |
+      row_item.mobile_number if defined("row_item.mobile_number") else ""
+  - Email: |
+      row_item.email if defined("row_item.email") else ""
+edit:
+  - name.first
+  - phone_number
+  - mobile_number
+  - email
+confirm: True
+
+---
+continue button field: interpreter.revisit
+question: |
+  Edit interpreter
+subquestion: |
+  ${ interpreter.table }
+
+  ${ interpreter.add_action() }
+---
+table: interpreter.table
+rows: interpreter
+columns:
+  - Name: |
+      row_item.name.full() if defined("row_item.name.first") else ""
+  - Mailing address: |
+      row_item.mailing_address.block() if defined("row_item.mailing_address.country") else ""
+  - Phone number: |
+      row_item.phone_number if defined("row_item.phone_number") else ""
+  - Mobile number: |
+      row_item.mobile_number if defined("row_item.mobile_number") else ""
+  - Email: |
+      row_item.email if defined("row_item.email") else ""
+edit:
+  - name.first
+  - mailing_address.country
+  - phone_number
+  - mobile_number
+  - email
+confirm: True
+
+---
+id: download I765_Employment_Authorization
+event: I765_Employment_Authorization_download
+question: |
+  All done
+subquestion: |
+  Thank you ${users}. Your form is ready to download and deliver.
+  
+  View, download and send your form below. Click the "Edit answers" button to fix any mistakes.
+
+  ${ action_button_html(url_action('review_I765_Employment_Authorization'), label='Edit answers', color='info') }
+  
+  
+  ${ al_user_bundle.download_list_html() }
+  
+
+  ${ al_user_bundle.send_button_html(show_editable_checkbox=False) }
+
+progress: 100
+---
+# ALDocument objects specify the metadata for each template
+objects:
+  - I765_Employment_Authorization_attachment: ALDocument.using(title="I-765 Employment Authorization", filename="I765_Employment_Authorization", enabled=True, has_addendum=False, )
+---
+# Bundles group the ALDocuments into separate downloads, such as for court and for the user
+objects:
+  - al_user_bundle: ALDocumentBundle.using(elements=[I765_Employment_Authorization_attachment], filename="I765_Employment_Authorization", title="All forms to download for your records", enabled=True)
+  - al_recipient_bundle: ALDocumentBundle.using(elements=[I765_Employment_Authorization_attachment],  filename="I765_Employment_Authorization", title="All forms to file", enabled=True)
+---
+# Each attachment defines a key in an ALDocument. We use `i` as the placeholder here so the same template is 
+# used for "preview" and "final" keys, and logic in the template checks the value of 
+# `i` to show or hide the user's signature
+---
+attachment:
+  name: I765 Employment Authorization
+  filename: I765_Employment_Authorization
+  variable name: I765_Employment_Authorization_attachment[i]
+  skip undefined: True
+  pdf template file: I765_Employment_Authorization.pdf
+  fields:
+      - "US Citizenship and Immigration Services": ${ US_Citizenship_and_Immigration_Services }
+      - "is_form_g28_attached": ${ is_form_g28_attached }
+      - "attorney_online_account_number": ${ attorney_online_account_number }
+      - "application_reason_employment": ${ application_reason_employment }
+      - "application_reason_replacement": ${ application_reason_replacement }
+      - "users1_previous_names1_last": ${ users[0].previous_names[0].last }
+      - "users1_previous_names1_first": ${ users[0].previous_names[0].first }
+      - "users1_previous_names1_middle": ${ users[0].previous_names[0].middle }
+      - "users1_previous_names2_last": ${ users[0].previous_names[1].last }
+      - "users1_previous_names2_first": ${ users[0].previous_names[1].first }
+      - "application_reason_renewal": ${ application_reason_renewal }
+      - "users1_previous_names2_middle": ${ users[0].previous_names[1].middle }
+      - "users1_previous_names3_last": ${ users[0].previous_names[2].last }
+      - "users1_previous_names3_first": ${ users[0].previous_names[2].first }
+      - "users1_previous_names3_middle": ${ users[0].previous_names[2].middle }
+      - "users1_name_last": ${ users[0].name.last }
+      - "users1_name_first": ${ users[0].name.first }
+      - "users1_name_middle": ${ users[0].name.middle }
+      - "users1_ssn": ${ users1_ssn }
+      - "users1_mailing_address_in_care_of": ${ users1_mailing_address_in_care_of }
+      - "users1_wants_ssn": ${ users1_wants_ssn }
+      - "users1_mailing_address_address": ${ users[0].mailing_address.address }
+      - "users1_mailing_address_is_apt": ${ users1_mailing_address_is_apt }
+      - "users1_mailing_address_is_suite": ${ users1_mailing_address_is_suite }
+      - "users1_mailing_address_is_floor": ${ users1_mailing_address_is_floor }
+      - "users1_mailing_address_unit": ${ users[0].mailing_address.unit }
+      - "users1_mailing_address_city": ${ users[0].mailing_address.city }
+      - "users1_mailing_address_state": ${ users[0].mailing_address.state }
+      - "users1_mailing_address_zip": ${ users[0].mailing_address.zip }
+      - "mailing_address_is_physical_address": ${ mailing_address_is_physical_address }
+      - "mailing_address_is_physical_address": ${ mailing_address_is_physical_address }
+      - "father_name_last": ${ father[0].name.last }
+      - "users1_address_address": ${ users[0].address.address }
+      - "father_name_first": ${ father[0].name.first }
+      - "users1_address_is_apt": ${ users1_address_is_apt }
+      - "users1_address_is_suite": ${ users1_address_is_suite }
+      - "users1_address_is_floor": ${ users1_address_is_floor }
+      - "users1_address_unit": ${ users[0].address.unit }
+      - "users1_address_city": ${ users[0].address.city }
+      - "users1_address_state": ${ users[0].address.state }
+      - "users1_address_zip": ${ users[0].address.zip }
+      - "mother_name_last": ${ mother[0].name.last }
+      - "mother_name_first": ${ mother[0].name.first }
+      - "users1_a_number": ${ users1_a_number }
+      - "users1_uscis_account_number": ${ users1_uscis_account_number }
+      - "users1_gender": ${ users[0].gender }
+      - "marital_status_single": ${ marital_status_single }
+      - "marital_status_married": ${ marital_status_married }
+      - "marital_status_divorced": ${ marital_status_divorced }
+      - "marital_status_widowed": ${ marital_status_widowed }
+      - "citizen_country_1": ${ citizen_country_1 }
+      - "previously_filed_i765": ${ previously_filed_i765 }
+      - "citizen_country_2": ${ citizen_country_2 }
+      - "has_ssn": ${ has_ssn }
+      - "city_of_birth": ${ city_of_birth }
+      - "state_of_birth": ${ state_of_birth }
+      - "country_of_birth": ${ country_of_birth }
+      - "users1_birthdate": ${ users[0].birthdate.format() }
+      - "i94_arrival_number": ${ i94_arrival_number }
+      - "passport_number": ${ passport_number }
+      - "travel_document_number": ${ travel_document_number }
+      - "passport_country_of_issue": ${ passport_country_of_issue }
+      - "passport_expiration_date": ${ passport_expiration_date.format() }
+      - "date_of_last_arrival": ${ date_of_last_arrival }
+      - "place_of_last_arrival": ${ place_of_last_arrival }
+      - "immigration_status_at_last_arrival": ${ immigration_status_at_last_arrival }
+      - "current_immigration_status": ${ current_immigration_status }
+      - "sevis_number": ${ sevis_number }
+      - "user_reads_english": ${ user_reads_english }
+      - "user_used_interpreter": ${ user_used_interpreter }
+      - "interpreter_spoke_language": ${ interpreter_spoke_language }
+      - "interpreter_spoke_language__1": ${ interpreter_spoke_language }
+      - "user_used_preparer": ${ user_used_preparer }
+      - "preparer_name": ${ preparer[0] }
+      - "users1_phone_number": ${ users[0].phone_number }
+      - "signature_date": ${ signature_date }
+      - "signature_date__2": ${ signature_date }
+      - "users1_mobile_number": ${ users[0].mobile_number }
+      - "users1_email": ${ users[0].email }
+      - "is_abc_salvadoran_guatemalan_national": ${ is_abc_salvadoran_guatemalan_national }
+      - "interpreter_name_last": ${ interpreter[0].name.last }
+      - "interpreter_name_first": ${ interpreter[0].name.first }
+      - "interpreter_organization": ${ interpreter_organization }
+      - "interpreter_mailing_address_address": ${ interpreter[0].mailing_address.address }
+      - "interpreter_mailing_address_is_apt": ${ interpreter_mailing_address_is_apt }
+      - "interpreter_mailing_address_is_suite": ${ interpreter_mailing_address_is_suite }
+      - "interpreter_mailing_address_is_floor": ${ interpreter_mailing_address_is_floor }
+      - "interpreter_mailing_address_unit": ${ interpreter[0].mailing_address.unit }
+      - "preparer_name_last": ${ preparer[0].name.last }
+      - "interpreter_mailing_address_city": ${ interpreter[0].mailing_address.city }
+      - "interpreter_mailing_address_city": ${ interpreter[0].mailing_address.city }
+      - "interpreter_mailing_address_zip": ${ interpreter[0].mailing_address.zip }
+      - "interpreter_mailing_address_zip": ${ interpreter[0].mailing_address.zip }
+      - "preparer_name_first": ${ preparer[0].name.first }
+      - "interpreter_mailing_address_state": ${ interpreter[0].mailing_address.state }
+      - "preparer_organization": ${ preparer_organization }
+      - "interpreter_mailing_address_country": ${ interpreter[0].mailing_address.country }
+      - "interpreter_phone_number": ${ interpreter[0].phone_number }
+      - "interpreter_mobile_number": ${ interpreter[0].mobile_number }
+      - "interpreter_email": ${ interpreter[0].email }
+      - "preparer_phone_number": ${ preparer[0].phone_number }
+      - "preparer_mobile_number": ${ preparer[0].mobile_number }
+      - "preparer_email": ${ preparer[0].email }
+      - "preparer_is_attorney_yes": ${ preparer_is_attorney }
+      - "preparer_is_attorney_no": ${ not preparer_is_attorney }
+      - "preparer_full_rep": ${ preparer_full_rep }
+      - "preparer_limited_rep": ${ preparer_limited_rep }
+      - "Page Number_3": ${ Page_Number_3 }
+      - "Part Number_3": ${ Part_Number_3 }
+      - "Item Number_3": ${ Item_Number_3 }
+      - "sign and date each sheet": ${ sign_and_date_each_sheet }
+      - "First Name_7": ${ First_Name_7 }
+      - "Middle Name_5": ${ Middle_Name_5 }
+      - "Page Number_4": ${ Page_Number_4 }
+      - "Part Number_4": ${ Part_Number_4 }
+      - "Item Number_4": ${ Item_Number_4 }
+      - "A_2": ${ A_2 }
+      - "Page Number": ${ Page_Number }
+      - "Part Number": ${ Part_Number }
+      - "Item Number": ${ Item_Number }
+      - "Page Number_5": ${ Page_Number_5 }
+      - "Part Number_5": ${ Part_Number_5 }
+      - "Item Number_5": ${ Item_Number_5 }
+      - "Page Number_2": ${ Page_Number_2 }
+      - "Part Number_2": ${ Part_Number_2 }
+      - "Item Number_2": ${ Item_Number_2 }
+
+
+

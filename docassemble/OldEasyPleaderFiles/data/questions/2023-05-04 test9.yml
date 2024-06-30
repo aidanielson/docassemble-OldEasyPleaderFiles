@@ -1,0 +1,137 @@
+include:
+  - docassemble.AssemblyLine:al_package.yml
+---
+mandatory: True
+code: | 
+  intro_screen
+  parties.gather()
+  parties_review
+  end_screen
+---
+continue button field: intro_screen
+question: |
+  Introduction
+---
+objects: 
+  - parties: ALPeopleList.using(ask_number=True, target_number=1, complete_attribute='complete')
+---
+objects:  
+  - parties[i].attorneys: ALPeopleList.using(complete_attribute='complete')
+---
+code: |
+  parties[i].name.first
+  parties[i].attorneys.gather()
+  parties[i].address.address
+  parties[i].phone_number
+  parties[i].email
+  parties[i].complete = True
+---
+code: |
+  parties[i].attorneys[j].name.first
+  parties[i].attorneys[j].address.address
+  parties[i].attorneys[j].phone_number
+  parties[i].attorneys[j].email
+  parties[i].attorneys[j].complete = True
+---
+sets:
+  - parties[i].name.first
+  - parties[i].name.last
+question: Create Party Database
+subquestion: |
+  [CENTER]**Party Name, Role & Representation**[BR][BR]
+fields:
+  - Party Litigant Role: parties[i].role
+    choices:
+      - Plaintiff
+      - Defendant
+      - Intervenor
+      - Real-Party-In-Interest
+  - code: parties[i].name_fields(person_or_business="unsure")
+  - Is represented?: parties[i].attorneys.there_are_any
+    datatype: yesno
+---
+question: Attorney's Name
+reconsider:
+  - all_attorneys
+fields:
+  - An existing attorney: parties[i].attorneys[j]
+    datatype: object_radio
+    choices: |
+      sorted(all_attorneys)
+    exclude:
+      - parties[i].attorneys.elements[:-1]
+    disable others: True
+  - code: parties[i].attorneys[j].name_fields() 
+---
+objects:
+  - all_attorneys: DASet.using(auto_gather=False)
+---
+code: |
+  all_attorneys.clear()
+  for party in parties.elements[:-1]:
+    all_attorneys.update(party.attorneys.elements)
+  all_attorneys.gathered = True
+---
+sets:
+  - x.address.address
+  - x.address.city
+generic object: ALIndividual
+question: Contact Info
+fields:
+  - Law Firm: x.law_firm
+  - code: x.address_fields()
+  - note: |
+      Here comes some more.
+  - Phone: x.phone_number
+  - Fax: x.fax_number
+    required: False
+  - Email: x.email
+---
+question: Party Review
+subquestion: |
+  So far, you've entered ${ parties.number_as_word() } parties:
+    
+  ${ parties.table }
+    
+  ${ parties.add_action() }
+continue button field: parties_review
+---
+table: parties.table
+rows: parties
+columns:
+  - Party: |
+      row_item.role
+  - Name: |
+      row_item.name.full()
+  - Attorney: |
+      row_item.attorneys[0].name.full() if len(row_item.attorneys.complete_elements()) else 'unrepresented'
+  - Service Address: |
+      row_item.attorneys[0].address.block() if len(row_item.attorneys.complete_elements()) else row_item.address.block()
+edit:
+  - role
+  - name.first
+allow reordering: True
+---
+event: end_screen
+question: |
+  xxx
+subquestion: |
+  % for party in parties:
+  **_${ party.role }_ ${ party }** is 
+  % if not len(party.attorneys.complete_elements()):
+  unrepresented in this action. Their service address is:[BR]
+  ${ party.address.block() }
+  % endif
+  % if len(party.attorneys.complete_elements()):
+  represented in this action by:[BR]
+  % for attorney in party.attorneys:
+  ${ attorney }, Esq.[BR]
+  ${ attorney.law_firm.upper() }[BR]
+  ${ attorney.address.block() }[BR]  
+  Phone: ${ phone_number_formatted(attorney.phone_number) }[BR]
+  Email: ${ attorney.email }[BR]
+  % endfor
+  **Attorneys for ${ party.role } ${ party }**[BR]
+  % endif
+  
+  % endfor

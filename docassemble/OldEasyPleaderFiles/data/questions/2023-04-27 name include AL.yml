@@ -1,0 +1,16 @@
+include:   
+  - docassemble.AssemblyLine:assembly_line.yml
+---
+mandatory: True
+code: |
+  al_form_type = 'existing case'
+---
+mandatory: True
+code: |
+  ohyeah.rearrange_exhibits
+---
+mandatory: True
+question: |
+  xxxx
+subquestion: |
+  ${ other_parties }

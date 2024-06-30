@@ -1,0 +1,149 @@
+---
+modules:
+  - .legalstuff2
+---
+mandatory: True
+code: | 
+  intro_screen
+  case.parties.gather()
+  case.parties_review
+  end_screen
+---
+continue button field: intro_screen
+question: |
+  Introduction
+---
+objects: 
+  - case: Case
+  - case.parties: PartyList.using(ask_number=True, target_number=1)
+---
+question: Create Party Database
+subquestion: |
+  [CENTER]**Party Name, Role & Representation**[BR][BR]
+fields:
+  - Party Litigant Role: case.parties[i].role
+    choices:
+      - Plaintiff
+      - Defendant
+      - Intervenor
+      - Real-Party-In-Interest
+  - First name: case.parties[i].name.first
+  - Last name: case.parties[i].name.last
+  - note: |
+      [CENTER]**Is this party represented by counsel, or are they proceeding 'in pro per'?**[BR]
+  - Party is **represented by counsel**: case.parties[i].attorneys.there_are_any
+    datatype: yesno
+  - Address: case.parties[i].address.address
+    hide if: case.parties[i].attorneys.there_are_any
+    required: False
+  - City: case.parties[i].address.city
+    hide if: case.parties[i].attorneys.there_are_any  
+    required: False
+  - State: case.parties[i].address.state
+    code: states_list()
+    hide if: case.parties[i].attorneys.there_are_any
+    required: False
+  - Zip: case.parties[i].address.zip
+    hide if: case.parties[i].attorneys.there_are_any
+    required: False
+  - Phone: case.parties[i].phone_number
+    validate: |
+      lambda y: (y == '' or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    hide if: case.parties[i].attorneys.there_are_any
+    required: False
+  - Email: case.parties[i].email
+    datatype: email
+    hide if: case.parties[i].attorneys.there_are_any
+    required: False
+---
+question: |
+  Attorney's Name
+fields:
+  - An existing attorney: case.parties[i].attorneys[j]
+    datatype: object_radio
+    choices: |
+      case.attorneys_in(exclude=case.parties[i].attorneys)
+    disable others: True
+    show if:
+      code: |
+        len(case.attorneys_in(exclude=case.parties[i].attorneys)) > 0
+  - First name: case.parties[i].attorneys[j].name.first
+  - Last name: case.parties[i].attorneys[j].name.last
+  - Law Firm: case.parties[i].attorneys[j].law_firm
+  - Address: case.parties[i].attorneys[j].address.address
+  - City: case.parties[i].attorneys[j].address.city
+  - State: case.parties[i].attorneys[j].address.state
+    code: states_list()
+  - Zip: case.parties[i].attorneys[j].address.zip
+  - Phone: case.parties[i].attorneys[j].phone_number
+  - Email: case.parties[i].attorneys[j].email
+---
+question: |
+  Does ${ case.parties[i] } have other counsel besides
+  ${ case.parties[i].attorneys }?
+yesno: case.parties[i].attorneys.there_is_another
+---
+generic object: Individual
+question: Contact Info
+fields:
+  - First name: x.name.first
+  - Last name: x.name.last
+  - Address: x.address.address
+  - City: x.address.city
+  - State: x.address.state
+    code: states_list()
+  - Zip: x.address.zip
+  - note: |
+      Phone, Fax (optional) & Email
+  - Phone: x.phone_number
+  - Fax: x.fax_number
+    required: False
+  - Email: x.email
+---
+question: Party Review
+subquestion: |
+  So far, you've entered ${ case.parties.number_as_word() } parties:
+    
+  ${ case.parties.table }
+    
+  ${ case.parties.add_action() }
+continue button field: case.parties_review
+---
+table: case.parties.table
+rows: case.parties
+columns:
+  - Party: |
+      row_item.role
+  - Name: |
+      row_item.name.full()
+  - Attorney: |
+      row_item.attorneys[0].name.full() if row_item.is_represented() else 'unrepresented'
+  - Service Address: |
+      row_item.attorneys[0].address.block() if row_item.is_represented() else row_item.address.block()
+edit:
+  - role
+  - name.first
+allow reordering: True
+---
+event: end_screen
+question: |
+  xxx
+subquestion: |
+  % for party in case.parties:
+  **_${ party.role }_ ${ party }** is 
+  % if not party.is_represented():
+  unrepresented in this action. Their service address is:[BR]
+  ${ party.address.block() }
+  % else:
+  represented in this action by:[BR]
+  % for attorney in party.attorneys:
+  ${ attorney }, Esq.[BR]
+  ${ attorney.law_firm.upper() }[BR]
+  ${ attorney.address.block() }[BR]  
+  Phone: ${ phone_number_formatted(attorney.phone_number) }[BR]
+  Email: ${ attorney.email }[BR]
+  % endfor
+  **Attorneys for ${ party.role } ${ party }**[BR]
+  % endif
+  
+  % endfor

@@ -1,0 +1,155 @@
+objects:
+  parties: DAList.using(object_type=Individual, auto_gather=False, complete_attribute='complete')
+  parties[i].lawyers: DAList.using(object_type=Individual, there_are_any=True)
+  opposing_parties: DAList(object_type=Individual, auto_gather=False, gathered=True)
+  new_list: DAList.using(object_type=Individual, there_are_any=True, complete_attribute='complete')
+---
+code: |
+  debug_mode = True
+---
+code: |
+  parties.prepopulated = True
+---
+if: debug_mode
+only sets: parties.prepopulated
+code: |
+  parties[0].name.first = 'Fred'
+  parties[0].name.last = 'Smith'
+  parties[0].initializeAttribute('lawyers', DAList.using(object_type=Individual))
+  parties[0].lawyers[0].name.first = 'Robert'
+  parties[0].lawyers[0].name.last = 'Henderson'
+  parties[0].lawyers.gathered = True
+  parties[0].complete = True
+  parties[1].name.first = 'Sally'
+  parties[1].name.last = 'Robinson'
+  parties[1].initializeAttribute('lawyers', DAList.using(object_type=Individual))
+  parties[1].lawyers[0].name.first = 'Henry'
+  parties[1].lawyers[0].name.last = 'Roper'
+  parties[1].lawyers.gathered = True
+  parties[1].complete = True
+  parties.there_is_another = False
+  parties.gathered = True
+  parties.prepopulated = True
+---
+code: |
+  parties.prepopulated
+  parties.gather()
+  parties.gathered = True
+---
+code: |
+  parties[i].name.first
+  parties[i].lawyers.gather()
+  parties[i].complete = True
+---
+question: |
+  Are there any parties?
+yesno: parties.there_are_any
+---
+question: |
+  Tell me about the ${ ordinal(i) } party.
+fields:
+  - First name: parties[i].name.first
+  - Last name: parties[i].name.last
+---
+question: |
+  Tell me about ${ parties[i].possessive(ordinal(j)) } lawyer.
+fields:
+  - First name: parties[i].lawyers[j].name.first
+  - Last name: parties[i].lawyers[j].name.last
+---
+question: |
+  Are there more parties?
+yesno: parties.there_is_another
+---
+question: |
+  Does ${ parties[i] } have any other lawyers besides ${ parties[i].lawyers }?
+yesno: parties[i].lawyers.there_is_another
+---
+question: troubleshoot
+subquestion: |
+  The 'parties' 'complete_elements()' is:
+  ${ parties.complete_elements() }
+continue button field: troubleshoot
+---
+question: |
+  The parties
+subquestion: |
+  ${ parties.table }
+  
+  ${ parties.add_action() }
+continue button field: parties.reviewed
+---
+table: parties.table
+rows: parties
+columns:
+  - Name: row_item
+  - Attorneys: row_item.lawyers
+edit:
+  - name.first
+  - lawyer_list
+---
+question: |
+  Lawyers for ${ parties[i] }
+subquestion: |
+  ${ parties[i].lawyers.table }
+  
+  ${ parties[i].lawyers.add_action() }
+continue button field: parties[i].lawyer_list
+---
+table: parties[i].lawyers.table
+rows: parties[i].lawyers
+columns:
+  - Name: row_item
+edit:
+  - name.first
+---
+question: Select Opposing Parties
+fields:
+  - Choose Parties: opposing_parties
+    datatype: object_checkboxes
+    choices: parties.complete_elements()
+---
+generic object: DAList
+question: new list
+fields:
+  - What is the name: x[i].name.first
+---
+generic object: DAList
+question: add another element to new_list?
+yesno: x.there_is_another
+---
+generic object: DAList
+code: |
+  x[i].name.first
+  x[i].service_methods
+  x[i].complete = True
+---
+question: How was xxx served?
+fields:
+  - Method: service_methods
+    datatype: checkboxes
+    choices:
+      - Regular Mail
+      - Email
+      - Fax
+      - Overnight Delivery
+  - Date: service_date
+    datatype: date
+---
+mandatory: True
+code: |
+  parties.reviewed
+  troubleshoot
+  opposing_parties
+  service_methods
+  final_screen
+---
+event: final_screen
+question: Results
+subquestion: |
+  **Opposing Parties**
+  [BR]
+  The parties opposing is/are 
+  % for party in opposing_parties:
+  ${ party } was served via ${ party.service_methods } on ${ party.service_date }[BR]
+  % endfor

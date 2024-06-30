@@ -1,0 +1,23 @@
+question: xxxx
+fields:
+  - Favorite Color: favorite_color
+    choices:
+      - Red
+      - Orange
+      - Blue
+  - Are you over 40?: is_over_40
+    datatype: yesnowide
+  - Favorite Fruit: favorite_fruit
+    show if: is_over_40
+    #default: ${favorite_color}
+---
+mandatory: true
+code: |
+  favorite_color
+  results_screen
+---
+event: results_screen
+question: Results Screen
+subquestion: |
+  You are ${ 'not' if not is_over_40 else '' } over 40, and your favorite color is ${ favorite_color }.
+#continue button field: results_screen

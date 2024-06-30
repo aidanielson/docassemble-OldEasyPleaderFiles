@@ -1,0 +1,32 @@
+mandatory: True
+code: |
+  first_thing
+  if first_thing:
+    second_thing
+  end_screen
+---
+question: |
+  xxx
+fields:
+  - Is the first thing true?: first_thing
+    datatype: yesnoradio
+---
+question: |
+  xxx
+fields:
+  - Is the second thing true: second_thing
+    datatype: yesnoradio
+---
+#code: |
+#  if first_thing and second_thing:
+#    which_thing_applies = 'second'
+#  else: 
+#    which_thing_applies = 'first'
+code: |
+  which_thing_applies = 'xxxx' if first_thing and second_thing else 'yyyy'
+---
+event: end_screen
+question: |
+  xxx
+subquestion: |
+  The thing that applies is: ${ which_thing_applies }

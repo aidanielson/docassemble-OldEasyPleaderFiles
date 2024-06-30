@@ -1,0 +1,43 @@
+question: |
+  xxx
+fields:
+  - Contact Type: litigants[i].type
+    datatype: radio
+    choices:
+      - Human/Individual
+      - Business/Organization
+  - First Name: litigants[i].name.first
+    show if: 
+      variable: litigants[i].type
+      is: Human/Individual
+  - Middle Name: litigants[i].name.middle
+    show if:
+      variable: litigants[i].type
+      is: Human/Individual
+  - Last Name: litigants[i].name.last
+    show if:
+      variable: litigants[i].type
+      is: Human/Individual
+  - Suffix: litigants[i].name.suffix
+    required: False
+    show if:
+      variable: litigants[i].type
+      is: Human/Individual
+  - Business/Organization Name: litigants[i].name.first
+    show if:
+      variable: litigants[i].type
+      is: Business/Organization
+---
+objects:
+  - litigants: DAList.using(there_are_any=True, object_type=Individual)
+---
+question: Are there more litigants to enter?
+yesno: litigants.there_is_another
+---
+mandatory: True
+question: |
+  xxxx
+subquestion: |
+  the litigants are:
+  
+  ${ litigants }

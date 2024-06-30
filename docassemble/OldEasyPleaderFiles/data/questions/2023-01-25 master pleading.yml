@@ -1,0 +1,383 @@
+metadata:
+  title: |
+    EasyPleader
+  short title: Generate polished legal pleadings quickly and easily!
+---
+mandatory: True
+code: |
+  author.name.first
+  atty_info_in_caption
+  doc.type
+  doc.title_full
+  doc.footer
+  attach_exhibits
+  sig_block_date_field
+  if doc.sign:
+    signature
+  party_contact.gather()
+  nonparty_contact.gather()
+  case.court
+  if doc.has_hrg == True:
+    hrg.date
+  user_approves
+  final_screen
+---
+objects:
+  - author: Individual
+  - case: DAObject
+  - party_contact: DAList.using(object_type=Person, there_are_any=True)
+  - nonparty_contact: DAList.using(object_type=Person, there_are_any=True)
+  - attorney: Individual
+  - hrg: DAObject
+  - doc: DAObject
+  - signature_file: DAFile
+---
+question: |
+  Enter the  author's contact info.
+fields:
+  - Is the author an attorney?: author.is_attorney
+    datatype: yesno
+  - First Name: author.name.first
+  - Middle Name: author.name.middle
+    required: False
+  - Last Name: author.name.last
+  - Suffix: author.name.suffix
+    required: False
+  - Law Firm: author.law_firm
+    show if: author.is_attorney
+  - State Bar Number: author.sbn
+    show if: author.is_attorney
+    datatype: integer
+  - Address: author.address.address
+    address autocomplete: True
+  - Unit: author.address.unit
+    required: False
+  - City: author.address.city
+  - State: author.address.state
+  - Zip: author.address.zip
+  - Phone: author.phone_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Fax: author.fax_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Email Address: author.email
+    datatype: email
+---
+question:
+  Who is authoring this document?
+field: author.is_me
+buttons: 
+  - "Tony Danielson": True
+    color: primary
+  - "Someone Else": False
+    color: warning
+---
+code: |
+  if author.is_me: 
+    author.name.first = "Anthony"
+    author.name.middle = "I."
+    author.name.last = "Danielson"
+    author.law_firm = "Danielson Kim Law Group, P.C."
+    author.sbn = 285576
+    author.address.address = "5170 Golden Foothill Parkway"
+    author.address.city = "El Dorado Hills"
+    author.address.state = "CA"
+    author.address.zip = 95762
+    author.phone_number = 9165203977
+    author.fax_number = 9165431601
+    author.email = 'Anthony@DanielsonKim.com'
+---
+code: |
+  if author.is_me or author.is_attorney:
+    atty_info_in_caption = True
+  else:
+    atty_info_in_caption = False
+---
+question: |
+  Named Parties
+subquestion: |
+  Enter contact info for all named parties in this case.
+fields:
+  - Select Party Role: party_contact[i].role
+    input type: combobox
+    choices:
+      - Plaintiff
+      - Petitioner
+      - Claimant
+      - Defendant
+      - Respondent
+  - Is this party a person/human or a company/entity?: party_contact[i].human_or_entity
+    input type: radio
+    choices:
+      - Person/Human
+      - Company/Entity
+  - Company/Entity Name: party_contact[i].name.first
+    show if:
+      variable: party_contact[i].human_or_entity
+      is: 'Company/Entity'
+  - First Name: party_contact[i].name.first
+    show if:
+      variable: party_contact[i].human_or_entity
+      is: 'Person/Human'
+  - Middle Name: party_contact[i].name.middle
+    required: False
+    show if:
+      variable: party_contact[i].human_or_entity
+      is: 'Person/Human'
+  - Last Name: party_contact[i].name.last
+    show if:
+      variable: party_contact[i].human_or_entity
+      is: 'Person/Human'
+  - Suffix: party_contact[i].name.suffix
+    required: False
+    show if:
+      variable: party_contact[i].human_or_entity
+      is: 'Person/Human'
+  - Is this party represented by an attorney?: party_contact[i].repd_by_attorney
+    datatype: yesno
+  - Attorney's First Name: party_contact[i].attorney.name.first
+    show if: party_contact[i].repd_by_attorney
+  - Attorney's Middle Name: party_contact[i].attorney.name.middle
+    required: False
+    show if: party_contact[i].repd_by_attorney
+  - Attorney's Last Name: party_contact[i].attorney.name.last
+    show if: party_contact[i].repd_by_attorney
+  - Attorney's Suffix: party_contact[i].attorney.name.suffix
+    required: False
+    show if: party_contact[i].repd_by_attorney
+  - Attorney's State Bar Number: party_contact[i].attorney.sbn
+    show if: party_contact[i].repd_by_attorney
+  - Law Firm: party_contact[i].attorney.law_firm
+    show if: party_contact[i].repd_by_attorney
+  - Address: party_contact[i].address.address
+    address autocomplete: True
+  - Unit: party_contact[i].address.unit
+    required: False
+  - City: party_contact[i].address.city
+  - State: party_contact[i].address.state
+  - Zip: party_contact[i].address.zip
+  - Phone: party_contact[i].phone_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Fax: party_contact[i].fax_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Email Address: party_contact[i].email
+    datatype: email
+---
+question: |
+  Are there more named parties?
+subquestion: |
+  You've entered ${party_contact} so far.
+yesno: party_contact.there_is_another
+---
+question: |
+  Nonparty Case Participants
+subquestion: |
+  Enter contact info for all nonparty case participants.
+fields:
+  - What is this nonparty's role in this litigation?: nonparty_contact[i].role
+    input type: combobox
+    choices:
+      - Fact Witness
+      - Expert Witness
+      - Court Reporter
+      - Interpreter
+      - Process Server
+      - eService Vendor
+      - Civil Filing Clerk
+      - Courtroom Deputy
+      - Levying Officer
+      - Judge
+  - Is this nonparty a person/human or a company/entity?: nonparty_contact[i].human_or_entity
+    input type: radio
+    choices:
+      - Person/Human
+      - Company/Entity
+  - Company/Entity Name: nonparty_contact[i].name.first
+    show if:
+      variable: nonparty_contact[i].human_or_entity
+      is: 'Company/Entity'
+  - First Name: nonparty_contact[i].name.first
+    show if:
+      variable: nonparty_contact[i].human_or_entity
+      is: 'Person/Human'
+  - Middle Name: nonparty_contact[i].name.middle
+    required: False
+    show if:
+      variable: nonparty_contact[i].human_or_entity
+      is: 'Person/Human'
+  - Last Name: nonparty_contact[i].name.last
+    show if:
+      variable: nonparty_contact[i].human_or_entity
+      is: 'Person/Human'
+  - Suffix: nonparty_contact[i].name.suffix
+    required: False
+    show if:
+      variable: nonparty_contact[i].human_or_entity
+      is: 'Person/Human'
+  - Address: nonparty_contact[i].address.address
+    address autocomplete: True
+  - Unit: nonparty_contact[i].address.unit
+    required: False
+  - City: nonparty_contact[i].address.city
+  - State: nonparty_contact[i].address.state
+  - Zip: nonparty_contact[i].address.zip
+  - Phone: nonparty_contact[i].phone_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Fax: nonparty_contact[i].fax_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+  - Email Address: nonparty_contact[i].email
+    datatype: email
+---
+question: |
+  Enter another nonparty case participant?
+subquestion: |
+  You have entered ${nonparty_contact} so far.
+yesno: nonparty_contact.there_is_another
+---
+table: party_contact.table
+rows: party_contact
+columns:
+  - Name: |
+      row_item.party_contact.name.full()
+  - Address: |
+      row_item.party_contact.address.block()
+  - Email: |
+      row_item.party_contact.email
+edit:
+  - receives
+---
+question: |
+  What type of document is this?
+field: doc.type
+choices:
+  - Generic Pleading
+  - Notice of Motion and Motion
+  - Declaration
+  - Memorandum of Points & Authorities
+  - Request for Judicial Notice
+  - Index of Exhibits
+  - Proposed Order
+  - Proof of Service
+---
+code: |
+  if doc.type in ['Generic Pleading', 'Notice of Motion and Motion', 'Memorandum of Points & Authorities', 'Request for Judicial Notice']:
+    sig_block_type = 'author'
+  elif doc.type == 'Declaration' or 'Proof of Service':
+    sig_block_type = 'declarant'
+  elif doc.type == 'Proposed Order':
+    sig_block_type = 'judge'
+---
+question: |
+  Does this document relate to a hearing?
+yesno: doc.has_hrg
+---
+question: |
+  What's the title of this document?
+subquestion: |
+  The title you enter will go into the caption page.
+fields:
+  - Document Title: doc.title_full
+  - "Do you want a short title for the footer or for easier reference?": wants_shorthand_title
+    datatype: yesno
+  - Document Shorthand Title: doc.title_shorthand
+    show if: wants_shorthand_title
+---
+code: |
+  if wants_shorthand_title:
+    doc.footer = doc.title_shorthand
+  else:
+    doc.footer = doc.title_full
+---
+question:
+  Enter Case Information
+fields:
+  - Case Jurisdiction: case.court
+  - Case Number: case.number
+  - Original Filing Date: case.filing_date
+    datatype: date
+  - Trial Date: case.trial_date
+    datatype: date
+---
+modules:
+    .biz_days
+---
+question: |
+  Enter hearing information.
+fields:
+  - Hearing Date: hrg.date
+    datatype: date
+  - Hearing Time: hrg.time
+    datatype: time
+  - Hearing Dept.: hrg.dept
+  - Hearing Judge: hrg.judge
+under: |
+  Note: Under CCP § 1005, if the papers are served **TODAY**, ${today()}, 16 court days from now is:
+  
+  * **${sixteen_court_days_from_today_string}** for PERSONAL SERVICE;
+  * **${earliest_overnight_or_fax_service_date_string}** for OVERNIGHT DELIVERY or FAX SERVICE;
+  * **${eighteen_court_days_from_today_string}** for EMAIL or ELECTRONIC SERVICE;
+  * **${earliest_mail_service_date_string}** for REGULAR MAIL SERVICE
+   
+  Visit Los Angeles County Superior Court's [Court Date Calculator](https://www.lacourt.org/courtdatecalculator/ui/) website for an additional date validation check.
+---
+question: |
+  Document-Specific Info
+subquestion: |
+  Choose document options.
+fields:
+  - Attach exhibits to this document?: attach_exhibits
+    datatype: yesno
+  - Include Statutory Call-Out Under Doc Title in Caption Page?: include_stat_callout
+    datatype: yesno
+  - Enter the statutory call-out text: stat_callout
+    show if: include_stat_callout
+---
+question: |
+  Signature Block
+fields:
+  - What date do you want in the signature block?: sig_block_date_field
+    datatype: radio
+    choices:
+      - Today
+      - Choose A Different Date
+      - Leave Blank
+  - Alternate Date: sig_block_alternate_date
+    datatype: date
+    show if: 
+      variable: sig_block_date_field
+      is: 'Choose A Different Date'
+  - Sign the document?: doc.sign
+    datatype: yesno
+---
+code: |
+  signature = signature_file.initialize(filename='AID_PDF_Sig.png')
+---
+question: |
+  Here is your ${doc.type} and here is the signature: ${signature}.
+subquestion: |
+  Do you approve?
+yesno: user_approves
+attachment:
+  name: Pleading
+  filename: letter
+  docx template file: 2023-01-25_.docx
+  valid formats:
+    - pdf
+    - docx
+include attachment notice: False
+---
+event: final_screen
+question: |
+  Well, ${author.name.full()}, 
+  % if user_approves:
+  Hope you liked your ${doc.type}!
+  % endif
+  We're all through here...
+buttons:
+  Exit: exit
+  Restart: restart

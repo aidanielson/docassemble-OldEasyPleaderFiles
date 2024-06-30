@@ -1,0 +1,20 @@
+objects: 
+  list_of_disco_methods_served: DAList.using(object_type=Thing)
+---
+question: Which discovery methods did you serve?
+fields:
+  no label: choices_to_populate_list_of_disco_methods_served
+  datatype: checkboxes
+  choices:
+    - Interrogatories
+    - Requests for Admission
+    - Requests for Production of Documents
+---
+code: |
+  
+---
+mandatory: True
+question: |
+  You served ${ number_as_word(list_of_disco_methods_served) } discovery methods.
+
+  

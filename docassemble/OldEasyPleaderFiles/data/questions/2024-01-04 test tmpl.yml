@@ -1,0 +1,2235 @@
+---
+include:
+  - docassemble.playground1:2024-01-04_test_EP_Universal_Questions.yml
+---
+features:
+  bootstrap theme: EP.css.minified.css
+---
+mandatory: True
+code: |
+  from typing import List, Union
+  from numpy import isnan
+  version = 0
+---
+metadata:
+  title: Master Pleading Template
+  short title: Polished legal documents. Zero hassle.
+  time format: 'h:mm a'
+---
+initial: True
+code: |
+  menu_items = [action_menu_item("Edit Profile", action="edit_profile")]
+---
+code: |
+  edit_profile_intro_page
+  #if g.user.profile_exists2:
+  #  undefine('g.user.profile_exists2', 'g.user.proposed_attorney_caption_block', 'g.user.default_attorney_caption_block')
+  edit_profile_page_2
+  edit_profile = True
+---  
+continue button field: edit_profile_intro_page
+question: |
+  % if not defined("g.user.name.text"):
+  Initial Login - Build User & Author Profile
+  % else:
+  Edit User & Author Profile
+  % endif
+subquestion: |
+  **EasyPleader User Information**
+  **Name:** ${ user_info().first_name } ${ user_info().last_name }[BR]
+  **User ID:** ${ user_info().id }[BR]
+  **Email:** ${ user_info().email }
+fields:
+  - Captioned Author's First Name: g.user.name.first
+  - Captioned Author's Last Name: g.user.name.last
+  - Captioned Author's Email: g.user.email
+  - the_value: g.the_value
+---
+id: edit profile page 2
+continue button field: edit_profile_page_2
+question: |
+  % if not defined("g.user.name.text"):
+  Initial Login[BR]Set Default Attorney Caption Block
+  % else:
+  Edit Default Attorney Caption Block
+  % endif
+fields:
+  - Default Attorney Caption: g.user.default_attorney_caption_block
+    input type: area
+    rows: 8
+    default: ${ g.user.proposed_attorney_caption_block if showifdef('g.user.profile_exists2') else '' }
+validation code: |
+  # put some code here that will automatically update certain other variables that depend on the global variables
+  g.user.profile_exists2 = True
+---
+id: test global variable question
+question: Global Variable Question
+fields:
+  User Name: some_roleplayer.name.first
+  default: ${ showifdef("g.user.name.first") }
+---
+id: troubeshoot global variable
+question: Troubleshoot Global Variable
+subquestion: |
+  'some_roleplayer.name.first' is: ${ some_roleplayer.name.first }[BR]
+  and global variable 'g.the_value' is: ${ g.the_value }
+continue button field: troubleshoot_global_variable
+---
+################################ MANDATORY CODE BLOCK ################################
+---
+mandatory: True
+depends on: version
+code: |
+  set_parts(title='EasyPleader', logo='<img src="' + company_logo.url_for() + '" style="height: 36px; width: 77px;">')
+  welcome_screen
+  g.user
+  if not defined("g.user.name.first"):
+    edit_profile
+  some_roleplayer.name.first
+  troubleshoot_global_variable
+  doc.type
+  casefile.new_or_existing
+  if casefile.new_or_existing == 'existing':
+    load_case_data
+  conduct_data_intake
+  set_various_party_lists
+  court.short_name
+  case.type
+  if case.type == 'Health & Safety Code Receivership':
+    real_property.name
+  case.attorney_caption_block
+  case.build_case_strings
+  case.generate_caption_party_blocks
+  if doc.type == 'Separate Statement' or showifdef('doc.letter_type') == 'disco_mc_ltr':
+    mc_ltr.propounder_or_responder
+    if mc_ltr.propounder_or_responder == 'responder':
+      disco_responses_coming_soon
+    #choose_methods
+    mc_ltr.methods_served
+    #populate_methods
+    mc_ltr.build_methods
+    # set propounding and responding parties and opponent choices
+    methods.gather()
+    # Run code to determine single discovery method or multiple methods
+    mc_ltr.several_methods
+    #if mc_ltr.several_methods == True:
+      #xxxxx
+    if showifdef('doc.letter_type') == 'disco_mc_ltr':
+      mc_ltr.propose_call_or_meeting
+      if mc_ltr.include_separate_statement:
+        set_special_rules_for_included_separate_statement
+      mc_ltr.response_deadline
+      troubleshoot_summary
+  if doc.type == 'Letter':
+    addressee
+    letter_options_extras
+    doc.set_letter_address_blocks
+    #troubleshoot_letter_address_block
+  if doc.type == 'Ex Parte Application':
+    doc.epa_prior_relief_requested
+  if doc.type == 'Memorandum of Points & Authorities':
+    doc.memo_headings_lvl_1.gather()
+    doc.memo_heading_review
+  if doc.type == 'Declaration':
+    doc.declarant
+    get_declaration_foundation_string()
+    doc.declarant_troubleshooting
+  if doc.type == 'Proof of Service':
+    doc.pick_server
+    if doc.pick_server != 'Me':
+      server[0].name.first
+    doc.set_servees
+    if not doc.same_service:
+      for servee in doc.all_servees:
+        servee.pick_service_methods
+    else:
+      doc.same_service_method
+    troubleshoot_all_servees
+    doc.show_service_list
+  if doc.type not in ['Generic Pleading', 'Proposed Order', 'Proof of Service', 'Letter'] or showifdef('mc_ltr.include_separate_statement'):
+    doc.set_doc_support_oppose_string
+    doc.lm_proceeding_title_short
+    doc.wants_proposed_title
+  else:
+    if doc.type != 'Letter':
+      doc.run_title_code_block
+  if doc.type != 'Letter':
+    if doc.has_hrg:
+      hrg.date
+    doc.footer
+    doc.pleading_options_extras
+    #troubleshoot_concurrently_filed_docs
+    if doc.include_concurrently_filed_docs_notice:
+      doc.set_concurrently_filed_docs
+    doc.atty_info_in_caption
+  if doc.attach_exhibits:
+    exhibits_yaml
+  if doc.type != 'Proposed Order':
+    sig_block_type
+    sig_block_date_field
+    if doc.sign:
+      signature
+  if casefile.new_or_existing == 'new':
+    save_answers
+  troubleshoot_service_blocks
+  doc_download
+  final_screen
+---
+################################# MAIN OBJECTS BLOCK #################################
+---
+depends on: version
+objects:
+  - court: DAObject
+  - case: DAObject
+  - casefile: DAObject
+  - hrg: DAObject
+  - doc: DAObject
+  - mc_ltr: DAObject
+  - doc.memo_headings_lvl_1: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False)
+  - dataloader: DataLoader.using(filename="2023-10-17_disco_authority_database.xlsx")
+  - methods: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False, complete_attribute='complete')
+  - methods[i].response_deadline_extensions: DAList.using(object_type=Thing, there_is_another=False)
+  - methods[i].responses: DAList.using(object_type=Thing, there_is_another=False, complete_attribute='complete')
+  - methods[i].ncr: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False, complete_attribute='complete')
+  - methods[i].combined_qa_list: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False)
+  - real_property: RealProperty.using(object_type=Thing)
+---
+########################## ARRAY OBJECTS' 'COMPLETE' BLOCKS ##########################
+---
+depends on: version
+code: |
+  methods[i].responses_file
+  methods[i].set_discovery_nouns
+  methods[i].ocr_responses
+  if 'Interrogatories' not in methods[i].name.text or 'Special' in methods[i].name.text:
+    methods[i].ocr_sprogs
+  methods[i].set_disco_parties_code
+  methods[i].set_no
+  methods[i].set_disco_parties_short_ref
+  methods[i].responses_service_method
+  if methods[i].response_deadline_extensions.there_are_any:
+    methods[i].response_deadline_extensions.gather()
+    methods[i].response_deadline_extensions_review
+  if showifdef('methods[i].docs_were_produced'):
+    methods[i].doc_production_full_partial
+    troubleshoot_production_description
+  if methods[i].name.text == 'General Form Interrogatories':
+    methods[i].frogs_propounded
+    if methods[i].responses_ocrd.ready():
+      ocr_completion_screen
+    else:
+      waiting_screen
+    methods[i].frogs_qa_dict = extract_and_filter_qa_with_buffer(gfrogs_served_no_index, responses_clean_text_no_index)
+    methods[i].error_sprogs = scan_for_error_sprogs(methods[i].frogs_qa_dict)
+  else:
+    if methods[i].sprogs_ocrd.ready() and methods[i].responses_ocrd.ready():
+      methods[i].troubleshoot_disco_propounded_ocr
+      methods[i].troubleshoot_disco_responses_ocr
+      methods[i].populate_qa_dict_from_sprogs
+    else:
+      waiting_screen
+  methods[i].set_combined_qa_list
+  methods[i].sprogs_reviewed
+  methods[i].pick_challenged_responses
+  methods[i].set_challenged_responses_list
+  methods[i].sort_ncrs
+  methods[i].ncr.gather()
+  methods[i].set_number_propounded
+  methods[i].complete = True
+---
+depends on: version
+code: |
+  methods[i].ncr[j].name.text
+  methods[i].ncr[j].deficiencies
+  if showifdef('methods[i].ncr[j].custom_critique'):
+    methods[i].ncr[j].custom_critique_added_to_list
+  methods[i].ncr[j].complete = True
+---
+####################################### USER PROFILE #######################################
+---
+#id: enter user profile info
+#question: User Profile & Custom Settings
+#subquestion: |
+#  EasyPleader User Information
+#  Name: ${ user_info().first_name } ${ user_info().last_name }[BR]
+#  EasyPleader ID: ${ user_info().id }
+#  Email: ${ user_info().email }
+#fields:
+#  - '**Default Attorney/Law Firm Caption**': user.profile.default_caption
+#    input type: area
+#    rows: 12
+#    default: ${ g.profile.proposed_attorney_caption_block }
+#    label above field: True
+#    grid:
+#      width: 6
+#  - '**User Signature**': user.profile.signature
+#---
+#code: |
+#  if userdata.defined("prefsg"):
+#    preferences = userdata.get("prefsg")
+---
+####################################### LETTER #######################################
+---
+id: are you propounder or responder
+depends on: version
+question: Discovery Meet & Confer Letter
+fields:
+  - '**Are you the propounder or responder?**': mc_ltr.propounder_or_responder
+    input type: radio
+    choices:
+      - We Propounded: propounder
+      - We Responded: responder
+    label above field: True
+    grid:
+      width: 5
+---
+id: discovery dispute resolution options
+depends on: version
+question: Dispute Resolution Options
+subquestion: |
+  ##### Check all desired options. If none, press "Continue."[NEWPAR]
+fields:
+  - '**Propose a call/meeting to confer?**': mc_ltr.propose_call_or_meeting
+    datatype: checkboxes
+    choices:
+      - Phone call
+      - Zoom call
+      - In-person meeting/conference
+    none of the above: False
+    label above field: True
+    grid: 4
+  - '**To resolve the dispute, would you consider...**': mc_ltr.proposal_list
+    datatype: checkboxes
+    choices:
+      - a stipulated protective order
+      - narrowing scope or revising/clarifying language
+      - reasonable extensions to respond based on legitimate need
+      - stipulation to an informal discovery conference
+      - appointment of a discovery referee
+    none of the above: False
+    label above field: True
+    grid: 8
+  - '**Enclose a draft *Separate Statement of Items in Dispute* with the letter?**': mc_ltr.include_separate_statement
+    datatype: yesnowide
+    grid:
+      width: 12
+    show if: 
+      code: |
+        doc.letter_type == 'disco_mc_ltr'
+  - note: |
+      Practice Pointer: Checking the option above will prepare a draft, unsigned Separate Statement of Items in Dispute explaining how each disputed response is noncompliant. Leaving it blank will include discussion of the deficiencies in the letter.
+      
+      Including a draft Separate Statement as an attachment to your meet-and-confer letter allows the letter to focus on dispute resolution (e.g., deadline extensions, proposed compromises) while minimizing the distraction from the (usually) voluminous legal deficiencies of the responses. It also has the beneficial effect of telling opposing counsel you're ready to go to law and motion if they don't comply.
+    show if: 
+      code: |
+        doc.letter_type == 'disco_mc_ltr'
+---
+id: letter options and extras
+depends on: version
+question: Letter Options & Extras
+fields:
+  - '**Subject Line** (click and type in box to modify)': letter_subject_line
+    input type: area
+    rows: 2
+    label above field: True
+    default: |
+      ${ f"Meet and confer re { methods[0].responding_parties_short_ref }'s noncompliant written discovery responses" if showifdef('doc.letter_type') == 'disco_mc_ltr' else ''}
+  - "**Include 'Our office represents...[client]' line?**": include_client_id
+    datatype: yesnowide
+    grid: 7
+  - note: |
+      **--Attachments & Acknowledgments--**
+    show if:
+      code: |
+        showifdef('doc.letter_type') != 'disco_mc_ltr'
+  - '**I am sending additional materials or attachments with this letter**': letter_encloses_things
+    datatype: yesnowide
+    grid: 12
+  - '**Do you want to attach formal exhibits or just an enclosure line?**': letter_attachment_choice
+    input type: radio
+    choices:
+      - formal, individually labeled exhibits with cover pages: wants_exhibits
+      - just an enclosure line and notation listing the enclosures in the body of the letter: include_enclosure_line
+    show if: letter_encloses_things
+    label above field: True
+    grid: 12
+  - '**List Enclosures**': enclosure_list
+    input type: area
+    rows: 2
+    label above field: True
+    show if:
+      variable: letter_attachment_choice
+      is: include_enclosure_line
+  - note: |
+      Type names/titles of each enclosed document, put a semicolon and space (; ) between items (if more than one).
+    show if:
+      variable: letter_attachment_choice
+      is: include_enclosure_line
+  - '**Attach notary acknowledgement**': doc.include_notary_acknowledgment_form
+    datatype: yesnowide
+    grid: 4
+    show if:
+      code: |
+        showifdef('doc.letter_type') != 'disco_mc_ltr'
+continue button field: letter_options_extras
+validation code: |
+  if showifdef('letter_attachment_choice') == 'wants_exhibits':
+    doc.attach_exhibits = True
+---
+id: follow up dates
+depends on: version
+question: Meet & Timeline
+fields:
+  - note: |
+      [BR][CENTER]**Today is**[BR]<span style="color: red;">**${ format_date(today(), format='MMMM d, yyyy') }**</span>
+    grid:
+      width: 6
+  - note: |
+      [CENTER]**45-Day Motion to Compel (MTC) Filing Deadline:**[BR]
+      % for method in methods:
+      ${ method.acronym }: <span style="color: red;">**${ method.mtc_deadline }**</span> (${nice_number(date_difference(starting=today(), ending=method.mtc_deadline).days)} days from now)[BR]
+      % endfor
+    grid:
+      width: 6
+  - '**Letter response deadline**': mc_ltr.response_deadline
+    datatype: date
+    default: ${ current_datetime() + date_interval(days=7) }
+    label above field: True
+    grid:
+      width: 4
+  - '**Propose extending MTC deadline**': mc_ltr.request_to_extend_MTC_deadline
+    datatype: yesnowide
+    grid:
+      width: 4
+  - '**New (proposed) MTC deadline**': mc_ltr.proposed_MTC_extension_deadline
+    datatype: date
+    default: ${ methods[0].mtc_deadline + date_interval(days=10) }
+    label above field: True
+    grid:
+      width: 4
+    show if: mc_ltr.request_to_extend_MTC_deadline
+  - '**Propose moving *other* litigation events/deadlines**': mc_ltr.propose_other_event_calendaring
+    datatype: yesnowide
+    grid:
+      width: 5
+      start: True
+right: |
+  [BR][BR]<span style="border: 2px solid black; padding: 10px;"><span style="color: red;">[CENTER]**Calendar Alert**</span></span>[NEWLINE]
+  
+  Practice Pointer: 
+  Earliest receipt of further *responses*: **${ format_date(current_datetime() + date_interval(days=33)) }** (**33 days** from now)
+  % if 'Requests for Production' in methods:
+  [BR]Earliest receipt of further document *production*: **${ format_date(current_datetime() + date_interval(days=43)) }** (**43 days** from now)
+  % endif
+  
+  * That's ***if*** you filed your motion and personally served it ***tomorrow***, <u>**and**</u> you secured the earliest code-compliant hearing date. Minimum motion timing is 22 days (16 court days plus 6 weekend days) to get to a hearing. The court is likely to give the responding party 10 days or more to serve further responses from the date of the order. 
+  
+  The below factors will can cause additional, sometimes significant, delay beyond the dates set forth above:
+  
+  * local courts having "first-available" hearing dates weeks or months away;
+  * continuances from the bench (requested by your opponent or not);
+  * the judge referring the dispute to a referee or requiring further meet-and-confer efforts, negotiation of protective order, etc.;
+  * post-ruling exchange of proposed orders under CRC 3.1312;
+  * judicial or administrative delay in signing or entering the actual order;
+  * holidays;
+  * additional rounds of insufficient/noncompliant responses or failure/refusal to produce documents.
+   
+  For more, see https://www.resolvingdiscoverydisputes.com/request-for-production-of-documents/start-preparing-your-motion/#more-2556.
+---
+id: letter service
+depends on: version
+reconsider: set_direct_contacts_sorted_list
+question: Letter Service
+fields:
+  - '**Addressee**': addressee
+    datatype: object
+    choices: |
+      [lawyer if person.lawyers.there_are_any else person for person in parties + nonparties.complete_elements() for lawyer in (person.lawyers if person.lawyers.there_are_any else [person])]
+    grid:
+      width: 5
+    label above field: True
+  - '**CC: anyone?**': include_cc_recipients
+    datatype: yesnowide
+    grid:
+      width: 5
+      offset: 1
+  - '**Service Method** (on addressee)': addressee_service_methods
+    datatype: checkboxes
+    code: |
+      list(service_method_dict.keys())
+    none of the above: False
+    grid:
+      width: 5
+      start: True
+    label above field: True
+  - '**CC: recipients**': letter_cc_recipients
+    datatype: object_checkboxes
+    choices: direct_contacts_sorted_list
+    none of the above: False
+    minlength: 1
+    show if: include_cc_recipients
+    grid:
+      width: 5
+    label above field: True
+validation code: |
+  if not showifdef('addressee.short_name'):
+    addressee.short_name = addressee.name.last
+---
+############################## DISCOVERY DISPUTED ITEMS ##############################
+---
+id: choose methods
+depends on: version
+question: The Discovery At Issue
+fields:
+  - '**What discovery did you serve?**': mc_ltr.methods_served
+    datatype: checkboxes
+    choices: 
+      - General Form Interrogatories
+      - Special Interrogatories
+      - Requests for Production
+      - Requests for Admission
+    none of the above: False
+    label above field: True
+    grid:
+      width: 5
+---
+#id: choose methods
+#depends on: version
+#question: The Discovery At Issue
+#fields:
+#  - '**What discovery did you serve?**': choose_methods
+#    datatype: checkboxes
+#    code: |
+#      unique_values(dataloader, search_column="Method")
+#    none of the above: False
+#    label above field: True
+#    grid: 6
+---
+#id: choose rogs type
+#depends on: version
+#question: ${ methods[i].name.text }
+#fields:
+#  - '**Type of Interrogatories**': methods[i].interrogatories_type
+#    input type: radio
+#    choices:
+#      - General Form Interrogatories (DISC-001): g_frogs
+#      #- Unlawful Detainer Form Interrogatories (DISC-003): ud_frogs
+#      #- Economic Litigation Form Interrogatories (DISC-004): el_frogs
+#      #- Construction Litigation Form Interrogatories (DISC-005): cl_frogs
+#      #- Employment Law Form Interrogatories (DISC-002): emp_frogs
+#      - Special Interrogatories: sprogs
+#    label above field: True
+#    grid: 7
+---
+id: upload disco propounded and responses
+depends on: version
+question: ${ methods[i].name.text }
+fields:
+  - '**Upload *Your* ${ methods[i].acronym }** :arrow-right-long:': methods[i].sprogs_file
+    datatype: files
+    file css class: None
+    grid:
+      width: 7
+      label width: 5
+    show if:
+      code: |
+        methods[i].name.text != 'General Form Interrogatories'
+  - '**Upload *Responses* to ${ methods[i].acronym }** :arrow-right-long:': methods[i].responses_file
+    datatype: files
+    file css class: None
+    grid:
+      width: 7
+      label width: 5
+---
+id: set discovery nouns
+depends on: version
+code: |
+  if "Interrogatories" in methods[i].name.text:
+    methods[i].short_unit_singular = 'interrogatory'
+    methods[i].short_unit_plural = 'interrogatories'
+    if 'Special' in methods[i].name.text:
+      methods[i].full_method = "Special Interrogatories"
+      methods[i].formal_unit = 'special interrogatory'
+      methods[i].acronym = 'SROGS'
+    else:
+      methods[i].full_method = "Form Interrogatories"
+      methods[i].formal_unit = 'form interrogatory'
+      methods[i].acronym = 'FROGS'      
+  elif 'Admission' in methods[i].name.text:
+    methods[i].full_method = methods[i].name.text
+    methods[i].short_unit_singular = 'request'
+    methods[i].short_unit_plural = 'requests'
+    methods[i].formal_unit = 'request for admission'
+    methods[i].acronym = 'RFAs'
+  else:
+    methods[i].full_method = methods[i].name.text
+    methods[i].short_unit_singular = 'request'
+    methods[i].short_unit_plural = 'requests'
+    methods[i].formal_unit = 'request for production'
+    methods[i].acronym = 'RPDs'
+  methods[i].set_discovery_nouns = True
+---
+id: set disco parties code
+depends on: version
+code: |
+  methods[i].show_the_propounding_parties_field = True
+  methods[i].show_the_responding_parties_field = True
+  methods[i].show_the_PP_collective_ref_field = 'show it'
+  methods[i].show_the_RP_collective_ref_field = 'show it'
+  if len(clients) == 1 and mc_ltr.propounder_or_responder == 'propounder':
+    methods[i].propounding_parties = clients[0]
+    methods[i].show_the_propounding_parties_field = False
+    methods[i].show_the_PP_collective_ref_field = 'do not show'
+    
+  if len(clients) == 1 and mc_ltr.propounder_or_responder == 'responder':
+    methods[i].responding_parties = clients[0]
+    methods[i].show_the_responding_parties_field = False
+    methods[i].show_the_RP_collective_ref_field = 'do not show'
+
+  methods[i].set_disco_parties_code = True
+---
+id: parties, set no, and range
+depends on: version
+question: "Your ${ methods[i] }: Parties, Service, Set No. and Range"
+fields:
+  - '**Propounding Party/Parties**': methods[i].propounding_parties
+    datatype: object_checkboxes
+    choices: |
+      clients if mc_ltr.propounder_or_responder == 'propounder' else nonclient_parties_sorted_list
+    none of the above: False
+    label above field: True
+    grid: 6
+    show if:
+      code: |
+        methods[i].show_the_propounding_parties_field
+  - '**Responding Party/Parties**': methods[i].responding_parties
+    datatype: object_checkboxes
+    choices: |
+      clients if mc_ltr.propounder_or_responder == 'responder' else nonclient_parties_sorted_list
+    none of the above: False
+    label above field: True
+    grid: 6
+    show if:
+      code: |
+        methods[i].show_the_responding_parties_field
+  - '**Set No.** (type/select)': methods[i].set_no
+    input type: combobox
+    choices: 
+      - One
+      - Two
+      - Three
+      - Four
+      - Supplemental
+    label above field: True
+    grid:
+      width: 4
+      start: True
+  - '**Starting #:**': methods[i].start_range
+    datatype: integer
+    label above field: True
+    grid:
+      width: 4
+    show if: 
+      code: |
+        methods[i].name.text != 'General Form Interrogatories'
+  - '**Ending #:**': methods[i].end_range
+    datatype: integer
+    label above field: True
+    grid: 
+      width: 4
+    show if: 
+      code: |
+        methods[i].name.text != 'General Form Interrogatories'
+  - '**Service Date**': methods[i].requests_service_date
+    datatype: date
+    label above field: True
+    grid:
+      width: 4
+      start: True
+  - '**Service Method**': methods[i].requests_service_method
+    code: |
+      list(service_method_dict.keys())
+    label above field: True
+    grid:
+      width: 4
+validation code: |
+  if showifdef('methods[i].start_range'):
+    if methods[i].start_range > methods[i].end_range:
+      validation_error('The Ending No. must be greater than the Starting No.', field='methods[i].end_range')
+---
+depends on: version
+code: |
+  if methods[i].propounding_parties == clients[0]:
+    methods[i].propounding_parties_short_ref = clients[0].short_name
+  elif len(methods[i].propounding_parties) < 2:
+    methods[i].propounding_parties_short_ref = methods[i].propounding_parties[0].short_name
+  else:
+    methods[i].propounding_parties_short_ref
+    
+  if methods[i].responding_parties == clients[0]:
+    methods[i].responding_parties_short_ref = clients[0].short_name
+  if len(methods[i].responding_parties) < 2:
+    methods[i].responding_parties_short_ref = methods[i].responding_parties[0].short_name
+  else:
+    methods[i].responding_parties_short_ref
+    
+  methods[i].set_disco_parties_short_ref = True
+---
+id: propounder and responder collective ref
+depends on: version
+question: Collective Reference Name
+subquestion: |
+  A collective reference name for 2+ parties enhances document readability.
+fields:
+  - '**Collective Shorthand Reference to Propounders**': methods[i].propounding_parties_short_ref
+    show if:
+      code: |
+        methods[i].show_the_PP_collective_ref_field == 'show it' and len(methods[i].propounding_parties) > 1
+  - '**Collective Shorthand Reference Name for all Responding Parties**': methods[i].responding_parties_short_ref
+    label above field: True
+    show if:
+      code: |
+        methods[i].show_the_RP_collective_ref_field == 'show it' and len(methods[i].responding_parties) > 1
+  - note: |
+      e.g., for Allan Johnson and Betty Johnson, consider "*the Johnsons*."[BR] For Gregory Anderson and Anderson Electrical, Inc., consider "*Anderson & Co.*" or "*Anderson and AEI*."
+---
+id: responses service and nature
+depends on: version
+question: "${ methods[i].responding_parties_short_ref }'s Responses to ${ methods[i].acronym }"
+fields:
+  - note: |
+      ##### Initial Response Service Deadline: <span style="color: red;">**${ deadline_calculator_v7(trigger_date=methods[i].requests_service_date, time_period=30, service_method=methods[i].requests_service_method)['explanation'] }**</span>
+  - '**Service Date**': methods[i].responses_service_date
+    datatype: date
+    grid: 
+      width: 4
+    label above field: True
+  - '**Service Method**': methods[i].responses_service_method
+    code: |
+      list(service_method_dict.keys())
+    grid:
+      width: 4
+    label above field: True
+  - '**Was Deadline Extended?**': methods[i].response_deadline_extensions.there_are_any
+    datatype: yesnoradio
+    label above field: True
+    grid: 
+      width: 4
+  - '**Were the responses late/untimely?**': methods[i].responses_untimely
+    datatype: yesnoradio
+    label above field: True
+    grid:
+      width: 3
+  - '**How did ${ methods[i].responding_parties_short_ref } respond?**': methods[i].responses_type
+    input type: radio
+    choices: 
+      - objections only
+      - a hybrid mix of objections and substantive responses
+      - substantive responses without objection
+    label above field: True
+    grid:
+      width: 9
+  - '**Were any documents produced?**': methods[i].docs_were_produced
+    datatype: yesnoradio
+    label above field: True
+    grid:
+      width: 3
+    show if:
+      code: |
+        methods[i].name.text == "Requests for Production"
+  - '**Were the responses verified?**': methods[i].verified
+    datatype: yesnoradio
+    label above field: True
+    grid:
+      width: 3
+    js show if: |
+      val('methods[i].responses_type') != 'objections only'
+  - '**Any responses invoke/object to privilege?**': methods[i].responses_privilege_claimed
+    datatype: yesnoradio
+    label above field: True
+    grid:
+      width: 3
+  - '**Did you receive a (purported) privilege log?**': methods[i].responses_privilege_log_served
+    datatype: yesnoradio
+    label above field: True
+    grid:
+      width: 3
+    show if: methods[i].responses_privilege_claimed 
+  - note: |
+      Check "Yes" if responding party served a document *purporting* to be a privilege log, regardless of whether the log is *sufficient* under the Discovery Act.
+    show if: methods[i].responses_privilege_claimed 
+---
+id: doc production
+depends on: version
+question: The Document Production
+fields:
+  - '**Full or Partial Production?**': methods[i].doc_production_full_partial
+    input type: radio
+    choices:
+      - Full: full
+      - Partial: partial
+      - Unclear: unclear
+    label above field: True
+    grid:
+      width: 3
+  - note: |
+      **Full:** the responses clearly state that the documents produced are the entire (total) amount of documents in the responder's possession, custody or control.[BR]**Partial:** one or more responses state that additional documents exist and will be produced at a later time.[BR]**Unclear:** the responses are not clear whether the documents produced are **all** responsive documents in responder's possession, custody, or control.
+    grid:
+      width: 9
+  - '**The documents were produced via...**': methods[i].doc_production_manner
+    datatype: checkboxes
+    choices:
+      - copies served with responses
+      - 'emailed PDF attachment(s)'
+      - emailed download link
+      - flash drive
+      - CD-ROM
+      - DVD
+      - Other
+    none of the above: False
+    label above field: True
+    grid:
+      width: 4
+  - '**Choose all applicable features/characteristics of the production**': methods[i].doc_production_features
+    datatype: checkboxes
+    choices: 
+      - it's a bulk "document dump" without correlation to any given request number: bulk_doc_dump
+      - at least some of the documents/materials are poor-quality/illegible: some_illegible
+      - at least some content or pages appear to be redacted: with_redactions
+      - the documents are Bates-numbered: bates_numbered
+      - the responses correlate specific documents to specific request number(s) per CCP § 2031.280(a): correlated_to_requests
+    label above field: True
+    grid: 8
+  - '**Describe "Other" way documents were produced to you**': methods[i].doc_production_manner_other
+    input type: area
+    rows: 2
+    label above field: True
+    grid:
+      width: 6
+    js show if: |
+      val("methods[i].doc_production_manner['Other']")
+  - note: |
+      e.g., *a courier delivered 2 banker's boxes of documents to our office on 10/2/2023*
+    grid:
+      width: 6
+    js show if: |
+      val("methods[i].doc_production_manner['Other']")
+  - '**Bates range**': methods[i].doc_production_bates_range
+    label above field: True
+    js show if: |
+      val("methods[i].doc_production_features['bates_numbered']")
+  - note: |
+      e.g., *ABC00001-ABC00358*
+    js show if: |
+      val("methods[i].doc_production_features['bates_numbered']")
+#  - '**Total number of documents produced**': methods[i].doc_production_amount
+#  - note: |
+#      e.g., *238 hardcopy pages and 70 MB of ESI data*
+---
+code: |
+  # Reformatting the code with indents of two spaces and adding Google docstrings
+  
+  def generate_production_description(features: List[str], bates_range: str = None) -> str:
+    """
+    Generate a description for a document production based on its features and Bates numbering range.
+    
+    Args:
+      features (List[str]): A list of features describing the document production.
+      bates_range (str, optional): The Bates numbering range for the documents.
+      
+    Returns:
+      str: A string description of the document production.
+    """
+    description = ''
+    if features:
+      feature_descriptions = {
+        'bulk_doc_dump': 'was a bulk "document dump" without correlation to any given request number',
+        'some_illegible': 'contained several poor-quality/illegible pages',
+        'with_redactions': 'contained apparently redacted content',
+        'bates_numbered': f'was {extract_numeric_range(bates_range)} pages, Bates-numbered {bates_range}' if bates_range else 'was Bates-numbered',
+        'correlated_to_requests': 'correlated specific documents to specific request number(s) per CCP § 2031.280(a)'
+      }
+      if 'bulk_doc_dump' in features:
+        features = [feature for feature in features if feature != 'correlated_to_requests']
+      if 'correlated_to_requests' in features:
+        features = [feature for feature in features if feature != 'bulk_doc_dump']
+      bates_feature = feature_descriptions['bates_numbered'] if 'bates_numbered' in features else None
+      selected_features = [feature_descriptions[feature] for feature in features if feature != 'bates_numbered']
+      if len(selected_features) == 0:
+        description = f"The document production {bates_feature}."
+      elif len(selected_features) == 1:
+        description = f"The document production {bates_feature}, and {selected_features[0]}." if bates_feature else f"The document production {selected_features[0]}."
+      else:
+        last_feature = selected_features.pop()
+        description = f" The document production {bates_feature}, {', '.join(selected_features)}, and {last_feature}." if bates_feature else f"The document production {', '.join(selected_features)}, and {last_feature}."
+    return description
+  
+  def extract_numeric_range(bates_range: str) -> Union[int, str]:
+    """
+    Extract the numeric range from a given Bates range string.
+    
+    Args:
+      bates_range (str): The Bates numbering range as a string.
+      
+    Returns:
+      Union[int, str]: The total number of pages in the Bates range, or an error message if the range cannot be determined.
+    """
+    regex = r"\d+"
+    delimiter_regex = r"[-\u2013\u2014\s]+"
+    cleaned_bates_range = re.sub(r"[;\s]+", " ", bates_range).strip()
+    numbers = re.findall(regex, cleaned_bates_range)
+    if len(numbers) < 2:
+      return f"Cannot determine the range for {bates_range}."
+    start, end = int(numbers[0]), int(numbers[-1])
+    total_pages = end - start + 1
+    return total_pages
+---
+id: troubleshoot doc production string
+question: Troubleshoot doc production string
+subquestion: |
+  'production_description' string variable is:[BR][BR]
+  ${ production_description }
+continue button field: troubleshoot_production_description
+---
+code: |
+  production_description = generate_production_description(methods[i].doc_production_features.true_values(), showifdef('methods[i].doc_production_bates_range'))
+---
+id: discovery extensions history
+depends on: version
+question: "${ ordinal(j).capitalize() } Extension of Response Deadline"
+fields:
+  - note: |
+      [BR]**Initial deadline:**[BR]<span style="color: red;">**${ deadline_calculator_v7(methods[i].requests_service_date, 30, methods[i].requests_service_method)['datetime_obj'] }**</span>
+      % if len(methods[i].response_deadline_extensions.complete_elements()) > 0:
+        % for extension in methods[i].response_deadline_extensions.complete_elements():
+          [BR]**Extended to:** <span style="color: red;">**${ extension.new_deadline }**</span>[BR]
+        % endfor
+      % endif
+    grid: 4
+  - '**Date you <u>granted</u> extension**': methods[i].response_deadline_extensions[j].date_granted
+    datatype: date
+    label above field: True
+    grid:
+      width: 4
+  - '**<u>How</u> you confirmed extension**': methods[i].response_deadline_extensions[j].how_granted
+    input type: combobox
+    choices:
+      - Email Confirmation: email
+      - Telephone Confirmation: phone
+      - Letter Confirmation: letter
+    label above field: True
+    grid:
+      width: 4
+  - '**<u>Old</u> deadline**': methods[i].response_deadline_extensions[j].old_deadline
+    datatype: date
+    label above field: True
+    grid:
+      width: 4
+      start: True
+  - '**<u>New</u> deadline**': methods[i].response_deadline_extensions[j].new_deadline
+    datatype: date
+    label above field: True
+    grid:
+      width: 4
+  - '**Number**': methods[i].response_deadline_extensions[j].name.text
+    input type: hidden
+    default: '${ ordinal_number(j) }'
+---
+id: review extension history
+depends on: version
+question: History of Response Deadline Extensions
+subquestion: |
+  ${ methods[i].response_deadline_extensions.table }
+  ${ methods[i].response_deadline_extensions.add_action(label='Add Another Extension', color='warning', size='md') }
+continue button field: methods[i].response_deadline_extensions_review
+---
+table: methods[i].response_deadline_extensions.table
+rows: methods[i].response_deadline_extensions
+columns:
+  - Date Granted: row_item.date_granted
+  - Old Deadline: row_item.old_deadline
+  - New Deadline: row_item.new_deadline
+  - Confirmed via: row_item.how_granted
+edit:
+  - row_item
+allow reordering: True
+---
+id: pick propounded form rogs
+depends on: version
+question: Select the Interrogatories You Propounded
+fields:
+  - no label: methods[i].frogs_propounded
+    datatype: checkboxes
+    grid: 2
+    code: get_gfrogs_dict_keys_list()
+    none of the above: False
+    all of the above: True
+    default:
+      code: |
+        ['1.1', '2.1', '2.2', '2.5', '2.6', '2.7', '2.8', '2.9', '2.10']
+validation code: |
+  methods[i].gfrogs_served = methods[i].frogs_propounded.true_values().sort(key=lambda x: (int(x.split('.')[0]), int(x.split('.')[1]) if '.' in x else 0))
+---
+#id: display propounded gfrogs
+#question: The GFROGS you served are
+#subquestion: |
+#  ${ get_formatted_values_by_keys(gfrogs_served) }
+#continue button field: display_served_gfrogs
+---
+question: "Your documents have been successfully OCR'd"
+depends on: version
+continue button field: ocr_completion_screen
+---
+event: waiting_screen
+reload: 3
+question: |
+  Please wait.
+subquestion: |
+  Your document is being processed.
+  This may take several minutes.
+
+  The text of your document will be
+  shown on the screen when the
+  processing is finished.
+---
+########################### DISCOVERY QUESTION/ANSWER CODE ###########################
+---
+id: troubleshoot frogs
+depends on: version
+question: Troubleshoot Frogs
+subquestion: |
+  **gfrogs_served are:**[BR][BR]
+  ${ methods[i].gfrogs_served }[BR][BR]
+  **'repr methods[i].responses_ocrd.get().content' is:**[BR][BR]
+  ${ repr(methods[i].responses_ocrd.get().content) }[BR][BR]
+  **'repr remove_footer_string(methods[i].responses_ocrd.get().content)' is:**[BR][BR]
+  ${ repr(remove_footer_string(methods[i].responses_ocrd.get().content)) }
+  **'remove_footer_string(methods[i].responses_ocrd.get().content)' is:**[BR][BR]
+  ${ remove_footer_string(methods[i].responses_ocrd.get().content) }
+continue button field: methods[i].troubleshoot_frogs
+---
+id: troubleshoot non-frogs propounded
+depends on: version
+question: Troubleshoot OCR Text of **Propounded** Discovery
+subquestion: |
+  **'methods[i].sprogs_ocrd.get().content' in a Mako tag returns this:**[BR][BR]
+  ${ methods[i].sprogs_ocrd.get().content }[BR][BR]
+
+  **'repr(methods[i].sprogs_ocrd.get().content)' in a Mako tag returns this:**[BR][BR]
+  <span style="color: red;">**${ repr(methods[i].sprogs_ocrd.get().content) }**</span>[BR][BR]
+  **'remove_footer_string(methods[i].sprogs_ocrd.get().content)' in a Mako tag returns this:**[BR][BR]
+  ${ remove_footer_string(methods[i].sprogs_ocrd.get().content) }[BR][BR]
+  **'repr(remove_footer_string(methods[i].sprogs_ocrd.get().content))' in a Mako tag returns this:**[BR][BR]
+  ${ repr(remove_footer_string(methods[i].sprogs_ocrd.get().content)) }
+continue button field: methods[i].troubleshoot_disco_propounded_ocr
+---
+id: troubleshoot non-frogs responses
+depends on: version
+question: Troubleshoot OCR Text of Discovery **Responses**
+subquestion: |
+  **'methods[i].responses_ocrd.get().content' in a Mako tag returns this:**[BR][BR]
+  ${ methods[i].responses_ocrd.get().content }[BR][BR]
+  **'remove_footer_string(methods[i].responses_ocrd.get().content)' in a Mako tag returns this:**[BR][BR]
+  ${ remove_footer_string(methods[i].responses_ocrd.get().content) }[BR][BR]
+  **'repr(methods[i].responses_ocrd.get().content)' in a Mako tag returns this:**[BR][BR]
+  <span style="color: red;">**${ repr(methods[i].responses_ocrd.get().content) }**</span>[BR][BR]
+  **'repr(remove_footer_string(methods[i].responses_ocrd.get().content)' in a Mako tag returns this:**[BR][BR]
+  ${ repr(remove_footer_string(methods[i].responses_ocrd.get().content)) }
+continue button field: methods[i].troubleshoot_disco_responses_ocr
+---
+depends on: version
+code: |
+  start_number = methods[i].start_range
+  end_number = methods[i].end_range
+
+  def create_qa_dict(start_number, end_number):
+    return {str(number): {'question': 'Question not detected/extracted', 'answer': 'Answer not detected/extracted'} for number in range(start_number, end_number + 1)}
+    
+  rogs_regex_capture_pattern = r'(?:special |general |form |general form )?interrogator(?:y|ies)\s{1,2}(?:no\.?:?|#|number)?\W*(\d{1,3}\.\d{1,2}|\d{1,3})[-:.;\s]+(\(\w.*?|.*?)(?=\n\d+\.\s+[A-Z]|\n\n[!@#%^&*)\/\\{}_\-=+\]|<>?.]|\s+(?:RESPONSE TO )?(?:GENERAL FORM |FORM |SPECIAL )?INTERROGATORY No[\d\., ]{1,7}[-:;.\s]+|\n{4,}|\.\n{3,})'
+  
+  rogs_responses_regex_capture_pattern = r'(?:response|answer|objection)s?\s{1,2}to\s{1,2}(?:special |general |form |general form )?interrogator(?:y|ies)\s{1,2}(?:no\.?:?|#|number)?\W*(\d{1,3}\.\d{1,2}|\d{1,3})[-:.;\s]+(\(\w.*?|.*?)(?=\n\d+\.\s+[A-Z]|\n\n[!@#%^&*)\/\\{}_\-=+\]|<>?.]|\s+(?:RESPONSE TO )(?:GENERAL FORM |FORM |SPECIAL )INTERROGATORY No[\d\., ]{1,7}[-:;.\s]+|\n{4,}|\.\n{3,})'
+  
+  rfa_regex_capture_pattern = r'(?<!\nresponse to )requests? (?:for |to )?(?:admissions? |admit )?(?:no\.?:?|#|number)?\W*(\d{1,3})[-:.;\s]+(.*?)(?=\n\d+\.\s+[A-Z]|["?!.\n](?:responses? |answers? |objections? )?(?:to |for )?requests? (?:for |to )?(?:admissions? |admit )?(?:no\.?:?|#|number)?\W*(?:\d{1,3})[-:.;\s]+)'
+  
+  rfa_responses_regex_capture_pattern = r'(?:responses? |answers? |objections? )(?:to |for )?(?:requests? )?(?:for |to )?(?:admissions? |admit )?(?:no\.?:?|#|number)?\W*(\d{1,3})[-:.;\s]+(.*?)(?=\n\d+\.\s+[A-Z]|["?!.\n ](?:responses? |answers? |objections? )?(?:to |for )?(?:requests? )?(?:for |to )?(?:admissions? |admit )?(?:no\.?:?|#|number)?\W*(?:\d{1,3})[-:.;\s]+)'
+  
+  rpd_regex_capture_pattern = r'(?<!\nresponse to )(?:demands? |requests? )(?:for |to )?(?:production |inspection )?(?:of documents )?(?:no\.?:?|#|number)?\W*(\d{1,3})[-:.;\s]+(.*?)(?=\n\d+\.\s+[A-Z]|["?!.\n](?:responses? |answers? |objections? )?(?:to |for )?(?:demands? |requests? )?(?:for |to )?(?:production |inspection )?(?:of documents )?(?:no\.?:?|#|number)?\W*(?:\d{1,3})[-:.;\s]+)'
+  
+  rpd_responses_regex_capture_pattern = r'(?:responses? |answers? |objections? )(?:to |for )?(?:demands? |requests? )?(?:for |to )?(?:production |inspection )?(?:of documents )?(?:no\.?:?|#|number)?\W*(\d{1,3})[-:.;\s]+(.*?)(?=\n\d+\.\s+[A-Z]|["?!.\n](?:responses? |answers? |objections? )?(?:to |for )?(?:demands? |requests? )?(?:for |to )?(?:production |inspection )?(?:of documents )?(?:no\.?:?|#|number)?\W*(?:\d{1,3})[-:.;\s]+)'
+  
+  def extract_text(content, pattern):
+    '''
+    Captures the responses to each individual interrogatory as separate text by running a regex findall pattern with capture groups against the entire text string returned from OCR.
+    Args:
+      content: variable containing the OCR'd text string to search against.
+      pattern: the regex pattern with capture groups that is run against the content.
+    Returns:
+      a list of tuples, with the number of elements in each tuple equal to the number of capture groups in the regex match pattern.
+    '''
+    return re.findall(pattern, content, re.DOTALL | re.MULTILINE | re.IGNORECASE)
+  
+  def validate_content(found_questions, found_answers, start_number, end_number):
+    total_expected = end_number - start_number + 1
+    total_found = len(set(number for number, _ in found_questions + found_answers))
+  
+    # Check if the total found is significantly different from the total expected
+    if abs(total_found - total_expected) > total_expected * 0.1: # 10% tolerance
+      print(f"Warning: Mismatch detected. Expected {total_expected} questions/answers, but found {total_found}. Check the variables and content.")
+  
+    # Check if a large proportion of the question numbers don't match the range
+    unexpected_numbers = [int(number) for number, _ in found_questions + found_answers if int(number) < start_number or int(number) > end_number]
+    if len(unexpected_numbers) > total_expected * 0.1: # 10% tolerance
+      print(f"Warning: {len(unexpected_numbers)} question/answer numbers are out of the expected range ({start_number} to {end_number}). Check the variables and content.")
+  
+  def populate_dictionary(found_items, qa_dict2, start_number, item_type):
+    '''
+    Unpacks list of tuples returned by extract_text and assigns them to the keys (interrogatory number) and values (xxxxx) of the qa_dict2, overwriting the placeholder values.
+    Args: 
+      - found_items (xxxx): xxxxx
+      - qa_dict2 (dict): a dictionary prepopulated with placeholder text for each interrogatory in the range of sprogs served
+      - start_number: (int) the beginning interrogatory number of the sprogs set
+      - item_type: stand-in for the nested dictionary key ('question') and value ('answer')
+    Returns:
+      - nothing, but modifies the qa_dict2 by overwriting the placeholder values with the actual text sprogs and responses captured by regex from the ocr'd files
+    '''
+    for number, text in found_items:
+      number = int(number)
+      if str(number) in qa_dict2:
+        qa_dict2[str(number)][item_type] = clean_ocrd_text(text)
+          
+  qa_dict2 = create_qa_dict(start_number, end_number)
+  
+  if methods[i].name.text == 'Special Interrogatories':
+    questions_regex_pattern = rogs_regex_capture_pattern
+    responses_regex_pattern = rogs_responses_regex_capture_pattern
+  elif methods[i].name.text == 'Requests for Admission':
+    questions_regex_pattern = rfa_regex_capture_pattern
+    responses_regex_pattern = rfa_responses_regex_capture_pattern
+  else:
+    questions_regex_pattern = rpd_regex_capture_pattern
+    responses_regex_pattern = rpd_responses_regex_capture_pattern
+  
+  found_questions = extract_text(remove_footer_string(methods[i].sprogs_ocrd.get().content), questions_regex_pattern)
+  found_answers = extract_text(remove_footer_string(methods[i].responses_ocrd.get().content), responses_regex_pattern)
+  
+  #validate_content(found_questions, found_answers, methods[i].start_range, methods[i].end_range) # Validation step
+  
+  populate_dictionary(found_questions, qa_dict2, start_number, 'question')
+  populate_dictionary(found_answers, qa_dict2, start_number, 'answer')
+  
+  # Check the qa_dict2 for any question or answer that was not overwritten...error_sprogs will contain the numbers for which either the question or the answer was not detected/extracted
+  methods[i].error_sprogs = [number for number, item in qa_dict2.items() if item['question'] == 'Question not detected/extracted' or item['answer'] == 'Answer not detected/extracted']
+  
+  methods[i].populate_qa_dict_from_sprogs = True
+---
+id: build DAList out of keys and values from frogs_qa_dict frogs
+if: methods[i].name.text == 'General Form Interrogatories'
+depends on: version
+code: |
+  for key, value in methods[i].frogs_qa_dict.items():
+    methods[i].combined_qa_list.appendObject()
+    methods[i].combined_qa_list[-1].name.text = f"{key}"
+    methods[i].combined_qa_list[-1].question = f"{value['question']}"
+    methods[i].combined_qa_list[-1].answer = f"{value['answer']}"
+    methods[i].combined_qa_list[-1].question_and_answer = f"**Question:**<br>{value['question']}<br>**Answer:**<br>{value['answer']}"
+  methods[i].set_combined_qa_list = True
+---
+id: build DAList out of keys and values from qa_dict2 for sprogs, rfas, rpds
+if: methods[i].name.text != 'General Form Interrogatories'
+depends on: version
+code: |
+  for key, value in qa_dict2.items():
+    methods[i].combined_qa_list.appendObject()
+    methods[i].combined_qa_list[-1].name.text = f"{key}"
+    methods[i].combined_qa_list[-1].question = f"{value['question']}"
+    methods[i].combined_qa_list[-1].answer = f"{value['answer']}"
+    methods[i].combined_qa_list[-1].question_and_answer = f"**Question:**<br>{value['question']}<br>**Answer:**<br>{value['answer']}"
+  methods[i].set_combined_qa_list = True
+---
+id: pick all challenged responses
+depends on: version
+question: Choose Disputed Responses
+fields: 
+  - no label: methods[i].pick_challenged_responses
+    datatype: checkboxes
+    code: |
+      methods[i].combined_qa_list
+    all of the above: True
+    none of the above: False
+    minlength: 1
+    grid: 2
+---
+depends on: version
+code: |
+  for number_picked in methods[i].pick_challenged_responses.true_values().sort(key=lambda y: float(y)):
+    for sprog in methods[i].combined_qa_list:
+      if sprog.name.text == number_picked:
+        methods[i].ncr.appendObject()
+        methods[i].ncr[-1].name.text = sprog.name.text
+        methods[i].ncr[-1].question = sprog.question
+        methods[i].ncr[-1].answer = sprog.answer
+        break
+  methods[i].set_challenged_responses_list = True
+---
+depends on: version
+code: |
+  methods[i].ncr.elements.sort(key=lambda y: float(y.name.text))
+  methods[i].sort_ncrs = True
+---
+id: explain noncompliant responses
+depends on: version
+question: "Challenge to ${ capitalize(methods[i].short_unit_singular) } ${ methods[i].ncr[j] }"
+subquestion: |
+  <div style="font-size: 1em; background-color: #ffffcc; padding: 5px; margin-top: 1px; margin-bottom: 1px;">
+    <strong>${ capitalize(methods[i].short_unit_singular) }:</strong>
+    <div style="line-height: 50%;">&nbsp;</div>
+    ${ methods[i].ncr[j].question }
+    <div style="line-height: 50%;">&nbsp;</div>
+    <strong>Response:</strong>
+    <div style="line-height: 50%;">&nbsp;</div>
+    ${ methods[i].ncr[j].answer }
+  </div>
+  <div style="line-height: 80%;">&nbsp;</div>
+fields:
+  - ' ': methods[i].ncr[j].deficiencies
+    datatype: multiselect
+    grid: 
+      width: 5
+    required: False
+    code: |
+      [{"label": result["Label"], "group": result["Category"], "value": index} for index, result in dataloader._load_data()[dataloader._load_data()["Method"]==(methods[i].name.text)].iterrows()]
+  - '**Add Custom Criticism** (Optional)': methods[i].ncr[j].add_custom_critique
+    datatype: yesnowide
+    grid:
+      width: 9
+  - '**Custom Criticism**': methods[i].ncr[j].custom_critique
+    input type: area
+    rows: 3
+    label above field: True
+    show if: methods[i].ncr[j].add_custom_critique
+  - note: |
+      e.g., *The response also fails to comply with the Court's prior order of 3/12/2023 that Acme omit blanket omnibus objections from all future discovery responses.*
+    show if: methods[i].ncr[j].add_custom_critique
+script: |
+  <script type="text/javascript">
+    /* 
+        Need to activate the multiselect JavaScript on each input, after base64 encoding 
+        the name of the input (it is "methods[i].ncr[j].deficiencies" here)
+    */
+    $(document).ready(function() {
+        $("#${base64.b64encode(str('methods[i].ncr[j].deficiencies').encode()).decode().replace('=', '')}")
+            .multiselect({
+                enableCaseInsensitiveFiltering: true,
+                inheritClass: true,
+                enableClickableOptGroups: false,
+                collapseOptGroupsByDefault: true,
+                nonSelectedText: 'Select All Deficiencies',
+                buttonClass: 'btn btn-warning fw-bold text-black',
+                delimiterText: '; ',
+                numberDisplayed: 1,
+                selectedClass: "active multiselect-active-item-fallback fw-bold bg-light text-black",
+                buttonWidth: '220px',
+                maxHeight: 450,
+                filterPlaceholder: 'Type here to search...',
+                enableCollapsibleOptGroups: true,
+                collapseOptGroupsByDefault: true
+            });
+      });
+  </script>
+under: |
+  % if defined('custom_critique_list'):
+    **Custom Criticism (last three):**
+    
+    % for item in custom_critique_list[-3:]:
+    * ${ item }
+    % endfor
+  % endif
+---
+id: troubleshoot repr of summary
+depends on: version
+question: the repr of summary
+subquestion: |
+  % for deficiency in methods[0].ncr[0].deficiencies.true_values():
+    The repr of 'summary' is: ${ repr(dataloader.load_row(to_int(deficiency))["Summary"]) }[BR][BR]
+    And regular 'summary' is ${ dataloader.load_row(to_int(deficiency))["Summary"] }
+  % endfor
+continue button field: troubleshoot_summary
+---
+id: create and maintain custom critique list for display
+depends on: version
+code: |
+  if not defined('custom_critique_list'):
+    custom_critique_list = []
+  if methods[i].ncr[j].custom_critique:
+    custom_critique_list.append(methods[i].ncr[j].custom_critique)
+  methods[i].ncr[j].custom_critique_added_to_list = True
+---
+id: review sprogs
+depends on: version
+question: Review Text of ${ methods[i].full_method }
+subquestion: |
+  % if methods[i].error_sprogs:
+    <span style="color: red;">**Alert: ${ methods[i].short_unit_singular.capitalize() } # ${ comma_and_list(methods[i].error_sprogs) }** was/were not properly captured.</span>
+  % endif
+  
+  ${ methods[i].sprogs_table }
+continue button field: methods[i].sprogs_reviewed
+---
+table: methods[i].sprogs_table
+rows: methods[i].combined_qa_list
+columns:
+  - header: |
+      No.
+    cell: |
+      bold(row_item)
+  - header: |
+      Request & Response
+    cell: |
+      row_item.question_and_answer
+edit:
+  - question
+---
+#event: methods[i].combined_qa_list[j].pick_disputed_resps
+#code: |
+#  if hasattr(methods[i].combined_qa_list[j], 'disputed'):
+#    del methods[i].combined_qa_list[j].disputed
+#  else:
+#    methods[i].combined_qa_list[j].disputed = True
+---
+id: question block for editing of sprogs
+depends on: version
+question: Confirm or Revise Text of Interrogatory No. ${ methods[i].combined_qa_list[j] }
+fields:
+  - '**${capitalize(methods[i].short_unit_singular)}**': methods[i].combined_qa_list[j].question
+    input type: area
+    rows: 4
+    label above field: True
+  - '**Response**': methods[i].combined_qa_list[j].answer
+    input type: area
+    rows: 12
+    label above field: True
+validation code: |
+  methods[i].combined_qa_list[j].question_and_answer = f"**Question:**<br>{methods[i].combined_qa_list[j].question}<br>**Answer:**<br>{methods[i].combined_qa_list[j].answer}"
+---
+id: disco responses feature coming soon
+question: "EasyPleader's Discovery *Responses* Feature is Coming Soon!"
+subquestion: |
+  This feature will be released in the coming weeks, and we can't wait to show you!
+continue button field: disco_responses_coming_soon
+---
+################################ EX PARTE APPLICATION ###############################
+---
+id: ex parte application info
+depends on : version
+question: Ex Parte Application Info
+fields:
+  - '**Was Similar Relief Requested Already?**': doc.epa_prior_relief_requested
+    datatype: yesnowide
+  - note: |
+      CRC, rule 3.1202(b):[BR]
+      Disclosure of previous applications[BR]If an ex parte application has been refused in whole or in part, any subsequent application of the same character or for the same relief, although made upon an alleged different state of facts, must include a full disclosure of all previous applications and of the court's actions.
+  - '**Basis For Ex Parte Relief**': doc.epa_basis_for_relief
+    choices:
+      - irreparable harm/immediate danger
+      - other statutory basis
+    label above field: True
+  - note: |
+      CRC, rule 3.1202(c):[BR]
+      Affirmative factual showing required[BR]An applicant must make an affirmative factual showing in a declaration containing competent testimony based on personal knowledge of irreparable harm, immediate danger, or any other statutory basis for granting relief ex parte.
+  - '**Other Statutury Basis**': doc.epa_other_statutory_basis
+    input type: area
+    rows: 3
+    label above field: True
+    show if:
+      variable: doc.epa_basis_for_relief
+      is: other statutory basis
+---
+#################################### DECLARATION ####################################
+---
+id: declaration info
+depends on: version
+question: Declaration Info
+fields:
+  - '**Select Declarant**': doc.declarant
+    datatype: object
+    choices: |
+      [person for person in everyone if not hasattr(person,'entity_type')]
+    label above field: True
+    grid:
+      width: 6
+  - "**Describe Declarant's Role in the Case**": doc.declarant_capacity
+    input type: area
+    rows: 6
+    label above field: True
+    grid:
+      width: 6
+      start: True
+    js show if: |
+      !val('doc.declarant').includes("parties") && !val('doc.declarant').includes("lawyers") && !val('doc.declarant').includes("clients") && !val('doc.declarant').includes("author")
+  - note: |
+      Establish declarant's relation to this lawsuit from the first-person perspective.
+      
+      e.g., *I personally witnessed the vehicle collision involving the Plaintiff and Defendant that is the subject of this lawsuit...I inspected and evaluated the physical condition of the property that is the subject of this lawsuit...*
+    grid:
+      width: 6
+    js show if: |
+      !val('doc.declarant').includes("parties") && !val('doc.declarant').includes("lawyers") && !val('doc.declarant').includes("clients") && !val('doc.declarant').includes("author")
+  - note: |
+      <span style="background-color: #feffe9; border: 2px solid #ddd; padding: 10px; font-weight: bold; font-size: 18px; color: #d91212;">Optional Features</span>
+    grid:
+      width: 4
+  - '**Include "*declaration submitted pursuant to [statute/rule]...*" in declaration text**': doc.cite_declaration_authority
+    datatype: yesnowide
+    grid:
+      width: 8
+  - '**Cited Statute/Rule**': doc.declaration_authority
+    label above field: True
+    grid:
+      width: 6
+    show if: doc.cite_declaration_authority
+  - note: |
+      [BR][BR]e.g., *CCP § 585(b), (d)...CRC, Rule 3.1204(b)*
+    grid:
+      width: 6
+    show if: doc.cite_declaration_authority
+  - '**Attach exhibits**': doc.attach_exhibits
+    datatype: yesnowide
+    grid:
+      width: 6
+validation code: |
+  if doc.type == 'Declaration' and doc.declarant is not g.author[0]:
+    doc.sign = False
+    doc.dont_show_doc_sign = True
+---
+id: declaration troubleshooting
+depends on: version
+question: Declaration Troubleshooting
+subquestion: |
+  'get_declaration_foundation_string()' is: ${ get_declaration_foundation_string() }[BR][BR]
+  'repr(doc.declarant) is: ${ repr(doc.declarant) }[BR][BR]
+  doc.declarant.instanceName is: ${ doc.declarant.instanceName }[BR][BR]
+  showifdef('doc.declarant.role') is ${ bool(showifdef('doc.declarant.role')) } and is: ${ showifdef('doc.declarant.role') }[BR][BR]
+  ${ 'parties' in doc.declarant.instanceName }[BR][BR]
+  'len([party for party in all_parties_list if party.role == doc.declarant.role]) < 2'
+  % if 'clients' in doc.declarant.instanceName or 'parties' in doc.declarant.instanceName:
+  ${ len([party for party in all_parties_list if party.role == doc.declarant.role]) < 2 }[BR][BR]
+  % endif
+  ${ doc.declarant is parties[1] }[BR][BR]
+  ${ doc.declarant == parties[1] }[BR][BR]
+continue button field: doc.declarant_troubleshooting
+---
+code: |
+  def get_declaration_foundation_string():
+    # Determine the appropriate declaration foundation string based on conditions
+    if doc.declarant is g.author[0]:
+      declaration_foundation_string = f"{ g.author[0].law_firm_role } at { g.author[0].law_firm }, attorneys in this action for { case.client_plus_short_name_string } and am licensed to practice in all superior courts in the State of California."
+    elif 'lawyers' in doc.declarant.instanceName:
+      declaration_foundation_string = f"counsel of record for xxxxxx"
+    elif 'parties' in doc.declarant.instanceName or 'clients' in doc.declarant.instanceName:
+      unique_party_suffix = "the" if len([party for party in all_parties_list if party.role == doc.declarant.role]) < 2 else "a named"
+      declaration_foundation_string = f"{ unique_party_suffix } { doc.declarant.role.lower() } in this action."
+    else:
+      declaration_foundation_string = f"{ doc.declarant_capacity }"
+
+    return declaration_foundation_string 
+---
+id: set support oppose verbiage
+depends on: version
+code: |
+  if doc.support_oppose == 'in support of':
+    doc.support_oppose_string_for_body = f"{ doc.support_oppose } {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title} ({doc.lm_proceeding_title_short})"
+    doc.support_oppose_string_for_title = f"{doc.support_oppose} {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title}"
+  if doc.support_oppose == 'in opposition to':
+    doc.support_oppose_string_for_body= f"{doc.support_oppose} the {doc.lm_proceeding_title} ({doc.lm_proceeding_title_short}) brought by {doc.lm_proceeding_movant.role.lower()} {doc.lm_proceeding_movant.name.full()} ({doc.lm_proceeding_movant.short_name})"
+    doc.support_oppose_string_for_title= f"{doc.support_oppose} {doc.lm_proceeding_movant.role} {doc.lm_proceeding_movant.name.full()}'s {doc.lm_proceeding_title}"
+  if doc.support_oppose == 'in reply to':
+    doc.support_oppose_string_for_body = f"{doc.support_oppose} the opposition of {oxford_comma_join([f'{party.role.lower()} {party.short_name}' for party in doc.lm_opposition_party])} (xxxxx) to {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title} ({doc.lm_proceeding_title_short})"
+    doc.support_oppose_string_for_title = f"{doc.support_oppose} {oxford_comma_join([f'{party.role.lower()} {party.short_name}' for party in doc.lm_opposition_party])}'s opposition to {doc.lm_proceeding_movant.short_name}'s {doc.lm_proceeding_title}"
+  doc.set_doc_support_oppose_string = True
+---
+######################### MEMORANDUM OF POINTS & AUTHORITIES #########################
+---
+id: memorandum point headings
+depends on: version
+question: Memorandum Argument and Options
+fields:
+  - '**${ capitalize(ordinal(i)) } Point Heading**': doc.memo_headings_lvl_1[i].name.text
+    input type: area
+    rows: 3
+    label above field: True
+  - note: |
+      Use regular sentence-case with punctuation, or enter dummy text (e.g., *xxxxx*) for properly formatted and highlighted placeholders in the memo.[BR]e.g., *Acme's interrogatory responses do not comply with the Civil Discovery Act.*[BR]
+  - '**Include Case "Gist" in Introduction?**': doc.memo_include_gist
+    datatype: yesnowide
+    label above field: True
+---
+id: memo point heading review
+depends on: version
+question: Review Argument Point Headings
+subquestion: |
+    **Point Headings**
+    ${ doc.memo_headings_lvl_1.table }
+    ${ doc.memo_headings_lvl_1.add_action(label='Add Heading', color='warning') }
+continue button field: doc.memo_heading_review
+---
+table: doc.memo_headings_lvl_1.table
+rows: doc.memo_headings_lvl_1
+columns:
+  - Heading: |
+      row_item
+edit:
+  - row_item
+allow reordering: True
+---
+depends on: version
+code: |
+  if doc.type in ['Declaration', 'Proof of Service']:
+    sig_block_type = 'declarant'
+  elif doc.type == 'Proposed Order':
+    sig_block_type = 'judge'
+  else:
+    sig_block_type = 'author'
+---
+id: common proceedings list
+code: |
+  common_proceedings_list = ['(Proposed) Consent Order for Voluntary Expedited Jury Trial', 'Abstract of Judgment – Civil and Small Claims', 'Abstract – Request', 'Acknowledgment of Satisfaction of Judgment', 'Affidavit (name extension)', 'Affidavit for Order for Appearance and Examination of a Third Person', 'Affidavit for Order for Appearance and Examination of a Third Person', 'Affidavit of Identity and Order', 'Agreement of Parties (Mandatory Expedited Jury Trial Procedures)', 'Amended Complaint', 'Amendment to Complaint (Fictitious/Incorrect Name)', 'Amendment to Cross-Complaint (Fictitious/Incorrect Name)', 'Answer', 'Appeal of Labor Commissioner Award', 'Appeal – Agreed Statement Filed', 'Appeal – Notice of Appeal/Cross Appeal Filed', 'Appeal – Notice of Non-Stipulation-Agreed Statement Filed', 'Appeal – Ntc Designating Record of Appeal APP-003/010/103', 'Appeal – Stipulation for Agreed Statement Filed', 'Application (name extension)', 'Application And Order For Appointment of Guardian Ad Litem', 'Application and Notice of Application and Hearing for Order to Quash Ex Parte Writ of Possession', 'Application and Order Regarding Lost Writ', 'Application and Order for Appearance and Examination', 'Application and Order for Viewing and/or Reproduction of Trial Court Exhibits', 'Application and Order to Withdraw Exhibits', 'Application for Determination of Good Faith Settlement', 'Application for Entry of Judgment on Sister-State Judgment', 'Application for Issuance of Writ of Execution, Possession or Sale', 'Application for Mandatory Evaluation Conference Under Code of Civil Procedure Section 55.545', 'Application for Order of Sale of Dwelling', 'Application for Order to Post', 'Application for Order to Publish', 'Application for Order to Vacate Prefiling and Remove Name from Statewide Vexatious Litigant List', 'Application for Release of Funds', 'Application for Right to Attach Order, Temporary Protective Order, etc.', 'Application for Temporary Restraining Order (Claim and Delivery)', 'Application for Withdrawal of Funds on Deposit', 'Application for Writ of Possession (Claim and Delivery)', 'Application for Writ of Possession', 'Application for and Renewal of Judgment', 'Application to Set Aside Right to Attach Order and Release Attached Property', 'Application to be Admitted Pro Hac Vice', 'Application to be Relieved as Attorney on Completion of Limited Scope Representation', 'Assignment of Judgment', 'Association of Attorney', 'Bench Warrant (Civil) Failure to Comply', 'Bench Warrant (Civil) ORAP', 'Brief (name extension)', 'Case Management Statement', 'Certificate (name extension)', 'Certificate of Facts re: Unsatisfied Judgment', 'Civil Case Cover Sheet', 'Claim Opposing Forfeiture', 'Claim of Exemption', 'Claim of Right to Possession and Notice of Hearing', 'Clerks Certificate of Service By Electronic Service', 'Clerk’s Application to Vacate and Order', 'Commission to Take Deposition Outside California', 'Complaint in Intervention', 'Complaint', 'Compliance with General Order for Limited Jurisdiction Unlawful Detainer [Eviction] Jury Trial Readiness', 'Condensed Narrative/Settled Statement on Appeal', 'Confession of Judgment', 'Confidential CASP Report', 'Confidential Cover Sheet False Claims Action', 'Courts Only (Central District)', 'Cross-Complaint', 'Declaration (name extension)', 'Declaration Pursuant to 1717 CC re: Attorney Fees', 'Declaration Pursuant to 1717.5 CC re: Attorney Fees', 'Declaration Pursuant to 585 CCP in Support of Default Judgment', 'Declaration and Order re: Advance Jury Fees', 'Declaration for Default Judgment by Court (Unlawful Detainer)', 'Declaration for Ex Parte Writ of Possession (Claim and Delivery)', 'Declaration in Support of Attorney’s Motion to Be Relieved as Counsel-Civil', 'Declaration in Support of Bus. & Prof. Code 6322.1(c)(1)', 'Declaration in Support of Ex Parte Application', 'Declaration of Attorney Re: Advisement of Rights and Defenses', 'Declaration of Interest, Costs and Attorney Fees', 'Declaration of Mailing', 'Declaration of Open Book Account', 'Declaration re: Attorney’s Fees', 'Declaration re: Due Diligence', 'Declaration re: Order for Sale of Dwelling', 'Declaration re: Uninsured Motorist', 'Declaration re: Waived Court Fees and Costs', 'Decree Changing Name', 'Default Judgment – Unlawful Detainer', 'Default Judgment', 'Defendant’s Application for Stay and Early Evaluation Conference Pursuant to Civil Code Section 55.54', 'Demand for Jury Trial', 'Demurrer – with Motion to Strike (CCP 430.10)', 'Demurrer – without Motion to Strike', 'Disassociation of Attorney', 'Ex Parte Application (name extension)', 'Ex Parte Right to Attach Order and Order for Issuance of Writ of Attachment (Nonresident)', 'Ex Parte Right to Attach Order and Order for Issuance of Writ of Attachment (Resident)', 'Exhibit List', 'Expedited Petition to Approve Compromise of Disputed Claim or Pending Action or Disposition of Proceeds of', 'Financial Statement', 'General Denial', 'Informal Discovery Conference Form for Personal Injury Courts', 'Informal Discovery Conference Report – Complex', 'Informal Discovery Conference', 'Joinder to Motion for Summary Judgment / Adjudication', 'Joinder to Motion', 'Joinder', 'Judgment Following General Verdict', 'Judgment for Minor or Person with a Disability (Miscellaneous)', 'Judgment on Special Verdict', 'Judgment on Verdict in Open Court', 'Judgment – Unlawful Detainer', 'Judgment', 'Jury Instructions', 'Jury Question', 'Media Request to Photograph, Record, or Broadcast', 'Memorandum (name extension)', 'Memorandum of Costs (Summary)', 'Memorandum of Costs After Judgment, Acknowledgment of Credit, and Declaration of Accrued Interest', 'Memorandum of Points & Authorities', 'Minor or Person With a Disability (Miscellaneous)', 'Motion for Attorney Fees', 'Motion for Change of Venue', 'Motion for Determination of Good Faith Settlement (CCP 877.6)', 'Motion for Discovery of Peace Officer Personnel Records (Pitchess Motion)', 'Motion for Forum Non Conveniens', 'Motion for Issuance of Out of State Commission', 'Motion for Judgment Notwithstanding the Verdict', 'Motion for Judgment on the Pleadings', 'Motion for Leave (name extension)', 'Motion for Leave to Amend (name extension)', 'Motion for Leave to File a Cross-Complaint', 'Motion for Leave to Intervene', 'Motion for New Trial', 'Motion for Order (name extension)', 'Motion for Preliminary Injunction', 'Motion for Protective Order', 'Motion for Reconsideration', 'Motion for Sanctions', 'Motion for Settled Statement In Lieu of Appeal Transcript', 'Motion for Stay of Proceedings', 'Motion for Stipulated Judgment', 'Motion for Summary Adjudication', 'Motion for Summary Judgment', 'Motion for Terminating Sanctions', 'Motion for Trial Preference', 'Motion for an OSC Re: Contempt (CCP 1209)', 'Motion in Limine (name extension)', 'Motion re: (name extension)', 'Motion to Amend Judgment', 'Motion to Augment (name extension)', 'Motion to Be Admitted Pro Hac Vice', 'Motion to Be Relieved as Counsel', 'Motion to Bifurcate', 'Motion to Challenge the Good Faith of a Settlement (CCP 877.6)', 'Motion to Compel (name extension)', 'Motion to Compel Arbitration', 'Motion to Compel Discovery (not Further Discovery) – 1 moving party, 1 motion', 'Motion to Compel Further Discovery Responses', 'Motion to Confirm Settlement', 'Motion to Consolidate', 'Motion to Continue (name extension)', 'Motion to Continue Trial Date', 'Motion to Declare Vexatious Litigant', 'Motion to Deem RFA’s Admitted', 'Motion to Dismiss', 'Motion to Disqualify Counsel', 'Motion to Enforce Settlement', 'Motion to Enforce Sister State Judgment', 'Motion to Expunge Lis Pendens', 'Motion to Extend Discovery Cut-Off Date', 'Motion to Join Necessary Party', 'Motion to Quash Service of Summons', 'Motion to Quash', 'Motion to Reclassify', 'Motion to Seal (name extension)', 'Motion to Set Aside/Vacate Default and / or Default Judgment', 'Motion to Set Aside/Vacate Default', 'Motion to Set Aside/Vacate Dismissal', 'Motion to Set Aside/Vacate Judgment', 'Motion to Sever', 'Motion to Stay Execution', 'Motion to Strike (not anti-SLAPP) – without Demurrer', 'Motion to Strike (not initial pleading)', 'Motion to Submit Tardy Expert Witness List', 'Motion to Tax Costs', 'Motion to Transfer', 'Motion to Trifurcate', 'Motion to Vacate (name extension)', 'Name Change Criminal History Assessment', 'Notice (name extension)', 'Notice and Acknowledgment of Receipt', 'Notice of Add-on to JCCP Petition', 'Notice of Appeal – Administrative Hearing', 'Notice of Appeal – Parking', 'Notice of Appearance', 'Notice of Application and Hearing for Claim and Delivery (CCP 512.030)', 'Notice of Application and Hearing for Writ of Attachment (CCP 484.040)', 'Notice of Attachment', 'Notice of Change of Address or Other Contact Information', 'Notice of Change of Firm Name', 'Notice of Consolidation', 'Notice of Coordinated Cases', 'Notice of Decision – Final Administrative Decision', 'Notice of Discharge of Debtor', 'Notice of Entry of Dismissal and Proof of Service', 'Notice of Hearing on Claim of Exemption or in lieu of Third-Party Claim', 'Notice of Hearing on Petition', 'Notice of Intent to Appear by Telephone', 'Notice of Intent to Move for New Trial', 'Notice of Joinder (Name Extension)', 'Notice of Lien', 'Notice of Limited Scope Representation', 'Notice of Lis Pendens', 'Notice of Lodging (name extension)', 'Notice of Mandatory Evaluation Conference', 'Notice of Motion', 'Notice of Opposition to Claim of Exemption', 'Notice of Opposition to Right to Attach Order and Claim of Exemption', 'Notice of Posting of Jury Fees', 'Notice of Related Case', 'Notice of Remand from Federal Court', 'Notice of Removal to Federal Court', 'Notice of Ruling', 'Notice of Settlement', 'Notice of Stay of Proceedings (Bankruptcy)', 'Notice of Stay of Proceedings and Early Evaluation Conference (Construction-Related Accessibility Claim)', 'Notice to Court of Improved Financial Situation or Settlement', 'Oath of Receiver', 'Objection (name extension)', 'Objection to Application to be Relieved as Attorney on Completion of Limited Scope Representation', 'Objection to Request to Opt Out of Mandatory Expedited Jury Trial Procedures', 'Offer to Compromise and Acceptance Under Code of Civil Procedure Section 998', 'Offer to Compromise', 'Opposition (name extension)', 'Opposition to Application for Determination of Good Faith Settlement', 'Order (name extension)', 'Order Approving Compromise of Disputed Claim or Pending Action or Disposition of Proceeds of Judgment for', 'Order Denying or Terminating Stay of Execution of Judgment (Unlawful Detainer)', 'Order Granting Attorney’s Motion to Be Relieved as Counsel-Civil', 'Order for Publication', 'Order for Release and Redelivery of Property (Claim and Delivery)', 'Order for Release of Funds', 'Order for Withdrawal of Funds From Blocked Account', 'Order for Writ of Possession (Claim and Delivery)', 'Order on Application to be Relieved as Attorney on Completion of Limited Scope Representation', 'Order on Court Fee Waiver (Superior Court)', 'Order on Media Request to Permit Coverage', 'Order to Deposit (name extension)', 'Order to Deposit Money Into Blocked Account', 'Order to Set Aside / Vacate (name extension)', 'Order to Show Cause for Change of Name (Change of Name)', 'Out of County Abstract', 'Petition (name extension)', 'Petition and Declaration Regarding Unresolved Claims and Deposit of Undistributed Surplus Proceeds of', 'Petition for Change of Name and Gender', 'Petition for Change of Name', 'Petition for Coordination', 'Petition for Withdrawal of Funds From Blocked Account', 'Petition for Writ (Misdemeanor, Infraction, or Limited Civil Case)', 'Petition for Writ of Mandate', 'Petition to Approve Compromise of Disputed Claim', 'Petition to Approve Structured Settlement', 'Petition to Confirm Arbitration Award', 'Petition to Confirm Minor’s Compromise with Special Needs Trust', 'Petition to Coordinate Add-On Case (JCCP)', 'Petition to Release Property – Mechanic’s Lien', 'Petition to Vacate or Alter Arbitration Award (CCP 1285 – 1287.6)', 'Prefiling Order – Vexatious Litigant', 'Prejudgment Claim of Right to Possession', 'Proof of Mailing (Substituted Service)', 'Proof of Personal Service', 'Proof of Publication', 'Proof of Service (Renewal of Judgment)', 'Proof of Service (not Summons and Complaint)', 'Proof of Service Not Plaintiff’s / Defendant’s Claim', 'Proof of Service by Mail', 'Proof of Service by Posting', 'Proof of Service by Substituted Service', 'Proof of Service – No Service', 'Proof of Service – Order Granting Attorney’s Motion to be Relieved as Counsel', 'Proposed Statement on Appeal Submitted APP-104 CR-135/143', 'Receipt and Acknowledgment of Order for the Deposit of Money Into Blocked Account', 'Receiver Bond', 'Reply (name extension)', 'Request (name extension)', 'Request For Entry of Judgment (Enforcement of Judgment)', 'Request for Accommodations by Persons with Disabilities and Response', 'Request for Court Reporter Services by Party with Fee Waiver', 'Request for Dismissal', 'Request for Entry of Default / Judgment', 'Request for Hearing About Court Fee Waiver Order (Superior Court)', 'Request for Informal Discovery Conference – Complex', 'Request for Interpreter', 'Request for Judicial Notice', 'Request for Statement of Decision', 'Request that Clerk Enter Judgment and Judgment on Final Order, Decision or Award of the Labor Commissioner', 'Request to Opt Out of Mandatory Expedited Jury Trial Procedures', 'Request to Waive Additional Court Fees (Superior Court)', 'Request to Waive Court Fees', 'Request/Counter-Request To Set Case For Trial', 'Response (name extension)', 'Response to Petition', 'Right to Attach Order After Hearing and Order for Issuance of Writ of Attachment', 'Separate Statement', 'Special Motion to Strike under CCP Section 425.16 (Anti-SLAPP motion)', 'Special Verdict', 'Statement of Damages (Personal Injury or Wrongful Death)', 'Statement of the Case', 'Status Report', 'Stipulated Judgment', 'Stipulation (name extension) – No Order', 'Stipulation and Order (name extension)', 'Stipulation for Judgment', 'Stipulation, Receipt and Order re: Release of Civil Exhibits', 'Subpoena & Proof of Service', 'Subpoena Duces Tecum and Proof of Service', 'Subsequent Petition for Relief in Discovery Dispute re: Out-of-State Case – by Non-Party', 'Subsequent Petition for Relief in Discovery Dispute re: Out-of-State Case – by Party', 'Substitution of Attorney', 'Summary of the Case', 'Summons (Joint Debtor)', 'Summons', 'Supplemental Declaration (name extension)', 'Temporary Protective Order', 'Trial Brief', 'Trustee’s Sale', 'Unlawful Detainer Stipulation and Judgment', 'Witness List', 'Writ of (name extension)', 'Writ of Execution', 'Writ of Mandate', 'Writ – Request', 'Writ – Return', '[Proposed Order] and Stipulation to Continue Trial, FSC (and Related Motion/Discovery Dates) Personal Injury', 'Proof of Service (Sister State Judgment)'] 
+---
+############################### LAW & MOTION PROCEEDING INFO ###############################
+---
+id: law and motion proceeding info
+depends on: version
+question: Law & Motion/Litigation Proceeding Info
+fields:
+  - note: |
+      <div style="text-align: center; background-color: #Feffe9; border: 2px solid #ddd; padding: 10px;">
+          <span style="font-weight: bold; font-size: 20px; color: #D91212">
+              Title of Legal Proceeding&emsp;&emsp;&emsp;
+          </span>
+          <br>
+          <span style="font-weight: bold; font-size: 18px;">
+              Pick From Drop-Down&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;Enter Custom Title&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;<br>
+              &emsp;&emsp;:arrow-down:&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&nbsp;<i>--OR--</i>&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&nbsp;:arrow-down:&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;&emsp;
+          </span>
+      </div>
+
+  - '**Recent & Common Proceedings**': doc.lm_proceeding_title_EP_builtin
+    input type: combobox
+    choices: 
+      code: |
+        get_past_lm_proceedings() + common_proceedings_list
+    label above field: True
+    grid:
+      width: 6
+    js disable if: |
+      val('doc.custom_lm_proceeding_title') !== ''
+  - '**Custom Proceeding Title**': doc.custom_lm_proceeding_title
+    input type: area
+    rows: 2
+    required: False
+    label above field: True
+    grid:
+      width: 6
+  - '**Short Reference to Proceeding**': doc.lm_proceeding_title_short
+    input type: combobox
+    choices:
+      - Motion
+      - Application
+      - Request
+      - OSC
+      - Petition
+      - Stipulation
+    label above field: True
+    grid: 5
+  - '**Select the Moving Party**': doc.lm_proceeding_movant
+    datatype: object
+    choices: all_parties_sorted_list
+    label above field: True
+    grid:
+      width: 5
+      start: True
+  - "**This document *supports/opposes/replies to* [the Proceeding]**": doc.support_oppose
+    input type: radio
+    choices:
+      - supports: in support of
+      - opposes: in opposition to
+      - replies to an opposition: in reply to
+      - objects to: objecting to
+      - is more or less neutral: regarding
+    label above field: True
+    grid: 7
+  - "**Select party whose opposition is being replied to**": doc.lm_opposition_party
+    datatype: object_checkboxes
+    choices: nonclient_parties_sorted_list
+    label above field: True
+    grid: 7
+    show if:
+      variable: doc.support_oppose
+      is: 'in reply to'
+validation code: |
+  doc.lm_proceeding_title = doc.enter_custom_lm_proceeding_title if doc.custom_lm_proceeding_title != '' else doc.lm_proceeding_title_EP_builtin
+  
+  update_past_lm_proceedings(doc.lm_proceeding_title)
+---
+################################ PLEADING DOCUMENT TITLE ################################
+---
+id: non-lm document title
+if: doc.type in ['Generic Pleading', 'Proposed Order', 'Proof of Service']
+depends on: version
+question: Document Caption Title & Footer
+fields:
+  - '**Caption Title**': doc.custom_title_full
+    input type: area
+    rows: 3
+    default: |
+      ${doc.type if doc.type != 'Generic Pleading' else ''}
+    label above field: True
+  - note: |
+      e.g., *Offer to Compromise & Acceptance Under Code of Civil Procedure Section 998*
+  - '**Short Title** (optional, for footer)': doc.custom_title_shorthand
+    input type: area
+    rows: 2
+    required: False
+    label above field: True
+  - note: |
+      e.g., *CCP § 998 Offer to Compromise*
+right: |
+  [BR][BR][BR][BR][BR]For guidance on court-recommended titles for litigation filings, see Los Angeles County Superior Court's [**Document Name List**](https://lascpubstorage.blob.core.windows.net/cpw/LIBOPSCivil-38-CivilEfilingDocumentNameList.pdf)
+---
+id: lm document title
+if: doc.type not in ['Generic Pleading', 'Proposed Order', 'Proof of Service']
+depends on: version
+question: Pleading Title
+subquestion: |
+  **:arrow-down:** **Proposed Title** **:arrow-down:**[BR]
+  <div style="background-color: #Feffe9; border: 2px solid #ddd; padding: 10px;"><span style="font-family: 'Georgia', serif; font-weight: bold; font-size: 18px; color: #D91212">${ doc.proposed_title }</span></div>[BR]
+fields:
+  - '**Use Proposed Title**': doc.wants_proposed_title
+    datatype: yesnoradio
+    grid:
+      width: 3
+    label above field: True
+  - '**Enter Custom Title**': doc.custom_title_full
+    input type: area
+    rows: 3
+    default: ${ doc.proposed_title }
+    label above field: True
+    show if:
+      variable: doc.wants_proposed_title
+      is: False
+    required: False
+  - '**Shortened Title** (optional, for footer)': doc.custom_title_shorthand
+    input type: area
+    rows: 2
+    label above field: true
+    required: False
+---
+################################# OPTIONAL DOCUMENT FEATURES #################################
+---
+id: pleading options and extras
+depends on: version
+question: Document Options & Extras
+fields:
+  - note: |
+      <span style="background-color: #feffe9; border: 2px solid #ddd; padding: 10px; font-weight: bold; font-size: 18px; color: #d91212;">Caption Page</span>
+  - '**Put statutory reference under pleading title**': doc.include_stat_callout
+    datatype: yesnowide
+    grid:
+      width: 7
+      offset: 1
+  - '**Enter statutory reference**': doc.stat_callout
+    show if: doc.include_stat_callout
+    label above field: True
+    grid:
+      width: 11
+      offset: 1
+  - note: |
+      The contents of this box will appear one line under the document's title, in braces.[BR]e.g.,  [CCP § 568, HSC § 17980.7]
+    grid:
+      width: 11
+      offset: 1
+      start: True
+    show if: doc.include_stat_callout
+  - '**Include "Concurrently filed with..." notice**': doc.include_concurrently_filed_docs_notice
+    datatype: yesnowide
+    grid: 
+      width: 7
+      offset: 1
+  - '**Choose Concurrently Filed Documents**': doc.concurrently_filed_common_docs
+    datatype: checkboxes
+    choices:
+      - Memorandum of Points & Authorities
+      - Declaration
+      - Request for Judicial Notice
+      - Index of Exhibits
+      - Proposed Order
+      - '**Document(s) Not Listed Here**'
+    none of the above: False
+    label above field: True
+    grid:
+      width: 7
+    show if: doc.include_concurrently_filed_docs_notice
+  - '**Select Declarants**': doc.concurrently_filed_declarants
+    datatype: object_checkboxes
+    choices: |
+      [person for person in everyone if not hasattr(person,'entity_type')]
+    label above field: True
+    grid:
+      width: 5
+    show if: doc.concurrently_filed_common_docs['Declaration']
+  - '**Enter short titles of concurrently filed documents**': doc.concurrently_filed_custom_docs
+    input type: area
+    rows: 2
+    label above field: True
+    show if: doc.concurrently_filed_common_docs['**Document(s) Not Listed Here**']
+  - note: |
+      Put a comma or semicolon and space between items (, or ; ).
+    show if: doc.include_concurrently_filed_docs_notice
+  - note: |
+      <span style="background-color: #feffe9; border: 2px solid #ddd; padding: 10px; font-weight: bold; font-size: 18px; color: #d91212;">Attachments & Acknowledgments</span>
+  - '**Attach exhibits**': doc.attach_exhibits
+    datatype: yesnowide
+    grid:
+      width: 4
+      offset: 1
+    show if: 
+      code: |
+        doc.type not in ['Declaration', 'Letter']
+  - '**Attach notary acknowledgement**': doc.include_notary_acknowledgment_form
+    datatype: yesnowide
+    grid:
+      width: 6
+continue button field: doc.pleading_options_extras
+---
+################################## PROOF OF SERVICE ##################################
+---
+id: pos info
+depends on: version
+question: Proof of Service Info
+fields:
+  - '**Title of documents being served**': doc.documents_served
+    input type: area
+    rows: 4
+    label above field: True
+    grid:
+      width: 6
+  - note: |
+      Put a comma or semicolon and a space between each item.[BR]
+      e.g., *Memorandum of Points and Authorities in Support of Plaintiff's Motion for Commotion, Declaration of John Smith in Support of Plaintiff's Motion for Commotion*
+    grid:
+      width: 6
+  - '**Served parties listed in this POS**': doc.choose_party_servees
+    datatype: radio
+    choices:
+      - All Parties
+      - Only Certain Parties
+    label above field: True
+    grid: 5
+  - '**Choose parties being served**': doc.party_servees
+    datatype: object_checkboxes
+    choices: nonclient_parties_sorted_list
+    label above field: True
+    grid: 7
+    show if:
+      variable: doc.choose_party_servees
+      is: 'Only Certain Parties'
+  - '**Nonparties are also being served**': doc.nonparties_being_served
+    datatype: yesnowide
+    grid:
+      width: 5
+      start: True
+  - '**Choose nonparties being served**': doc.nonparty_servees
+    datatype: object_checkboxes
+    choices: nonparties.complete_elements()
+    label above field: True
+    none of the above: False
+    grid: 7
+    show if: doc.nonparties_being_served
+  - '**Who is serving the documents?**': doc.pick_server
+    datatype: radio
+    choices:
+      - Me
+      - Someone Else
+    label above field: True
+    grid: 5
+  - '**Everyone is being served *the same way on the same day***': doc.same_service
+    datatype: yesnowide
+    grid:
+      width: 7
+---
+id: same service - choose service date and method
+depends on: version
+question: Service Date & Method
+fields:
+  - '**Service Date**': doc.same_service_date
+    datatype: date
+    label above field: True
+    grid: 4
+  - '**Service Methods**': doc.same_service_method
+    datatype: checkboxes
+    code: |
+      list(service_method_dict.keys())
+    label above field: True
+    grid: 4
+validation code: |
+  for servee in doc.all_servees:
+    servee.service_date = doc.same_service_date
+    servee.service_methods = doc.same_service_method.true_values()
+---
+id: different service - choose service date and method for each servee
+depends on: version
+generic object: ALPeopleList
+question: "Service on ${ x[i] }: Date & Method"
+fields:
+  - '**Service Date**': x[i].service_date
+    datatype: date
+    label above field: True
+    grid: 4
+  - '**Service Methods**': x[i].pick_service_methods
+    datatype: checkboxes
+    code: |
+      list(service_method_dict.keys())
+    label above field: True
+    grid: 4
+validation code: |
+  x[i].service_methods = x[i].pick_service_methods.true_values()
+---
+id: generate service list
+depends on: version
+question: Show Proof of Service[BR]${ doc.all_servees }
+subquestion: |
+  ${ build_POS(doc.all_servees, doc.documents_served, doc.server_address) }
+continue button field: doc.show_service_list
+---
+################################### FINAL SCREEN ########################################
+---
+event: final_screen
+question: Draft again or goodbye for now?
+#${author[0].name.first}, 
+#Hope you liked your ${doc.type}![BR]
+action buttons:
+  - label: '**Draft another document**'
+    action: new_version
+    color: primary
+  - label: '**Go to *Easy*Pleader Homepage**'
+    action: https://www.easypleader.com
+    color: warning
+    icon: sign-out-alt
+---
+###################################### REAL PROPERTY ######################################
+---
+id: real property facts
+question: Real Property
+fields:
+  - '**Short Reference Name for Property**': real_property.name
+    label above field: True
+    grid:
+      width: 7
+  - note: |
+      [BR][BR]e.g., *341 Jackson Ave.*
+    grid:
+      width: 5
+  - '**Street Address**': real_property.street_address.address
+    address autocomplete: True
+    label above field: True
+    grid:
+      width: 10
+  - '**Unit/Suite**': real_property.street_address.unit
+    required: False
+    label above field: True
+    grid:
+      width: 2
+  - '**City**': real_property.street_address.city
+    label above field: True
+    grid:
+      width: 6
+  - '**State**': real_property.street_address.state
+    label above field: True
+    grid:
+      width: 2
+  - '**Zip Code**': real_property.street_address.zip
+    label above field: True
+    grid:
+      width: 4
+  - '**County**': real_property.street_address.county
+    label above field: True
+    grid:
+      width: 6
+  - '**Neighborhood**': real_property.street_address.neighborhood
+    required: False
+    label above field: True
+    grid:
+      width: 6
+  - '**County APN**': real_property.assessors_parcel_number
+    label above field: True
+    grid:
+      width: 8
+  - '**Parcel is not within city limits**': real_property.not_within_city_limits
+    datatype: yesnowide
+    grid:
+      width: 4
+  - '**Full Legal Description**': real_property.full_legal_description
+    input type: area
+    rows: 6
+    label above field: True
+---
+code: |
+  city_or_area = f"the City of {real_property.street_address.city}," if not   real_property.not_within_city_limits else f"an unincorporated area of the"
+  property_formal_description_string = f"The real property commonly known as {real_property.street_address.on_one_line()}, situated in {city_or_area} County of {real_property.street_address.county} (APN {real_property.assessors_parcel_number}), and more particulary described as:\n\n{real_property.full_legal_description}"
+---
+######################################## CODE #######################################
+---
+depends on: version
+code: |
+  gfrogs_served_no_index = methods[i].gfrogs_served
+  responses_clean_text_no_index = remove_footer_string(methods[i].responses_ocrd.get().content)
+  methods[i].set_variables_for_function = True
+---
+id: troubleshoot regex
+depends on: version
+question: troubleshoot regex
+subquestion: |
+  In EP, the output string text returned from DA's ocr function is 
+  1. DA's OCR function returns
+    'methods[i].sprogs_ocrd.get().content' for propounded discovery; and
+    'methods[i].responses_ocrd.get().content' for discovery responses.
+  2. remove_footer_string matches internal footer strings and replaces them with a single newline:
+    r'(?<=\S)(?:\\n\\n \\n\\n|\\n\\n\W*\d{1,3}\W*\\n).{25,160}(?:\\n\\n \\n\\x0c\\x0c).{75,250}?(?:\\n\\n)(?=[A-Za-z]{2,}|\d+[.:]|[\(\/])'
+  3. the found_questions and found_answers regex capture groups runs, and the combined_qa_dict is populated with the captured groups;
+  4. clean_ocrd_text is run against each found_question and found_answer:
+    def clean_ocrd_text(ocrd_text):
+  # Step 1: Replace qualifying newlines with a pound sign
+  intermediate_text = re.sub(r'([A-Za-z][.?!\'\"\];:)]{1,4}\s)\n', r'\1£', ocrd_text)
+    
+  # Step 2: Remove or keep the pound sign and newline based on the following text
+  regex_remove_or_keep_newline = r'£\n?(?=[ \t]*\([a-z]\)[ \t]*|\([0-9]{1,2}\)|[0-9]{1,2}\.)|£'
+  intermediate_text = re.sub(regex_remove_or_keep_newline, lambda m: '\n' if m.group() == '£\n' else ' ', intermediate_text)
+
+  # Step 3: Convert extraneous newlines to a single space
+  # Target newlines preceded by words, a space, or midsentence punctuation like a comma or dash
+  # and followed by words.
+  intermediate_text = re.sub(r'([A-Za-z\s,\-])\n([A-Za-z])', r'\1 \2', intermediate_text)
+    
+  # Step 4: Replace two or more whitespace characters with a single space
+  clean_text = re.sub(r'(?:\s{2,}|/{2,})', ' ', intermediate_text).strip()
+    
+  return clean_text
+
+  test string = r'Code of Civil Procedure section 2034.210-2034.310) concerning the INCIDENT? If so,\nfor each item state:\n\n(a) the type (i.e., diagram, reproduction, or model);\n\n(b) the subject matter; and\n\n(c) the name, ADDRESS, and telephone number of each PERSON who has it.\n\n15\nDEFENDANT’S ANSWERS TO FORM INTERROGATORIES, SET NUMBER ONE\n\n \n\x0c\x0c0 Oo ND na FP WW NO\n\nNO NO NO HN NHN HN HN NHN NHN FF FF Ff FF KF KF KF PF OS hl\nCo tT DO MN FP W NY K§ ODO OO OH HTD Dn FP WY NY | OC\n\n \n\nRESPONSE TO FORM INTERROGATORY NO. 12.5:\n\nObjection. This interrogatory seeks information protected by the attorney-client and work-\nproduct privilege; calls for speculation; lacks'
+  
+#  ' remove_footer_string(test_string) ' results in:[BR][BR]
+#  **THE REPR OUTPUT:**[BR][BR]
+#  ${ repr(remove_footer_string(test_string)) }[BR][BR]
+#  **THE NON-REPR OUTPUT:**[BR][BR]
+#  ${ remove_footer_string(test_string) }
+continue button field: methods[i].troubleshoot_regex
+---
+code: |
+  def remove_footer_string(input_text_string):
+    convert_all_capitalized_footer_text_and_surrounding_newlines_to_newline = r'(?<=\S)(?:[\n\/\-\|]*\n\n \n\n|\n\n\W*\d{1,3}\W*\n).{25,160}(?:\n*\n \n\x0c\x0c).{65,250}?(?:\n\n[\/\n]*)(?=[A-Za-z 0-9.]{5,}|\d+[.:]|[\(\/]+)'
+    convert_all_errant_vertical_line_numbers_and_garble_to_space = r'(?:\n(?:[12]\d|\d)[ \-|]*)+(?=\n|[A-Za-z])'
+    first_stage_text = re.sub(convert_all_capitalized_footer_text_and_surrounding_newlines_to_newline, '\n', input_text_string, flags=re.DOTALL)
+    second_stage_text = re.sub(convert_all_errant_vertical_line_numbers_and_garble_to_space, ' ', first_stage_text)
+    return second_stage_text
+---
+id: troubleshoot concurrently filed docs string
+depends on: version
+question: Troubleshoot concurrently filed docs and object_checkboxes
+subquestion: |
+  ${ repr(doc.concurrently_filed_declarants) }
+  ${ doc.concurrently_filed_declarants }
+  ${ f"Declaration of {doc.concurrently_filed_declarants}" }
+  ${ common_docs }
+continue button field: troubleshoot_concurrently_filed_docs
+---
+id: build concurrently filed docs string
+depends on: version
+#code: |
+#  if 'Declaration' in doc.concurrently_filed_common_docs.true_values():
+#    if len(doc.concurrently_filed_declarants) > 1:
+#      declarant_list = f"Declarations of {doc.concurrently_filed_declarants}"
+#    else: 
+#      declarant_list = f"Declaration of {doc.concurrently_filed_declarants}"
+#
+#  common_docs = [doc if doc != 'Declaration' else declarant_list for doc in doc.concurrently_filed_common_docs.true_values() if doc != '**Document(s) Not Listed Here**']
+#  custom_docs = doc.concurrently_filed_custom_docs.replace(',', ';').split('; ')
+#  all_docs = common_docs + [doc.strip() for doc in custom_docs if doc.strip()]
+#  doc.concurrently_filed_docs = '; '.join(all_docs)
+#  doc.set_concurrently_filed_docs = True 
+#---
+code: |
+  if 'Declaration' in doc.concurrently_filed_common_docs.true_values():
+      if len(doc.concurrently_filed_declarants) > 1:
+          declarant_list = f"Declarations of {doc.concurrently_filed_declarants}"
+      else:
+          declarant_list = f"Declaration of {doc.concurrently_filed_declarants}"
+  
+  # Extract common documents excluding 'Declaration' and '**Document(s) Not Listed Here**'
+  common_docs = [
+    declarant_list if doc == 'Declaration' else doc
+    for doc in doc.concurrently_filed_common_docs.true_values()
+    if doc not in ['**Document(s) Not Listed Here**']
+  ]
+  
+  # Check if doc.concurrently_filed_custom_docs exists before processing
+  if showifdef('doc.concurrently_filed_custom_docs'):
+      # Split custom documents and strip whitespace
+      custom_docs = doc.concurrently_filed_custom_docs.replace(',', ';').split('; ')
+      custom_docs = [doc.strip() for doc in custom_docs if doc.strip()]
+  else:
+      custom_docs = []  # Initialize it as an empty list if it doesn't exist
+  
+  # Combine common_docs and custom_docs into all_docs
+  all_docs = common_docs + custom_docs
+  
+  # Join all_docs into a single string and set the attribute
+  doc.concurrently_filed_docs = '; '.join(all_docs)
+  
+  # Set the flag indicating that the operation is complete
+  doc.set_concurrently_filed_docs = True
+---
+depends on: version
+code: |
+  # Function to validate and correct delimiters in the input string
+  def validate_and_correct_delimiters(input_str):
+    # Remove leading and trailing whitespaces
+    input_str = input_str.strip()
+    # Replace multiple spaces with a single space
+    input_str = re.sub(r'\s+', ' ', input_str)
+    # Replace any type of space (or multiple spaces) that follows a comma with a single space
+    input_str = re.sub(r',\s*', ', ', input_str)
+    # Replace any commas that are now properly formatted with "; "
+    if ',' in input_str:
+      words = re.findall(r'\w{2,}', input_str)
+      if len(words) >= 2:
+        input_str = input_str.replace(', ', '; ')
+    # Replace any semicolons not followed by a space with "; "
+    input_str = re.sub(r';(?!\s)', '; ', input_str)
+    # Replace any stray spaces around semicolons
+    input_str = re.sub(r'\s*;\s*', '; ', input_str)
+    return input_str
+
+  # Function to convert a string to either an Oxford comma list or a bulleted list
+  def to_oxford_comma_or_bulleted_list(string_var):
+    string_var = validate_and_correct_delimiters(string_var)
+    items = string_var.split('; ')
+    items = [item.strip() for item in items if len(item.strip()) > 0]
+    count = len(items)
+    if count == 1:
+      return f"is a copy of {items[0]}"
+    elif count == 2:
+      return f"are copies of {items[0]} and {items[1]}"
+    elif count == 3:
+      return f"are copies of {items[0]}, {items[1]}, and {items[2]}"
+    else:
+      return "copies of the following documents:\n" + "\n".join([f"•\t{item}" for item in items])
+---
+depends on: version
+code: |
+  mc_ltr.several_methods = True if len(methods) > 1 else False
+---
+depends on: version
+code: |
+  for method in mc_ltr.methods_served.true_values():
+    methods.appendObject()
+    methods[-1].name.text = f"{method}"
+  mc_ltr.build_methods = True
+---
+depends on: version
+code: |
+  methods[i].mtc_deadline = deadline_calculator_v7(trigger_date=methods[i].responses_service_date, time_period=45, service_method=methods[i].responses_service_method)['datetime_obj']
+---
+depends on: version
+code: |
+  if methods[i].name.text == 'General Form Interrogatories':
+    methods[i].number_propounded = nice_number(len(methods[i].frogs_propounded.true_values()), use_word=True)
+  else:
+    methods[i].number_propounded = nice_number(int(methods[i].end_range) - int(methods[i].start_range) + 1, use_word=True)
+
+  methods[i].set_number_propounded = True
+---
+depends on: version
+code: |
+  methods[i].responses_ocrd = ocr_file_in_background(methods[i].responses_file, language='en', psm='3')
+  methods[i].ocr_responses = True
+---
+depends on: version
+code: |
+  methods[i].sprogs_ocrd = ocr_file_in_background(methods[i].sprogs_file, language='en', psm='3')
+  methods[i].ocr_sprogs = True
+---
+depends on: version
+code: |
+  if doc.type == 'Declaration':
+    doc.proposed_title = doc.type + ' of ' + str(doc.declarant) + ' ' + title_case(doc.support_oppose_string_for_title)
+  elif doc.type == 'Notice of Motion and Motion':
+    doc.proposed_title = 'Notice of Motion and ' + title_case(doc.lm_proceeding_title)
+  elif doc.type in ['Memorandum of Points & Authorities', 'Request for Judicial Notice', 'Index of Exhibits', 'Separate Statement']:
+    doc.proposed_title = doc.type + ' ' + title_case(doc.support_oppose_string_for_title)
+  else:
+    doc.proposed_title = doc.type + ' ' + title_case(doc.support_oppose_string_for_title)
+---
+depends on: version
+code: |
+  doc.title_full = doc.proposed_title if defined('doc.wants_proposed_title') else doc.custom_title_full
+  
+  update_documents_drafted(doc.title_full)
+  
+  doc.run_title_code_block = True
+---
+depends on: version
+code: |
+  if doc.custom_title_shorthand:
+    doc.footer = doc.custom_title_shorthand
+  else:
+    doc.footer = doc.title_full
+---
+depends on: version
+code: |
+  doc.atty_info_in_caption = True
+---
+id: determine servees
+depends on: version
+code: |
+  if doc.choose_party_servees == 'All Parties':
+    doc.all_servees = parties.complete_elements()
+  elif doc.choose_party_servees is None:
+    doc.all_servees = []
+  else:
+    doc.all_servees = doc.party_servees
+  if doc.nonparties_being_served:
+    doc.all_servees = doc.all_servees + doc.nonparty_servees
+  doc.set_servees = True
+---
+depends on: version
+code: |
+  doc.server_address = g.author[0].address.on_one_line() if doc.pick_server == 'Me' else '1234 Main Street, Honolulu, HI 20347'
+---
+depends on: version
+code: |
+  methods[i].list_of_challenged_response_numbers = [number for number in methods[i].ncr]
+  methods[i].number_of_challenged_responses = len(methods[i].list_of_challenged_response_numbers)
+---
+depends on: version
+code: |
+  methods[i].number_of_extensions_granted = len(methods[i].response_deadline_extensions)
+---
+depends on: version
+code: |
+  case.nonbreaking_case_number = case.number.replace('-', '\u2011')
+---
+depends on: version
+code: |
+  generate_separate_statement = True if doc.type == "Separate Statement" or showifdef('mc_ltr.include_separate_statement') else False
+---
+depends on: version
+code: |
+  doc.letter_address_block = f"{addressee.name.full()}"
+  
+  if showifdef('addressee.law_firm'):
+    doc.letter_address_block += f"\n{addressee.law_firm.upper()}"
+  
+  doc.letter_address_block += f"\n{addressee.address.line_one()}\n{addressee.address.line_two()}"
+  
+  if 'Email' in addressee_service_methods:
+    doc.letter_address_block += f"\n{addressee.email}"
+  
+    if addressee.add_second_email:
+      doc.letter_address_block += f"\n{addressee.second_email}\n({addressee.second_email_recipient})"
+  
+  doc.set_letter_address_blocks = True
+---
+if: showifdef('mc_ltr.include_separate_statement')
+depends on: version
+code: |
+  doc.has_hrg = True
+  doc.hrg_is_tbd = True
+  hrg.dept_is_tbd = True
+  hrg.judge_is_tbd = True
+  hrg.reservation_number = 'TBD'
+  hrg.appearance = 'in_person'
+  doc.support_oppose = 'in support of'
+  doc.lm_proceeding_title = f"Motion to Compel Further Responses to {methods[0].full_method}, Set No. {methods[0].set_no}"
+  doc.lm_proceeding_title_short = 'Motion'
+  doc.lm_proceeding_movant = methods[0].propounding_parties
+  doc.proposed_title = f"Separate Statement of Items in Dispute {title_case(doc.support_oppose_string_for_title)}"
+  doc.wants_proposed_title = True
+  doc.custom_title_full = doc.proposed_title
+  doc.custom_title_shorthand = ''
+  letter_encloses_things = True
+  letter_attachment_choice = 'include_enclosure_line'
+  enclosure_list = 'Separate Statement of Items in Dispute'
+  special_rules = True
+  set_special_rules_for_included_separate_statement = True
+---
+################################ TROUBLESHOOTING CODE ################################
+---
+depends on: version
+question: troubleshoot methods
+subquestion: |
+  choose_methods.true_values() is:[BR]
+  ${ choose_methods.true_values() }
+  Methods elements is: [BR]
+  ${ methods.elements }
+continue button field: troubleshoot_methods
+---
+id: troubleshoot letter address block
+depends on: version
+question: troubleshoot letter address block
+subquestion: |
+  The addressee is:[BR]
+  ${ addressee } whose instanceName is: ${ addressee.instanceName }[BR]
+  and whose address is ${ addressee.address.block() }
+  The letter_address_block is:[BR]
+  ${ doc.letter_address_block }
+continue button field: troubleshoot_letter_address_block
+---
+id: troubleshoot responding parties short ref
+depends on: version
+question: troubleshoot rp short ref
+subquestion: |
+  'methods[0].responding_parties' is:[BR]
+  ${ methods[0].responding_parties } whose repr is ${ repr(methods[0].responding_parties) }, whose instanceName is: ${ methods[0].responding_parties.instanceName }, whose short name is: 
+
+  [BR][BR]
+  'methods[0].responding_parties[0]' is:[BR]
+  ${ methods[0].responding_parties[0] } whose repr is ${ repr(methods[0].responding_parties[0]) }, whose instanceName is: ${ methods[0].responding_parties[0].instanceName }, whose short name is: ${ methods[0].responding_parties[0].short_name }
+  [BR][BR]
+  
+#${ methods[0].responding_parties.gender } and whose short_ref is:
+# ${ methods[i].responding_parties[0].short_name }
+# ${ methods[0].responding_parties_short_ref }[BR]
+continue button field: troubleshoot_short_ref
+---
+id: troubleshoot all servees
+question: troubleshoot all_servees
+subquestion: |
+  doc.all_servees is :[BR]
+  ${ doc.all_servees }[BR]
+  parties.complete_elements() is :[BR]
+  ${ repr(parties.complete_elements()) }[BR]
+  doc.all_servees + doc.nonparty_servees is:[BR]
+#  ${ doc.all_servees.append([element for element in doc.nonparty_servees]) }
+continue button field: troubleshoot_all_servees
+---
+id: troubleshoot service blocks
+depends on: version
+question: troubleshoot service blocks
+subquestion: |
+  **${ repr(build_service_address_block(parties_plus_nonparties_sorted_list)) }**
+  [BR][BR]
+  **${ build_service_address_block(parties_plus_nonparties_sorted_list) }**
+  [BR][BR]
+  ${ test_string }
+  [BR][BR]
+  ${ repr(test_string) }
+  [BR][BR]
+  ${ verbatim(test_string) }
+  [BR][BR]
+  ${ verbatim(repr(test_string)) }
+continue button field: troubleshoot_service_blocks
+---
+code: |
+  case.service_blocks = build_service_address_block(parties_plus_nonparties_sorted_list)
+---
+code: |
+  test_string = r'texttext      texttext'

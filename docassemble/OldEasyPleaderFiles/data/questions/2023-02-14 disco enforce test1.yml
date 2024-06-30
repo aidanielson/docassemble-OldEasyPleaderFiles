@@ -1,0 +1,94 @@
+mandatory: True
+code: |
+  disco.type
+  disco.propounder
+  option
+  rogs_number_propounded
+---
+objects:
+  - disco: DAObject
+  - fruit: DADict.using(there_are_any = True)
+---
+question: |
+  What type of discovery are you enforcing?
+fields:
+  - Choose specific discovery type: disco.type
+    input type: radio
+    choices:
+      - General Form Interrogatories
+      - Special Interrogatories
+      - Requests for Admission
+      - Requests for Production
+      - Supplemental Discovery
+  - What Set Number?: disco.set_no
+    input type: combobox
+    choices: 
+      - One
+      - Two
+      - Three
+      - Four
+---
+question: |
+  Propounder & Responder
+fields:
+  - Select propounding party(ies): disco.propounder
+    datatype: checkboxes
+    choices:
+      - X
+      - Y
+      - Z
+  - Select responding party(ies): disco.responder
+    datatype: checkboxes
+    choices:
+      - A
+      - B
+      - C
+---
+question: |
+  Options
+fields:
+  - Here's an option choice: option
+    datatype: yesnoradio
+---
+question: |
+  Interrogatories
+subquestion: |
+  Interrogatory Info
+fields:
+  - How many did you propound?: rogs_number_propounded
+    datatype: integer
+---
+question: |
+  Enter information on the noncompliant interrogatories.
+fields:
+  - Interrogatory Number: fruit.new_item_name
+    datatype: integer
+  - Verbatim Interrogatory: fruit.verbatim_interrogatory
+    input type: area
+  - Verbatim Response: fruit.verbatim_response
+    input type: area
+  - Select how the response is noncompliant: fruit.noncompliant_grounds
+    datatype: checkboxes
+    choices:
+      - evasive or incomplete
+      - fails to set forth foundational facts establishing privilege and omits privilege log
+      - fails to identify offending verbiage/passage or else how it is vague, ambiguous, or overbroad
+      - fails to answer nonobjectionable portion of interrogatory
+      - deliberately misinterprets the interrogatories plain meaning
+      - fails to set forth whether RP has any present knowledge
+      - evinces a lack of inquiry
+      - requests information plainly in the responders possession
+---
+question: |
+  So far, you've indicated that Responding Party has failed to properly respond to interrogatories nos. **${ fruit }**.  Are there any others?
+yesno: fruit.there_is_another
+---
+mandatory: True
+question: |
+  There are ${ fruit.number_as_word() }
+  noncompliant responses in all.
+subquestion: |
+  % for item in fruit:
+  The fruit ${ item } has
+  ${ fruit[item] } seeds.
+  % endfor

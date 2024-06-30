@@ -1,0 +1,109 @@
+include:
+  - docassemble.AssemblyLine:al_package.yml
+---
+mandatory: True
+code: | 
+  parties.gather()
+  parties_review
+  end_screen
+---
+objects: 
+  - parties: ALPeopleList.using(there_are_any=True, there_is_another=False, complete_attribute='complete')
+  - parties[i].attorneys: ALPeopleList.using(there_are_any=parties[i].represented, complete_attribute='complete')
+---
+code: |
+  parties[i].name.first
+  parties[i].represented
+  if parties[i].represented:
+    parties[i].attorneys.gather()
+  else:
+    parties[i].address.address
+    parties[i].phone_number
+    parties[i].email
+  parties[i].complete = True
+---
+code: |
+  parties[i].attorneys[j].name.first
+  parties[i].attorneys[j].address.address
+  parties[i].attorneys[j].phone_number
+  parties[i].attorneys[j].email
+  parties[i].attorneys[j].complete = True
+---
+sets:
+  - parties[i].name.first
+  - parties[i].name.last
+question: Create Party Database
+subquestion: |
+  [CENTER]**Party Name, Role & Representation**[BR][BR]
+fields:
+  - Party Litigant Role: parties[i].role
+    choices:
+      - Plaintiff
+      - Defendant
+      - Intervenor
+      - Real-Party-In-Interest
+  - code: parties[i].name_fields(person_or_business=None)
+  - Is represented?: parties[i].represented
+    datatype: yesno
+---
+sets:
+  - x[i].address.address
+generic object: ALIndividual
+question: Enter Contact Info
+fields:
+  - code: x[i].address_fields()
+  - Email: x[i].email
+---
+generic object: ALIndividual
+question: xxx
+fields:
+  - Phone: x.phone_number
+    validate: |
+      lambda y: phone_number_is_valid(y) or validation_error("Please enter a valid, 10-digit phone number.")
+---
+question: |
+  Party Review
+subquestion: |
+    So far, you've entered ${ parties.number_as_word() } parties:
+    
+    ${ parties.table }
+    
+    ${ parties.add_action() }
+continue button field: parties_review
+---
+table: parties.table
+rows: parties
+columns:
+  - Party: |
+      row_item.role
+  - Name: |
+      row_item.name.full()
+  - Attorney: |
+      row_item.attorneys[0].name.full() if row_item.represented else 'unrepresented'
+  - Service Address: |
+      row_item.attorneys[0].address.block() if row_item.represented else row_item.address.block()
+edit:
+  - role
+  - name.first
+allow reordering: True
+---
+event: end_screen
+question: |
+  xxx
+subquestion: |
+  % for party in parties:
+  * ${ party.role } **${ party }** lives at: 
+  % if not party.represented:
+  ${ party.address.on_one_line() }
+  xxxxx
+  % endif
+  % if party.represented:
+  % for attorney in party.attorneys:
+  * They are represented by attorney ${ attorney } who can be served at:
+  
+  ${ attorney.address.block() }
+  Phone: ${ phone_number_formatted(attorney.phone_number) } .
+  
+  % endfor
+  % endif
+  % endfor

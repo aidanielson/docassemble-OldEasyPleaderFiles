@@ -1,0 +1,151 @@
+mandatory: True
+code: |
+  parties.gather()
+  oldest_person
+  interim_party_list
+  opposing_parties
+  all_unique_people_updated
+  final_screen
+---
+objects:
+  parties: DAList.using(object_type=Individual, there_are_any=True, complete_attribute='complete')
+  parties[i].lawyers: DAList.using(object_type=Individual)
+  oldest_person: Individual
+  opposing_parties: DAList.using(object_type=Individual)
+  lawyer_list: DAList.using(object_type=Individual, gathered=True)
+  all_unique_people: DASet.using(auto_gather=False, gathered=True)
+---
+code: |
+  parties[i].name.first
+  if parties[i].lawyers.there_are_any:
+    parties[i].lawyers.gather()
+  parties[i].complete = True
+---    
+question: Parties
+fields:
+  - First Name: parties[i].name.first
+  - Last Name: parties[i].name.last
+  - Role: parties[i].role
+    datatype: radio
+    choices:
+      - Plaintiff
+      - Defendant
+      - Cross-Defendant
+  - Represented by counsel?: parties[i].lawyers.there_are_any
+    datatype: yesno
+---
+question: Add another party?
+yesno: parties.there_is_another
+---
+question: ${ parties[i] }'s Lawyer(s)
+fields: 
+  - An ***Existing*** Lawyer: parties[i].lawyers[j]
+    datatype: object
+    choices: lawyer_list
+    disable others: True
+    exclude: parties[i].lawyers
+    show if: 
+      code: |
+        len(lawyer_list) > 0
+  - First Name: parties[i].lawyers[j].name.first
+  - Last Name: parties[i].lawyers[j].name.last
+validation code: |
+  if parties[i].lawyers[j] not in lawyer_list:
+    lawyer_list.append(parties[i].lawyers[j])
+    lawyer_list.sort(key=lambda y: y.name.last)
+---
+question: Does ${ parties[i] } have another lawyer?
+yesno: parties[i].lawyers.there_is_another
+---
+question: Who is the oldest party?
+fields:
+  - An ***Existing*** Party: oldest_person
+    datatype: object
+    choices: parties
+    disable others: True
+  - First Name: oldest_person.name.first
+  - Last Name: oldest_person.name.last
+#  - Age: oldest_person.age
+#    datatype: integer
+validation code: |
+  if oldest_person not in parties:
+    parties.appendObject()
+    parties[-1].name.first = oldest_person.name.first
+    parties[-1].name.last = oldest_person.name.last
+---
+question: Interim List of All Entered Parties
+subquestion: |
+  % for party in parties:
+  **${ party }**
+  % endfor
+continue button field: interim_party_list
+---
+question: Who are the parties opposing this filing?
+fields:
+  - Existing Parties: opposing_parties
+    datatype: object_checkboxes
+    choices: parties
+#  - First Name: opposing_parties.name
+#    show if:
+#      variable: opposing_parties
+#      is: null
+#  - Last Name: opposing_parties.name.last
+#   show if:
+#     variable: opposing_parties
+#     is: null
+#  - Some Variable: opposing_parties.some_variable
+---
+#code: |
+#  opposing_parties = DAList('opposing_parties', object_type=Individual)
+---
+code: |
+  combined_all_people = DAList('combined_all_people', auto_gather=False, gathered=True)
+  combined_all_people.extend(parties)
+  combined_all_people.extend(lawyer_list)
+  all_unique_people_updated = True
+#  combined_all_people = parties + lawyer_list
+#  all_unique_people.add(combined_all_people)
+---
+event: final_screen
+question: |
+  ***Party List***
+  
+  % for party in parties:
+  1. ${ party }
+  % endfor
+  
+  ***Lawyer List***
+  
+  % for lawyer in lawyer_list:
+  1. ${ lawyer }
+  % endfor
+  
+  ***Combined Party/Lawyer List***
+  [BR][BR] 
+  % for party in parties:
+  ${ party.role } ${ party }
+    % if party.lawyers.there_are_any:
+    is represented by:
+    [BR]  
+      % for lawyer in party.lawyers:
+      ${ lawyer }
+      [BR]
+      % endfor
+    % endif
+  [BR]
+  % endfor
+  [BR]
+  ***Oldest Party***
+  [BR][BR]
+  ${ oldest_person }
+  [BR][BR]
+  ***All Human Beings (Party or not)***
+  % for human in all_unique_people:
+  1. ${ human }
+  % endfor
+  [BR][BR]
+  ***'combined_all_people'***
+  
+  % for person in combined_all_people:
+  1. ${ person }
+  % endfor

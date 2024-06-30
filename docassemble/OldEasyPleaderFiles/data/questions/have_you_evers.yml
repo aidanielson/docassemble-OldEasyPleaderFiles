@@ -1,0 +1,474 @@
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+  - limited_scope_questions.yml
+  - screeners.yml
+  - aiw.yml
+  - combined_application_questions.yml
+---
+metadata:
+  title: >-
+    DHS Application for EAD or TPS
+  short title: >-
+    Apply for EAD or TPS
+  description: |-
+    This interview helps someone in Illinois apply to the DHS for an Employment Authorization Document (EAD) or Temporary Protected Status (TPS).
+  tags:
+    - "IM-00-00-00-00"
+  authors:
+    - Quinten Steenhuis
+    - Anthony Danielson
+  allowed_courts: []
+  typical_role: "na"
+  al_weaver_version: "playground"
+  generated_on: "2024-02-04"
+---
+code: |
+  # This controls the default country and list of states in address field questions
+  AL_DEFAULT_COUNTRY = "US"
+---
+code: |
+  # This controls the default state in address field questions
+  AL_DEFAULT_STATE = "IL"
+---
+code: |
+  github_repo_name =  'docassemble-USCISApplications'
+---
+code: |
+  interview_short_title = "Apply for EAD or TPS"
+---
+code: |
+  al_form_type = "other_form"
+---
+features:
+  progress bar: True
+  progress bar multiplier: 0.01
+---
+code: |
+  nav.set_sections(default_sections)
+  set_initial_sections = True
+---
+#################### Interview order #####################
+id: interview_order_main
+mandatory: True
+code: |
+  set_initial_sections
+  intro_main
+  preparer.name.first
+  if interpreter_present:
+    interpreter.name.first
+  users.gather()
+  review_initial_user_list
+  nav.set_section("section_retainer")
+  interview_order_limited_scope
+  set_progress(10)
+  for user in users:
+    user.signature
+  nav.set_section("section_screener")
+  application_kind
+  signpost_screener
+  if len(users) > 1:
+    update_sections
+  for idx, user in enumerate(users):
+    nav.set_section(f"users_{idx}_signpost_screen")
+    if application_kind == "ead_only":
+      user.ead_screening_questions
+      user.review_ead_screening_questions
+    else:
+      user.tps_screening_questions
+      user.review_tps_screening_questions
+    # user.applicant_intake_worksheet_questions
+    set_progress((80/len(users.complete_elements())) * (idx + 1) + 10 )
+    # Trigger the more detailed questions on a per-user basis
+  for idx,user in enumerate(users):
+    nav.set_section(f"users_{idx}_signpost_app")
+    user.signpost
+    user.complete
+  store_variables_snapshot(
+      persistent=True,
+      data={
+          "application_kind": application_kind,
+          "zip": showifdef("users[0].address.zip"),
+          "reached_interview_end": True,
+      },
+  )  
+  download_completed_ea_application
+---
+variable name: default_sections
+data:
+  - section_family: Applicant names
+  - section_retainer: Limited Retainer
+  - section_screener: Verify eligibility
+  - section_application: Application
+  - review_USCIS_Applications: Review your answers    
+  - section_download: Download and print
+---
+code: |
+  if len(users) > 1:
+    sections = default_sections[:-4]
+    for idx, user in enumerate(users):
+      sections.append({f"users_{idx}_signpost_screen": f"Eligibility for {user}"})
+    for idx, user in enumerate(users):
+      sections.append({f"users_{idx}_signpost_app": f"Application for {user}"})
+    sections.extend(default_sections[-2:]
+    )
+    nav.set_sections(sections)
+  update_sections = True
+---
+id: signpost_screener
+question: |
+  Legal screener
+subquestion: |
+  Before you start the application, we will check that ${ users }
+  % if len(users) > 1:
+  are all eligible to apply.
+  % else:
+  is eligible to apply.
+  % endif  
+continue button field: signpost_screener
+---
+id: interpreter_present
+question: |
+  Is an interpreter present?
+fields:
+  - Is an interpreter present?: interpreter_present
+    datatype: yesnoradio
+  - What language will the interpreter speak?: interpreter.language
+    show if: interpreter_present
+    datatype: combobox
+    choices:
+      - Spanish
+      - Arabic
+      - Chinese
+      - French
+      - Haitian Creole
+      - Korean
+      - Polish
+      - Portuguese
+      - Russian
+      - Tagalog
+      - Vietnamese
+  - note: |
+      <h2 class="h4">Interpreter's Name</h2>
+    show if: interpreter_present
+  - code: |
+      interpreter.name_fields(person_or_business="person", show_if="interpreter_present")
+---
+id: intro_main
+question: |
+  Let's get started
+subquestion: |
+
+  This interview will help you complete employment authorization
+  paperwork for a family group.
+
+  <h2 class="h4">Overview</h2>
+
+  You will work through the following sections:
+
+  1. Gather names
+  2. Complete the limited scope retainer
+  3. Verify eligibility
+  4. Complete the application, for the I-765 or the I-821 or both
+  5. Review your work
+  6. Download and print your work. You will get a separate
+      set of documents for each person in the family group.
+continue button field: intro_main
+---
+continue button field: users[i].signpost
+question: |
+  The next questions are about ${ bold(users[i]) }
+subquestion: |
+  We will cover 
+  % if application_kind == "ead_only":
+  EAD application questions.
+  % else:
+  TPS and EAD application questions.
+  % endif
+
+  % if i + 1 == len(users):
+  This is set of questions is for the **last** member of this family group.
+
+  When you're done with the questions for ${ bold(users[i]) }, you'll be able to review your answers and download the completed application.
+  % else:
+  This is set of questions is for the ${ ordinal(i) } family member of ${ len(users) }.
+
+  When you're done with the questions for ${ bold(users[i]) }, you'll be able to move on to the next person in the family group.
+  % endif
+---
+sets:
+  - preparer.name.first
+id: supervisor name
+question: |
+  What is the name of the volunteer or person asking questions today?
+fields:
+  - code: preparer.name_fields(person_or_business="person")
+---
+code: |
+  if user_logged_in():
+    preparer.name.first = user_info().first_name
+    preparer.name.last = user_info().last_name
+    preparer.email = user_info().email
+---
+id: people
+question: |
+  How many people are applying for work authorization at this station?
+subquestion: |
+  Get the names of all people who have a **family relationship** and are here
+  to get work authorization together today. For example: siblings, aunts, 
+  uncles, parents, children, and spouses.
+
+  Please complete a separate interview for each person who is not in 
+  a family relationship with the others.
+
+fields:
+  - How many?: users.target_number
+    datatype: integer
+  - note: |
+      <h2 class="h4">Name of the head of household</h2>
+  - First name: users[0].name.first
+  - Middle name: users[0].name.middle
+    required: False
+  - Last name: users[0].name.last
+  # - Suffix: users[0].name.suffix
+  #   required: False
+  #   datatype: combobox
+  #   code: |
+  #     name_suffix()
+  - Country of Birth: users[0].country_of_birth
+    datatype: combobox
+    code: |
+      uscis_countries_list()
+  - Birthdate: users[0].birthdate
+    datatype: Birthdate
+  - A Number: users[0].a_number
+    required: False
+  - note: |
+      <h2 class="h4">We'll get the name of the remaining applicants on the next screen</h2>
+    js show if: |
+      val("users.target_number") > 1
+right: |
+  % if user_logged_in():
+  <div class="alert alert-info">
+  <h2 class="h4">Is this ${ user_info().first_name }?</h2>
+  <p>If not, please <a href="${ url_of('logout') }">log out</a> and log back in as the correct person.</p>
+  </div>
+  % endif
+---
+sets:
+  - users[i].name.first
+id: add another applicant
+question: |
+  What is the name of the ${ ordinal(i) } applicant?
+subquestion: |
+  % if len(users.complete_elements()) == 1:
+  You can give the names in any order, but you may want
+  to start with the second oldest applicant.
+  % endif
+
+  So far you have named ${ bold(users.complete_elements()) }.
+fields:
+  - code: |
+      users[i].name_fields(person_or_business="person")
+  - Country of Birth: users[i].country_of_birth
+    datatype: combobox
+    code: |
+      uscis_countries_list()
+    default: |
+      ${ users[0].country_of_birth }
+  - Birthdate: users[i].birthdate
+    datatype: Birthdate
+  - A Number: users[i].a_number
+    required: False
+---
+table: users.initial_review_table
+rows: users
+columns:
+  - Name: |
+      row_item
+edit:
+  - name.first
+confirm: True
+---
+id: review_initial_user_list
+question: |
+  OK, we'll make documents for the following people
+subquestion: |
+  ${ users.initial_review_table }
+
+  ${ users.add_action() }
+
+  On the next screen, we'll review the limited scope retainer.
+continue button field: review_initial_user_list
+---
+id: signatures for users i
+question: |
+  ${ users[i].name.first }, please sign here to agree / firma aqui para aceptar
+signature: users[i].signature
+under: |
+  ${ users[i] }
+required: False
+---
+id: kind of interview
+question: |
+  What kind of application will this family complete?
+field: application_kind
+buttons:
+  - TPS and EAD: ead_and_tps
+    image: shield-halved
+  - EAD only: ead_only
+    image: briefcase
+---
+id: download_completed_ea_application
+event: download_completed_ea_application
+question: |
+  Download the completed application
+subquestion: |
+  % for user in users:
+  <h2 class="h4">${ user.name.first }'s application</h2>
+
+  ${ user.document_bundle.download_list_html() }
+  ${ action_button_html(user.document_bundle.as_pdf().url_for(), label=f"Download { user}'s application as PDF", icon="file-pdf") }
+  % endfor
+---
+objects:
+  - users[i].military_service_addendum: ALDocument.using(title=f"{users[i]} - Military Service Addendum", filename=space_to_underscore(f"{users[i]} - Military Service Addendum"), has_addendum=False)
+  - users[i].transit_through_ca_addendum: ALDocument.using(title=f"{users[i]} - Transit Through Central America Addendum", filename=space_to_underscore(f"{users[i]} - Transit Through Central America Addendum"), has_addendum=False)
+  - users[i].child_venezuelan_nationals_addendum: ALDocument.using(title=f"{users[i]} - Child of Venezuelan Nationals Addendum", filename=space_to_underscore(f"{users[i]} - Child of Venezuelan Nationals Addendum"), has_addendum=False)
+  - users[i].smuggling_addendum: ALDocument.using(title=f"{users[i]} - Smuggling Addendum", filename=space_to_underscore(f"{users[i]} - Smuggling Addendum"), has_addendum=False)
+  - users[i].continuous_residence_addendum: ALDocument.using(title=f"{users[i]} - Affidavit of Continuous Residence Addendum", filename=space_to_underscore(f"{users[i]} - Affidavit of Continuous Residence Addendum"), has_addendum=False)
+  - users[i].ead_interim_parole_addendum: ALDocument.using(title=f"{users[i]} - EAD Interim Parole Addendum", filename=space_to_underscore(f"{users[i]} - EAD Interim Parole Addendum"), has_addendum=False)
+  - users[i].ead_legal_screener: ALDocument.using(title=f"{users[i]} - EAD Legal Screener", filename=space_to_underscore(f"{users[i]} - EAD Legal Screener"), has_addendum=False)
+  - users[i].tps_legal_screener: ALDocument.using(title=f"{users[i]} - TPS Legal Screener", filename=space_to_underscore(f"{users[i]} - TPS Legal Screener"), has_addendum=False)
+  - users[i].applicant_intake_worksheet: ALDocument.using(title=f"{users[i]} - Applicant Intake Worksheet", filename=space_to_underscore(f"{users[i]} - Applicant Intake Worksheet"), has_addendum=False, enabled=True)
+---
+objects:
+  - al_user_bundle: ALDocumentBundle.using(title="All documents to print and file", filename="all_documents", enabled=True, elements=[])
+  - users[i].document_bundle: ALDocumentBundle.using(title=f"{users[i]} - All documents to print and file", filename=space_to_underscore(f"{users[i]} - all_documents"), enabled=True, elements=[
+        users[i].applicant_intake_worksheet,
+        users[i].i_821_attachment,
+        users[i].ead_legal_screener,
+        users[i].tps_legal_screener,
+        users[i].military_service_addendum,
+        users[i].transit_through_ca_addendum,
+        users[i].child_venezuelan_nationals_addendum,
+        users[i].smuggling_addendum,
+        users[i].continuous_residence_addendum,
+        users[i].ead_interim_parole_addendum,
+      ])
+---
+code: |
+  users[i].military_service_addendum.enabled = users[i].addenda.get("military_service")
+---
+code: |
+  users[i].transit_through_ca_addendum.enabled = users[i].addenda.get("transit_through_ca")
+---
+code: |
+  users[i].child_venezuelan_nationals_addendum.enabled = users[i].addenda.get("child_venezuelan_nationals")
+---
+code: |
+  users[i].smuggling_addendum.enabled = users[i].addenda.get("smuggling")
+---
+code: |
+  users[i].continuous_residence_addendum.enabled = users[i].addenda.get("continuous_residence")
+---
+code: |
+  users[i].ead_interim_parole_addendum.enabled = users[i].addenda.get("ead_interim_parole")
+---
+attachment:
+  variable name: users[i].military_service_addendum[j]
+  name: ${ users[i] } - Military Service Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - Military Service Addendum") }
+  docx template file: TPS_addendum_military_service.docx
+---
+attachment:
+  variable name: users[i].transit_through_ca_addendum[j]
+  name: ${ users[i] } - Transit Through Central America Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - Transit Through Central America Addendum") }
+  docx template file: TPS_addendum_transit.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].child_venezuelan_nationals_addendum[j]
+  name: ${ users[i] } - Child of Venezuelan Nationals Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - Child of Venezuelan Nationals Addendum") }
+  docx template file: TPS_addendum_child_venezuelan_nationality.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].smuggling_addendum[j]
+  name: ${ users[i] } - Smuggling Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - Smuggling Addendum") }
+  docx template file: TPS_addendum_smuggling.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].continuous_residence_addendum[j]
+  name: ${ users[i] } - Affidavit of Continuous Residence Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - Affidavit of Continuous Residence Addendum") }
+  docx template file: TPS_legal_screener.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].ead_interim_parole_addendum[j]
+  name: ${ users[i] } - EAD Interim Parole Addendum
+  filename: ${ space_to_underscore(f"{users[i]} - EAD Interim Parole Addendum") }
+  docx template file: EAD_addendum_interim_parole.docx
+  skip undefined: True
+---
+code: |
+  users[i].ead_legal_screener.enabled = application_kind == "ead_only"
+  users[i].tps_legal_screener.enabled = not application_kind == "ead_only"
+---
+attachment:
+  variable name: users[i].ead_legal_screener[j]
+  name: ${ users[i] } - EAD Legal Screener
+  filename: ${ space_to_underscore(f"{users[i]} - EAD Legal Screener") }
+  docx template file: EAD_legal_screener.docx
+  skip undefined: True
+---
+attachment:
+  variable name: users[i].tps_legal_screener[j]
+  name: ${ users[i] } - TPS Legal Screener
+  filename: ${ space_to_underscore(f"{users[i]} - TPS Legal Screener") }
+  docx template file: TPS_legal_screener.docx
+  skip undefined: True
+---
+code: |
+  def uscis_countries_list():
+    """
+    Returns a list of countries as strings, without the extra verbiage like "Republic of".
+    We tweak the following entries:
+    - "Bolivia, Plurinational State of" becomes "Bolivia"
+    - Venezuela, Bolivarian Republic of becomes "Venezuela"
+    - Congo, the Democratic Republic of the becomes "Congo (D.R.C.)"
+    - Iran, Islamic Republic of becomes "Iran"
+    - Korea, Democratic People's Republic of becomes "North Korea"
+    - Korea, Republic of becomes "South Korea"
+    - Lao People's Democratic Republic becomes "Laos"
+    - Micronesia, Federated States of becomes "Micronesia"
+    - Moldova, Republic of becomes "Moldova"
+    - Palestine, State of becomes "Palestine"
+    - Saint Martin (French part) becomes "Saint Martin"
+    - Sint Maarten (Dutch part) becomes "Sint Maarten"
+    - Taiwan, Province of China becomes "Taiwan"
+    - Tanzania, United Republic of becomes "Tanzania"
+    - Åland Islands becomes "Aland Islands"
+    """
+    country_names = [next(iter(item.values())) for item in countries_list()]
+    country_names[country_names.index("Bolivia, Plurinational State of")] = "Bolivia"
+    country_names[country_names.index("Venezuela, Bolivarian Republic of")] = "Venezuela"
+    country_names[country_names.index("Congo, The Democratic Republic of the")] = "Congo (D.R.C.)"
+    country_names[country_names.index("Iran, Islamic Republic of")] = "Iran"
+    country_names[country_names.index("Korea, Democratic People's Republic of")] = "North Korea"
+    country_names[country_names.index("Korea, Republic of")] = "South Korea"
+    country_names[country_names.index("Lao People's Democratic Republic")] = "Laos"
+    country_names[country_names.index("Micronesia, Federated States of")] = "Micronesia"
+    country_names[country_names.index("Moldova, Republic of")] = "Moldova"
+    country_names[country_names.index("Palestine, State of")] = "Palestine"
+    country_names[country_names.index("Saint Martin (French part)")] = "Saint Martin"
+    country_names[country_names.index("Sint Maarten (Dutch part)")] = "Sint Maarten"
+    country_names[country_names.index("Taiwan, Province of China")] = "Taiwan"
+    country_names[country_names.index("Tanzania, United Republic of")] = "Tanzania"
+    country_names[country_names.index("Åland Islands")] = "Aland Islands"
+
+    return country_names

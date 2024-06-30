@@ -1,0 +1,161 @@
+metadata:
+  title: Protocol Input
+  short title: ProtocolInput.yml
+---
+modules:
+  - docassemble.base.util
+  - yaml
+---
+objects:
+ - protocoloutput: DAObject
+ - protocoloutput.specialpopulation: DAList
+ - protocoloutput.counties: DAList
+ - protocoloutput.opposingparty: DAList
+ - protocoloutput.typeofhousing: DAList
+ - protocoloutput.problem: DAList
+ - protocoloutput.stage: DAList
+ - protocoloutput.court: DAList
+ - protocoloutput.city: DAList
+ - specialpopulation: DASet
+ - counties: DASet
+ - opposingparty: DASet
+ - typeofhousing: DASet
+ - problem: DASet
+ - stage: DASet
+ - court: DASet
+ - city: DASet
+---
+mandatory: True
+code: |
+  counties.gathered = True
+  counties.auto_gather = False
+  opposingparty.gathered = True
+  opposingparty.auto_gather = False
+  typeofhousing.gathered = True
+  typeofhousing.auto_gather = False
+  problem.gathered = True
+  problem.auto_gather = False
+  stage.gathered = True
+  stage.auto_gather = False
+  court.gathered = True
+  court.auto_gather = False
+  city.gathered = True
+  city.auto_gather = False
+  specialpopulation.gathered = True
+  specialpopulation.auto_gather = False
+---
+question: |
+  Protocol Input
+fields:
+  - "Counties": countiesdict
+    datatype: checkboxes
+    code: |
+      countieslist
+  - "Opposing Party": opposingpartydict
+    datatype: checkboxes
+    code: |
+      opposingpartylist
+  - "Type of Housing": typeofhousingdict
+    datatype: checkboxes
+    code: |
+      typeofhousinglist
+  - "Problem": problemdict
+    datatype: checkboxes
+    code: |
+      problemlist
+  - "Stage": stagedict
+    datatype: checkboxes
+    code: |
+      stagelist
+  - "Court": courtdict
+    datatype: checkboxes
+    code: |
+      courtlist
+  - "City": citydict
+    datatype: checkboxes
+    code: |
+      citylist
+  - "Special Population": specialpopulationdict
+    datatype: checkboxes
+    code: |
+      specialpopulationlist
+  - Destination: destination
+  - Name: protocolname
+  - Description: protocoldescription
+---
+mandatory: True
+code: |
+  countieslist = ['Auglaize County', 'Champaign County', 'Clark County', 'Crawford County', 'Darke County', 'Defiance County', 'Erie County', 'Fulton County', 'Greene County', 'Hancock County', 'Hardin County', 'Henry County', 'Huron County', 'Logan County', 'Lucas County', 'Mercer County', 'Miami County', 'Montgomery County', 'Ottawa County', 'Paulding County', 'Preble County', 'Putnam County', 'Richland County', 'Sandusky County', 'Seneca County', 'Shelby County', 'Van Wert County', 'Williams County', 'Wood County', 'Wyandot County']
+---
+mandatory: True
+code: |
+  opposingpartylist = []
+---
+mandatory: True
+code: |
+  typeofhousinglist = ['A1','A2','A3','A4','A5','A6','A7','A8','A9']
+---
+mandatory: True
+code: |
+  problemlist = ['Eviction', 'Lockout', 'Utility Shutoff', 'Voucher or Subsidy Termination', 'Denied admission', 'Conditions', 'Return of security deposits', 'Early lease termination']
+---
+mandatory: True
+code: |
+  stagelist = ['Received Court Papers', 'Hearing More Than 2 Business Days', 'Received Notice Less Than 10 Days Ago', 'No hearings or deadlines within 60 days', 'Received Court Papers and Hearing More Than 7 Days', 'Decision',]
+---
+mandatory: True
+code: |
+  courtlist = ['Toledo Municipal Court', 'Sylvania Municipal Court', 'Oregon Municipal Court', 'Maumee Municipal Court']
+---
+mandatory: True
+code: |
+  citylist = ['Toledo']
+---
+mandatory: True
+code: |
+  specialpopulationlist = ['Veteran', 'Active Duty', 'Senior 60plus', 'Senior in Household', 'Disability determination', 'Self identified disability', 'Domestic Violence Victim', 'Child under 12 in household', 'Receives Public Benefits']
+---
+mandatory: True
+code: |
+  for k,v in countiesdict.iteritems():
+    if v:
+      counties.add(k)
+  for k,v in opposingpartydict.iteritems():
+    if v:
+      opposingparty.add(k)
+  for k,v in typeofhousingdict.iteritems():
+    if v:
+      typeofhousing.add(k)
+  for k,v in problemdict.iteritems():
+    if v:
+      problem.add(k)
+  for k,v in stagedict.iteritems():
+    if v:
+      stage.add(k)
+  for k,v in courtdict.iteritems():
+    if v:
+      court.add(k)
+  for k,v in citydict.iteritems():
+    if v:
+      city.add(k)
+  for k,v in specialpopulationdict.iteritems():
+    if v:
+      specialpopulation.add(k)
+---
+mandatory: True
+code: |
+  protocoloutput.specialpopulation = list(specialpopulation)
+  protocoloutput.counties = list(counties)
+  protocoloutput.opposingparty = list(opposingparty)
+  protocoloutput.typeofhousing = list(typeofhousing)
+  protocoloutput.problem = list(problem)
+  protocoloutput.stage = list(stage)
+  protocoloutput.court = list(court)
+  protocoloutput.city = list(city)
+---
+mandatory: True
+question: |
+  The variables in the dictionary are:
+    
+  `${ all_variables() }`
+---

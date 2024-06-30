@@ -1,0 +1,86 @@
+mandatory: True
+code: |
+  responses.wants_sanctions_yes
+  responses.sanctions_types
+  now_what
+  user_tdk
+  user_approves
+---
+objects:
+  responses: Thing
+---
+id: responses options
+question: |
+  xxx
+fields:
+  - Has there been a prior discovery dispute?: responses.prior_dispute_yes
+    datatype: yesnoradio
+  - Do you want to seek sanctions for discovery misuse/abuse?: responses.wants_sanctions_yes
+    datatype: yesnoradio
+---
+id: sanctions
+question: |
+  Sanctions
+subquestion: |
+  Enter information about your sanctions request.
+fields:
+  - Select the type(s) of sanctions you are seeking: responses.sanctions_types
+    datatype: checkboxes
+    choices:
+      - Monetary (Money) Sanctions
+      - Evidentiary/Issue Sanctions
+      - Terminating Sanctions
+      - Other (Specify)
+  - Describe the nature of the sanctions you're seeking: responses.sanctions_types_other
+    show if: 
+      variable: responses.sanctions_types['Other (Specify)']
+      is: True
+---
+id: monetary sanctions
+question: |
+  Monetary Sanctions
+subquestion: |
+  Enter info about your monetary sanctions request.
+fields:
+  - note: |
+      How many hours did you expend on efforts from initial review of the responses, all the way through the hearing on the motion?
+  - Hours expended pre-motion (review of responses and meet-and-confer proceedings)?: responses.sanctions_hours_expended_pre_motion
+    datatype: number
+  - Hours expended from commencement of motion preparation to now: responses.sanctions_hours_expended_motion_to_now
+    datatype: number
+  - Hours *to be* expended from now through hearing on the motion: responses.sanctions_hours_expended_in_future
+    datatype: number
+  - What's your claimed hourly rate?: responses.sanctions_hourly_rate
+    datatype: number
+---
+question: |
+  Monetary Sanctions Amount
+subquestion: |
+  You expended ${ responses.sanctions_hours_total } hours, times ${ currency(responses.sanctions_hourly_rate) } per hour, which totals ${ currency(responses.sanctions_monetary_fee_amount) }.
+yesno: user_tdk
+---
+code: |
+  responses.sanctions_hours_total = (responses.sanctions_hours_expended_pre_motion + responses.sanctions_hours_expended_motion_to_now + responses.sanctions_hours_expended_in_future)
+---
+code: |
+  responses.sanctions_monetary_fee_amount = (responses.sanctions_hours_total * responses.sanctions_hourly_rate)
+---
+question: |
+  You are asking for ${ comma_and_list(responses.sanctions_types.true_values()) } sanctions.
+fields:
+  - Now what?: now_what
+---
+id: docx template
+question: |
+  Here is your document.
+subquestion: |
+  The current date is ${ today(format='yyyy-MM-dd') } xxxxx.
+  Does it meet your approval?
+yesno: user_approves
+attachment:
+  name: Sanctions
+  filename: ${ today(format='yyyy-MM-dd') } REQ For SANC
+  docx template file: sanctions_template.docx
+  valid formats:
+    - pdf
+    - docx

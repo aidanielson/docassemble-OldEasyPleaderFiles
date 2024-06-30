@@ -1,0 +1,800 @@
+include:
+  - docassemble.AssemblyLine:assembly_line_unstyled.yml
+  - docassemble.ALToolbox:multiselect.yml
+  - docassemble.playground1:exhibits.yml
+---
+features: 
+  progress bar: False
+  #centered: False
+  #wide side by side: True
+---
+imports:
+  - base64
+---
+modules:
+  - .load_data
+  - .courts_works
+  - .biz_days
+---
+code: |
+  set_parts(title='EasyPleader', logo='<img src="' + company_logo.url_for() + '" style="height: 65px; width: 280px;">')
+  aid_not_author
+  if aid_not_author:
+    author.gather()
+  else:
+    set_aid_author
+  parties.prepopulated
+  clients.gather()
+  clients.gathered = True
+  parties.gather()
+  parties.gathered = True
+  conduct_data_intake = True
+---
+objects:
+  - company_logo: DAStaticFile.using(filename='EP_Logo_White.png')
+  - aid_signature: DAStaticFile.using(filename='AID_PDF_Sig.png')
+  - author: ALPeopleList.using(object_type=ALIndividual, there_are_any=True, there_is_another=False, complete_attribute=['law_firm', 'address.address'])
+  - clients: ALPeopleList.using(object_type=ALIndividual, auto_gather=False, complete_attribute='complete')
+  - parties: ALPeopleList.using(object_type=ALIndividual, auto_gather=False, complete_attribute='complete')
+  - parties[i].lawyers: ALPeopleList.using(object_type=ALIndividual, complete_attribute='address.address')
+  - lawyer_list: ALPeopleList.using(object_type=ALIndividual, gathered=True)
+  - nonparties: ALPeopleList.using(object_type=ALIndividual)
+  - server: ALPeopleList.using(object_type=ALIndividual)
+  - combined_all_people: ALPeopleList.using(auto_gather=False, gathered=True)
+  - everyone: DASet.using(auto_gather=False, gathered=True)
+  - all_parties: DASet.using(auto_gather=False, gathered=True)
+  - party_servees: ALPeopleList.using(object_type=ALIndividual, auto_gather=False, gathered=True)
+---
+generic object: ALPeopleList
+code: |
+  x[i].name.first
+  if 'clients' not in x.instanceName:
+    if x[i].lawyers.there_are_any:
+      x[i].lawyers.gather()
+    else:
+      x[i].address.address
+  else:
+    x[i].address.address
+  x[i].process_name_code_block
+  x[i].complete = True
+---
+#id: all_servees gethered block
+#code: |
+#  for servee in all_servees:
+#    servee.service_methods
+#  all_servees.gathered = True
+---
+id: intro screen
+question: Welcome to *Easy*Pleader.[BR][BR]Polished pleadings... Less hassle.[BR][BR]
+continue button field: welcome_screen
+---
+id: set aid as author
+if: not aid_not_author
+code: |
+  author[0].name.first = "Anthony"
+  author[0].name.middle = "I"
+  author[0].name.last = "Danielson"
+  author[0].law_firm = "Danielson Kim Law Group, P.C."
+  author[0].law_firm_role = "managing partner of"
+  author[0].bar_state = "CA"
+  author[0].bar_number = "285576"
+  author[0].address.address = "5170 Golden Foothill Parkway"
+  author[0].address.city = "El Dorado Hills"
+  author[0].address.state = "CA"
+  author[0].address.zip = "95762"
+  author[0].phone_number = "(916) 520-3977"
+  author[0].fax_number = "(916) 543-1601"
+  author[0].email = "Anthony@DanielsonKim.com"
+  author.gathered = True
+  set_aid_author = True
+---
+variable name: party_role_list
+data:
+  - Plaintiff
+  - Defendant
+  - Petitioner
+  - Respondent
+  - Court-Appointed Receiver
+  - Proposed Court-Appointed Receiver
+  - Claimant
+  - Real-Party-in-Interest
+  - Judgment Creditor
+  - Assignee & Judgment Creditor
+  - Judgment Debtor
+  - Appellant
+  - Appellee
+  - Conservator
+  - Conservatee
+---
+variable name: nonparty_role_list
+data:
+  - Process Server
+  - Court Filing Vendor
+  - Civil Filing Clerk
+  - Fact Witness
+  - Expert Witness
+  - Court Reporter
+  - Interpreter
+  - eService Vendor
+  - Courtroom Deputy
+  - Levying Officer
+  - Judge
+  - Garnishee
+---
+variable name: short_filename_acronyms
+data:
+  Memorandum of Points & Authorities: 'MPA'
+  Declaration: 'DECL'
+  Request for Judicial Notice: 'RJN'
+  Proposed Order: 'PROPORD'
+  Notice of Motion and Motion: 'NOMM'
+  Index of Exhibits: 'INX EXH'
+  Proof of Service: 'POS'
+  Separate Statement: 'SEP STMT'
+---
+variable name: service_method_dict
+data:
+  U.S. Mail: "I enclosed the documents in a sealed envelope or package addressed to the person or persons below and placed the envelope for collection and mailing, following our ordinary business practices. I am readily familiar with this
+business's practice for collecting and processing correspondence for mailing. On the same day that correspondence is placed for collection and mailing, it is deposited in the ordinary course of business with the United States Postal Service, in a sealed envelope with postage fully prepaid."
+  Certified Mail: 'xxxxx'
+  Overnight Delivery: 'xxxxx'
+  Email: 'xxxxx'
+  Fax: 'xxxxx'
+  Personal: 'xxxxx'
+---
+id: backup code to set parties.prepopulated if debug_mode is False and no prepopulation
+code: |
+  parties.prepopulated = True
+---
+if: debug_mode
+only sets: parties.prepopulated
+code: |
+  clients[0].name.first = 'David'
+  clients[0].name.middle = 'K.'
+  clients[0].name.last = 'Dunderman'
+  clients[0].short_name = 'Dunderman'
+  clients[0].party_role = 'Defendant'
+  clients[0].person_type = 'human'
+  clients[0].gender = 'male'
+  clients[0].address.address = '345 Howard Ave.'
+  clients[0].address.unit = 'Ste 125'
+  clients[0].address.city = 'Sacramento'
+  clients[0].address.state = 'CA'
+  clients[0].address.zip = '95825'
+  clients[0].phone_number = '(916) 245-2453'
+  clients[0].add_second_phone = True
+  clients[0].second_phone_number = '(415) 352-2452'
+  clients[0].second_phone_number_description = 'Home'
+  clients[0].email = 'ddunderman@gmail.com'
+  clients[0].complete = True
+  clients.gathered = True
+  
+  parties[0].name.first = 'Peter'
+  parties[0].name.middle = 'R.'
+  parties[0].name.last = 'Petrossian'
+  parties[0].short_name = 'Petrossian'
+  parties[0].party_role = 'Plaintiff'
+  parties[0].person_type = 'human'
+  parties[0].gender = 'male'
+  parties[0].lawyers.there_are_any = True
+  parties[0].initializeAttribute('lawyers', ALPeopleList.using(object_type=ALIndividual))
+  parties[0].lawyers[0].name.first = 'Larry'
+  parties[0].lawyers[0].name.middle = 'P.'
+  parties[0].lawyers[0].name.last = 'Luhrmann'
+  parties[0].lawyers[0].law_firm = 'Luhrmann Lambertson LLP'
+  parties[0].lawyers[0].address.address = '235 South Market St.'
+  parties[0].lawyers[0].address.unit = 'Suite 425'
+  parties[0].lawyers[0].address.city = 'San Francisco'
+  parties[0].lawyers[0].address.state = 'CA'
+  parties[0].lawyers[0].address.zip = '94316'
+  parties[0].lawyers[0].phone_number = '(415) 824-1545'
+  parties[0].lawyers[0].add_second_phone = False
+  parties[0].lawyers[0].fax_number = '(415) 824-1548'
+  parties[0].lawyers[0].email = 'larry@luhrmannlaw.com'
+  parties[0].lawyers[0].add_second_email = True
+  parties[0].lawyers[0].second_email = 'brenda@luhrmannlaw.com'
+  parties[0].lawyers[0].second_email_recipient = 'Secretary Brenda Bartlett'
+  parties[0].lawyers.gathered = True
+  parties[0].complete = True
+  
+  parties[1].name.first = 'Daniel'
+  parties[1].name.middle = 'A.'
+  parties[1].name.last = 'Dowling'
+  parties[1].short_name = 'Dowling'
+  parties[1].party_role = 'Defendant'
+  parties[1].person_type = 'human'
+  parties[1].gender = 'male'
+  parties[1].lawyers.there_are_any = True
+  parties[1].initializeAttribute('lawyers', ALPeopleList.using(object_type=ALIndividual))
+  parties[1].lawyers[0].name.first = 'Lisa'
+  parties[1].lawyers[0].name.middle = 'M.'
+  parties[1].lawyers[0].name.last = 'Lilibet'
+  parties[1].lawyers[0].law_firm = 'Lilibet & Associates, APC'
+  parties[1].lawyers[0].address.address = '123 Main St.'
+  parties[1].lawyers[0].address.unit = 'Unit 100'
+  parties[1].lawyers[0].address.city = 'Los Angeles'
+  parties[1].lawyers[0].address.state = 'CA'
+  parties[1].lawyers[0].address.zip = '90001'
+  parties[1].lawyers[0].phone_number = '(323) 555-1234'
+  parties[1].lawyers[0].add_second_phone = False
+  parties[1].lawyers[0].fax_number = '(323) 555-5678'
+  parties[1].lawyers[0].email = 'lisal@lilibetlaw.com'
+  parties[1].lawyers[0].add_second_email = False
+  parties[1].lawyers.gathered = True
+  parties[1].complete = True
+  
+  parties[2].name.first = 'Dowling Construction, Inc.'
+  parties[2].short_name = 'DCI'
+  parties[2].party_role = 'Defendant'
+  parties[2].person_type = 'entity'
+  parties[2].entity_type = 'a California corporation'
+  parties[2].lawyers.there_are_any = True
+  parties[2].initializeAttribute('lawyers', ALPeopleList.using(object_type=ALIndividual))
+  parties[2].lawyers[0] = parties[1].lawyers[0]
+  #parties[2].lawyers[0].name.first = 'Lawrence'
+  #parties[2].lawyers[0].name.middle = 'K.'
+  #parties[2].lawyers[0].name.last = 'Lafferty'
+  #parties[2].lawyers[0].law_firm = 'Jones Lafferty Simmons, APC'
+  #parties[2].lawyers[0].address.address = '2874 Emerald Drive'
+  #parties[2].lawyers[0].address.unit = '18th Floor'
+  #parties[2].lawyers[0].address.city = 'Rocklin'
+  #parties[2].lawyers[0].address.state = 'CA'
+  #parties[2].lawyers[0].address.zip = '96790'
+  #parties[2].lawyers[0].phone_number = '(530) 235-9827'
+  #parties[2].lawyers[0].add_second_phone = False
+  #parties[2].lawyers[0].second_phone_number = '(530) 235-2525'
+  #parties[2].lawyers[0].second_phone_description = 'Cell'
+  #parties[2].lawyers[0].fax_number = '(530) 235-9828'
+  #parties[2].lawyers[0].email = 'lklafferty@jlslawyers.law'
+  #parties[2].lawyers[0].add_second_email = False
+  parties[2].lawyers.gathered = True
+  parties[2].complete = True
+
+  parties[3].name.first = 'Emily'
+  parties[3].name.middle = 'K.'
+  parties[3].name.last = 'Williams'
+  parties[3].short_name = 'Williams'
+  parties[3].party_role = 'Defendant'
+  parties[3].person_type = 'human'
+  parties[3].gender = 'female'
+  parties[3].lawyers.there_are_any = False
+  parties[3].address.address = '789 East Oak St.'
+  parties[3].address.unit = 'Apt 6B'
+  parties[3].address.city = 'Chicago'
+  parties[3].address.state = 'IL'
+  parties[3].address.zip = '60601'
+  parties[3].phone_number = '(312) 555-6789'
+  parties[3].add_second_phone = True
+  parties[3].second_phone_number = '(312) 555-6790'
+  parties[3].second_phone_number_description = 'Work'
+  parties[3].fax_number = 'none/unknown'
+  parties[3].email = 'emily.williams@example.com'
+  parties[3].complete = True
+  parties.there_is_another = False
+  parties.gathered = True
+  parties.prepopulated = True
+---
+id: xxxxx
+code: |
+  parties.prepopulated
+  parties.gather()
+  parties.gathered = True
+---
+code: |
+  set_everyone
+  set_all_parties
+  set_parties_list
+  set_various_party_lists = True
+---
+id: gather author name and firm info
+question: "**Your** Name & Firm Info"
+fields:
+  - '**First Name**': author[0].name.first
+  - '**Middle Name**': author[0].name.middle
+    required: False
+  - '**Last Name**': author[0].name.last
+  - '**Suffix**': author[0].name.suffix
+    code: name_suffix()
+    required: False
+  - '**Law Firm**': author[0].law_firm
+  - '**Role in Law Firm**': author[0].law_firm_role
+  - note: e.g., *managing partner of...associate attorney at...shareholder.director of...* 
+  - '**Bar License State**': author[0].bar_state
+    default: 'CA'
+  - '**Bar License No.**': author[0].bar_number
+    datatype: integer
+---
+id: gather parties
+generic object: ALPeopleList
+sets: x[0].name.first
+check in: name_preview
+reconsider:
+  - set_everyone
+question: "${ x[i].ask_name_and_role_template.subject }"
+subquestion: |
+  ${ show_everyone_template.content }
+right: |
+  <div class="da-page-header"><h1 class="h3">Name Preview</h1></div>
+  [TARGET name_preview_text]
+fields:
+  - '**Party**': x[i].party_role
+    datatype: combobox
+    code: party_role_list
+    show if:
+      code: |
+        'nonparties' not in x[i].instanceName
+  - '**Nonparty Role**': x[i].nonparty_role
+    datatype: combobox
+    code: nonparty_role_list
+    show if:
+      code: |
+        'nonparties' in x[i].instanceName
+  - '**Person or Entity**': x[i].person_type
+    choices:
+      - Human: human
+      - Trustee/Other Representative Capacity: person_specific_capacity
+      - Entity (Company/Governmental Org): entity
+      - Something Else: other
+    show if:
+      code: |
+        'nonparties' not in x[i].instanceName
+  - '**First Name**': x[i].name.first
+    show if: 
+      variable: x[i].person_type
+      is: human
+  - '**Middle Name**': x[i].name.middle
+    required: False
+    show if: 
+      variable: x[i].person_type
+      is: human
+  - '**Last Name**': x[i].name.last
+    show if: 
+      variable: x[i].person_type
+      is: human
+  - '**Suffix**': x[i].name.suffix
+    code: name_suffix()
+    show if:
+      variable: x[i].person_type
+      is: human
+    required: False
+  - '**Representative Name**': x[i].name.first
+    show if: 
+      variable: x[i].person_type
+      is: person_specific_capacity
+  - '**Representing in what capacity?**': x[i].capacity
+    input type: combobox
+    choices:
+      - trustee
+      - co-trustee
+      - executive director and designated representative
+      - administrator
+    show if: 
+      variable: x[i].person_type
+      is: person_specific_capacity
+  - '**Represented Trust/Entity Name**': x[i].representee
+    show if: 
+      variable: x[i].person_type
+      is: person_specific_capacity
+  - '**Entity *Name***': x[i].name.first
+    show if: 
+      variable: x[i].person_type
+      is: entity
+  - '**Entity *Type***': x[i].entity_type
+    input type: combobox
+    choices:
+      - a California corporation
+      - a California limited liability company
+      - a California professional corporation
+      - a municipal corporation
+    show if: 
+      variable: x[i].person_type
+      is: entity
+  - '**Employer**': x[i].employer_name
+    show if:
+      code: |
+        'nonparties' in x[i].instanceName
+  - '**Title**': x[i].employee_title
+    show if:
+      code: |
+        'nonparties' in x[i].instanceName
+  - '**Short Name**': x[i].short_name
+  - '**Gender**': x[i].gender
+    input type: radio
+    choices:
+      - Male: male
+      - Female: female
+      - Other: other
+    js show if:
+      val('x[i].person_type') == 'human' || val('x[i].person_type') == 'person_specific_capacity'
+  - '**Is the party represented by counsel?**': x[i].lawyers.there_are_any
+    datatype: yesno
+    show if:
+      code: |
+        'parties' in x[i].instanceName
+---
+template: name_preview
+content: |
+  % if action_argument('x[i].person_type') == 'human':
+  ### ${ action_argument('x[i].party_role' if any(word in x[i].instanceName for word in ['clients', 'parties']) else 'x[i].nonparty_role') + ' ' + action_argument('x[i].name.first') } ${ action_argument('x[i].name.middle') or '' } ${ action_argument('x[i].name.last') } (${ action_argument('x[i].short_name') })
+  % elif action_argument('x[i].person_type') == 'person_specific_capacity':
+  ### ${ action_argument('x[i].party_role') + ' ' + action_argument('x[i].name.first') + ', ' + action_argument('x[i].capacity') + ' of ' + action_argument('x[i].representee') } (${ action_argument('x[i].short_name') })
+  % else:
+  ### ${ action_argument('x[i].party_role') + ' ' + action_argument('x[i].name.first') + ', ' + action_argument('x[i].entity_type') } (${ action_argument('x[i].short_name') })
+  % endif
+target: name_preview_text
+---
+id: add another party
+reconsider:
+  - set_everyone
+question: Add party?
+subquestion: |
+  ${ show_everyone_template }
+yesno: parties.there_is_another
+color: warning
+---
+id: gather party lawyers
+generic object: ALPeopleList
+question: |
+  % if 'author' in x.instanceName:
+  **Your** Caption Info
+  % else:
+  ${ value(x[i].instanceName.split(".")[0]) }'s Lawyer's Info
+  % endif
+subquestion: |
+  % if len(x[i].lawyers.complete_elements()) > 0:
+  **${ x[i].lawyers.complete_elements() }**
+  % endif
+fields: 
+  - '**An *Existing* Lawyer**': x[i].lawyers[j]
+    datatype: object
+    choices: lawyer_list.complete_elements()
+    disable others: True
+    exclude: x[i].lawyers
+    show if: 
+      code: len(lawyer_list) > 0
+  - '**First Name**': x[i].lawyers[j].name.first
+  - '**Middle Name**': x[i].lawyers[j].name.middle
+    required: False
+  - '**Last Name**': x[i].lawyers[j].name.last
+  - '**Suffix**': x[i].lawyers[j].name.suffix
+    code: name_suffix()
+    required: False
+  - '**Law Firm**': x[i].lawyers[j].law_firm
+validation code: |
+  if x[i].lawyers[j] not in lawyer_list:
+    lawyer_list.append(x[i].lawyers[j])
+    lawyer_list.sort(key=lambda y: y.name.last)
+---
+id: add a party lawyer
+question: Does ${ parties[i] } have another lawyer?
+subquestion: |
+  ${ parties[i].lawyers.complete_elements() }
+yesno: parties[i].lawyers.there_is_another
+color: warning
+---
+id: gather individual address
+generic object: ALIndividual
+question: ${ x }'s Service Address & Contact Info
+fields:
+  - '**Address**': x.address.address
+    address autocomplete: True
+  - '**Unit/Suite**': x.address.unit
+    required: False
+  - '**City**': x.address.city
+  - '**State**': x.address.state
+  - '**Zip Code**': x.address.zip
+  - note: |
+      #### ---Phone, Fax & Email---
+  - '**Phone No.**': x.phone_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+  - '**Add Second Phone**': x.add_second_phone
+    datatype: yesno
+    show if:
+      code: |
+        'author' not in x.instanceName
+    required: False
+  - '**Second Phone No.**': x.second_phone_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    show if: x.add_second_phone
+    required: False
+  - '**Second Phone Description**': x.second_phone_description
+    show if: x.add_second_phone
+    required: False
+  - note: e.g., *cell...work...home...secretary*
+    show if: x.add_second_phone
+  - '**Fax No.**': x.fax_number
+    validate: |
+      lambda y: (not y or phone_number_is_valid(y)) or validation_error("Please enter a valid, 10-digit phone number.")
+    required: False
+    show if:
+      code: |
+        'lawyers' in x.instanceName or 'author' in x.instanceName
+  - '**Email**': x.email
+    datatype: email
+    required: False
+  - '**Add Second Email**': x.add_second_email
+    datatype: yesno
+  - '**Second Email Address**': x.second_email
+    datatype: email
+    show if: x.add_second_email
+  - '**Second Email Recipient**': x.second_email_recipient
+    show if: x.add_second_email
+  - note: e.g., *Admin...Secretary Debbie Thompson...eService*
+    show if: x.add_second_email
+validation code: |
+  if x.add_second_email:
+    if x.email == x.second_email:
+      validation_error("'Second Email Address:' must be different from 'Email:' above.", field='x.second_email')
+      
+  for attr in ['phone_number', 'fax_number', 'email', 'second_phone_number', 'second_email']:
+    if not getattr(x, attr, False):
+      setattr(x, attr, 'none/unknown')
+    else:
+        if attr in ['phone_number', 'fax_number', 'second_phone_number']:
+            setattr(x, attr, phone_number_formatted(getattr(x, attr)))
+---
+id: create 'everyone' and sorted list of everyone for choices
+code: |
+  everyone = author.complete_elements() + clients.complete_elements() + parties.complete_elements() + lawyer_list.complete_elements()
+  everyone_sorted_list = everyone.sort(key=lambda y: y.name.first)
+  set_everyone = True
+---
+id: create all_parties and sorted list of all_parties for choices
+code: |
+  all_parties = clients.complete_elements() + parties.complete_elements()
+  all_parties_sorted_list = all_parties.sort(key=lambda y: y.name.first)
+  set_all_parties = True
+---
+id: create sorted list of parties (without clients) for choices
+code: |
+  parties_sorted_list = parties.sort(key=lambda y: y.name.first)
+  set_parties_list = True
+---
+id: name code block ALIndividual
+generic object: ALIndividual
+code: |
+  if x.person_type == 'human':
+    x.whole_name = x.name.full()
+  elif x.person_type == 'person_specific_capacity':
+    x.whole_name = x.name.first + ', ' + x.capacity + ' of ' + x.representee
+    x.entity_or_capacity = ', ' + x.capacity + ' of ' + x.representee
+  else:
+    x.whole_name = x.name.first + ', ' + x.entity_type
+    x.entity_or_capacity = ', ' + x.entity_type
+  x.party_plus_whole_name = x.party_role + ' ' + x.whole_name
+  x.party_plus_whole_name_plus_short = x.party_role + ' ' + x.whole_name + ' (' + x.short_name + ')'
+  x.process_name_code_block = True
+---
+id: name code block ALPeopleList
+generic object: ALPeopleList
+code: |
+  if x[i].person_type == 'human':
+    x[i].whole_name = x[i].name.full()
+  elif x[i].person_type == 'person_specific_capacity':
+    x[i].whole_name = x[i].name.first + ', ' + x[i].capacity + ' of ' + x[i].representee
+    x[i].entity_or_capacity = ', ' + x[i].capacity + ' of ' + x[i].representee
+  else:
+    x[i].whole_name = x[i].name.first + ', ' + x[i].entity_type
+    x[i].entity_or_capacity = ', ' + x[i].entity_type
+  x[i].party_plus_whole_name = x[i].party_role + ' ' + x[i].whole_name
+  x[i].party_plus_whole_name_plus_short = x[i].party_role + ' ' + x[i].whole_name + ' (' + x[i].short_name + ')'
+  x[i].process_name_code_block = True
+---
+id: author caption block
+code: |
+  author_caption_block = f"""{author[0].name.full()}\n{author[0].law_firm}\n{author[0].address.address}\n{author[0].address.city}, {author[0].address.state} {author[0].address.zip}\nPhone: {author[0].phone_number}\nFax: {author[0].fax_number}\nEmail: {author[0].email}
+  """
+---
+generic object: ALPeopleList
+template: x[i].ask_name_and_role_template
+subject: |
+  % if 'parties' in x[i].instanceName:
+  Other Parties
+  % elif 'clients' in x[i].instanceName:
+  Client(s)
+  % else:
+  Nonparties
+  % endif
+content: |
+  % if 'parties' in x[i].instanceName:
+  % if len(clients.complete_elements()) > 0:
+  Client:
+  % for client in clients.complete_elements():
+  **${ client.party_role } ${ client }**[BR]
+  % endfor
+  % endif
+  % if len(parties.complete_elements()) > 0:
+  Parties entered so far:[BR]
+  % for party in parties.complete_elements():
+  **${ party.party_role } ${ party }**[BR]
+  % endfor
+  % endif
+  % elif 'clients' in x[i].instanceName:
+  Name & Party Role
+  % else:
+  Name & Role
+  % endif
+---
+template: show_everyone_template
+content: |
+  % if len(author.complete_elements()) > 0:
+    **Author:** 
+    % for auth in author.complete_elements():
+    ${ auth } 
+    % endfor
+  [BR]
+  % endif
+  % if len(clients.complete_elements()) > 0:
+    **Clients:** 
+    % for client in clients.complete_elements():
+    ${ client.party_role } ${ client } 
+    % endfor
+  [BR]
+  % endif
+  % if len(parties.complete_elements()) > 0:
+    **Other Parties:** 
+    % for party in parties.complete_elements():
+    ${ party.party_role } ${ party } 
+    % endfor
+  [BR]
+  % endif
+  % if len(lawyer_list.complete_elements()) > 0:
+    **Other Lawyers:** 
+    % for lawyer in lawyer_list.complete_elements():
+    ${ lawyer } 
+    % endfor
+  [BR]
+  % endif
+  **Everyone:** 
+  % for index, person in enumerate(everyone):
+  ${ index+1 }. ${ person } 
+  % endfor
+  [BR]
+---
+####################### END OF CONTACT GATHERING ######################################
+---
+id: screen 2 - choose document type
+depends on: version
+question: What are we drafting today?
+fields:
+  - no label: doc.type
+    input type: radio
+    choices:
+      - Generic Pleading
+      - Separate Statement
+      - Notice of Motion and Motion
+      - Declaration
+      - Memorandum of Points & Authorities
+      - Request for Judicial Notice
+      - Index of Exhibits
+      - Proposed Order
+      - Proof of Service
+  - '**Upload Discovery *Responses***': responses_file
+    datatype: files
+    show if:
+      variable: doc.type
+      is: Separate Statement
+  #- AID is **NOT** the Author!: aid_not_author
+  #  datatype: yesno
+  #- Import Dummy Contact Data: debug_mode
+  #  datatype: yesno
+---
+# This block automatically sets AID as author and imports dummy contact/party data without giving the user a choice. Delete or comment out this block to allow the user to choose.
+code: |
+  aid_not_author = False
+  debug_mode = True
+---
+id: hearing info
+depends on: version
+question: Hearing Info
+subquestion: |
+  Is a hearing associated with this ${ doc.type }?
+fields:
+  - '**Document relates to a hearing**': doc.has_hrg
+    datatype: yesnoradio
+  - '**Hearing Date & Time**': hrg.datetime
+    datatype: datetime
+    js show if: |
+      val('doc.has_hrg') && !val('doc.hrg_is_tbd')
+  - '**Hearing Date is TBD**': doc.hrg_is_tbd
+    datatype: yesno
+    show if: doc.has_hrg
+  - '**Hearing Dept.**': hrg.dept
+    js show if: |
+      val('doc.has_hrg') && !val('hrg.dept_is_tbd')
+  - '**Dept. is TBD**': hrg.dept_is_tbd
+    datatype: yesno
+    show if: doc.has_hrg
+  - '**Hearing Judge**': hrg.judge
+    input type: combobox
+    choices:
+      - Christopher E. Krueger
+      - Richard K. Sueyoshi
+    js show if: |
+      val('doc.has_hrg') && !val('hrg.judge_is_tbd')
+  - '**Judge is TBD**': hrg.judge_is_tbd
+    datatype: yesno
+    show if: doc.has_hrg
+right: |
+  Today is **${today()}**. 
+  
+  Under CCP § 1005, 16 court days from now with extensions for service is:
+  
+  * Personal Service:[BR] **${sixteen_court_days_from_today_string}**[BR][BR]
+  * Overnight Delivery/Fax:[BR] **${earliest_overnight_or_fax_service_date_string}**[BR][BR]
+  * Email/Electronic Service:[BR] **${eighteen_court_days_from_today_string}**[BR][BR]
+  * Regular U.S. Mail Service:[BR] **${earliest_mail_service_date_string}**[BR][BR]
+  Visit LA County Superior Court's [**Court Date Calculator**](https://www.lacourt.org/courtdatecalculator/ui/) for an additional date validation check.
+validation code: |
+  if doc.has_hrg:
+    hrg.date = 'TBD' if doc.hrg_is_tbd else hrg.datetime.format_date(format='EEEE, MMMM d, yyyy')
+    hrg.time = 'TBD' if doc.hrg_is_tbd else format_time(hrg.datetime.time(), format='h:mm a')
+---
+id: document date and signature
+depends on: version
+question: Signature Block
+fields:
+  - '**What date goes in the signature block?**': sig_block_date_field
+    datatype: radio
+    choices:
+      - Today
+      - Different Date
+      - Leave Blank
+  - '**Different Date**': sig_block_alternate_date
+    datatype: date
+    show if: 
+      variable: sig_block_date_field
+      is: 'Different Date'
+  - '**Sign the document?**': doc.sign
+    datatype: yesno
+---
+id: sign name
+depends on: version
+question: Sign your name
+signature: user_signature
+under: |
+  ${ author[0].name.full() }
+---
+depends on: version
+code: |
+  signature = user_signature if aid_not_author else aid_signature
+---
+id: generate document
+depends on: version
+question: Your ${doc.type} is below.
+subquestion: |
+  Do you approve?
+yesno: user_approves
+attachment:
+  name: Pleading
+  filename: ${short_filename}
+  docx template file: 2023-08-28_pleading_template.docx
+  valid formats:
+    - pdf
+    - docx
+include attachment notice: False
+---
+depends on: version
+code: |
+  if doc.type == 'Generic Pleading':
+    short_filename = f"{format_date(today(), format='yyyy-MM-dd')} {doc.title_full} [draft]"
+  elif doc.type == 'Declaration':
+    short_filename = f"{format_date(today(), format='yyyy-MM-dd')} {short_filename_acronyms[doc.type]} {doc.declarant.name.first.split(' ')[0]} {doc.declarant.name.last or ''} [draft]"
+  else:
+    short_filename = f"{format_date(today(), format='yyyy-MM-dd')} {short_filename_acronyms[doc.type]} [draft]"
+---
+depends on: version
+event: final_screen
+question: |
+  Well, ${author[0].name.first}, 
+  % if user_approves:
+  Hope you liked your ${doc.type}!
+  % endif
+  We're all through here...
+action buttons:
+  - label: Try again
+    action: new_version
+    color: primary

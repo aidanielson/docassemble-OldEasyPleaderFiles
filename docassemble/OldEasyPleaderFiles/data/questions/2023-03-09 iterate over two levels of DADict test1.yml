@@ -1,0 +1,64 @@
+objects:
+  - method: DADict.using(object_type=Thing, auto_gather=False, complete_attribute='complete')
+  - method[i].bad_response: DADict.using(object_type=Thing, auto_gather=False, complete_attribute='complete')
+---
+code: |
+  method.new(disco_methods.true_values())
+  method.gathered = True
+---
+code: |
+  method[i].name.text
+  method[i].complete = True     
+---
+code: |
+  method[i].bad_response.new(method[i].bad_response_numbers.true_values())
+  method[i].bad_response.gathered = True
+---
+code: |
+  method[i].bad_response[j].name.text
+  method[i].bad_response[j].complete = True   
+---
+question: |
+  Which of the following discovery methods did you propound?
+fields:
+  - no label: disco_methods
+    datatype: checkboxes
+    none of the above: False
+    choices:
+      - Form Interrogatories
+      - Special Interrogatories
+      - Requests for Admission
+      - Requests for Production of Documents
+---
+question: |
+  Check the noncompliant response number(s).
+fields:
+  - no label: bad_response_numbers
+    datatype: checkboxes
+    none of the above: False
+    choices:
+      - 1
+      - 2
+      - 3
+      - 4
+---
+question: |
+  What is something about ${ i }?
+fields:
+  - Company name: method[i].name.text
+---
+question: |
+  What is something about ${ j }?
+fields:
+  - Company name: method[i].bad_response[j].name.text
+---
+mandatory: True
+question: All done
+subquestion: |
+  
+  You served ${ method.number_as_word() } types of discovery.
+  % for key, bad_response in method.items():
+  My dictionary has a key called ${ key }. Something about it is xxxxx.
+  
+
+  % endfor

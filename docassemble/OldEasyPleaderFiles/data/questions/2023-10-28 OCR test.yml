@@ -1,0 +1,47 @@
+modules:
+  - .ocr_PDF_module
+---
+mandatory: True
+code: |
+  input_file
+  run_ocr_task
+  if run_ocr_task.ready():
+    see_raw_ocr_text
+  else:
+    waiting_screen
+---
+code: |
+  run_ocr_task = background_action('ocr_task', 'refresh')
+---
+question: |
+  Upload PDF File to be OCR'd
+fields:
+  - Upload PDF to be OCR'd: input_file
+    datatype: file
+#validation code: |
+#  try:
+#    assert input_file.mimetype == 'application/pdf'
+#    input_file.fix_up()
+#  except:
+#    raise validation_error("Sorry, that is not a valid PDF file")
+---
+event: ocr_task
+code: |
+  background_response(ocr_pdf(input_file.path()))
+---
+event: waiting_screen
+question: |
+  Hang tight.
+  Still waiting for an answer.
+---
+question: Raw OCR Text
+subquestion: |
+  The task failed? ${ run_ocr_task.failed() }[BR][BR]
+  The task's result: ${ run_ocr_task.result() }[BR][BR]
+  ${ run_ocr_task.result().error_type }[BR][BR]
+  ${ run_ocr_task.result().error_message }[BR][BR]
+  ${ run_ocr_task.result().error_trace }[BR][BR]
+  ${ run_ocr_task.result().variables }[BR][BR]
+  The answer is ${ repr(run_ocr_task.get()) }.
+continue button field: see_raw_ocr_text
+---    

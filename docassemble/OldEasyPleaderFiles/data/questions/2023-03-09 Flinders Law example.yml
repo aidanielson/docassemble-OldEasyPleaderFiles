@@ -1,0 +1,206 @@
+initial: true
+code: |
+  if not user_logged_in():
+    kick_out_user
+---
+features:
+  go full screen: True
+---
+event: kick_out_user
+question: |
+  User access only
+subquestion: |
+  Sorry, Bar Playbook is invite-only at this time. Please sign up [here] if you'd like to know when we're adding new members. 
+  
+  [here]: https://barplaybook.com/signup
+buttons:
+  - Exit: exit
+---
+include:
+  - biz-assoc-library.yml
+  - atty-ads.yml
+---
+metadata:
+  interview_identifier: "Business Associations Logic"
+  title: |
+    Business Associations Logic
+---
+mandatory: True
+question: |
+  Business Associations
+subquestion: |
+  ###`Check all that apply`
+fields:
+  - no label: issues
+    datatype: checkboxes
+    choices:
+      - crossover issues from Professional Responsibility?
+      - facts mention a contract (K) or a formal agreement (incl. leases)?
+      - 2 or more entities intend to do business *without* a formal agreement?
+---
+question: |
+  there is a formal agreement/K
+subquestion: |
+  If the facts mention a contract (K) or a formal agreement (including leases) entered into, there may be… 
+    
+    * An **agency** issue (can apply to **partnership** or **corporations** issues): P and/or A liable; and/or
+    * A **corporations** issue: pre-incorporation promoter liability, unenforceable K due to ultra vires acts
+fields:
+  - no label: k_type
+    datatype: checkboxes
+    choices:
+      - Agency
+      - Corporation
+---
+question: |
+  There's an **agency** issue
+subquestion: |
+  Or there's a principal-agent relationship and/or a third party
+fields:
+  - no label: agency
+    datatype: checkboxes
+    choices:
+      - Was an agency relationship formed?
+      - What type of authority does agent (A) have?
+      - Who is liable if A entered into K?
+      - Who is liable if A committed a tort? 
+---
+question: |
+  The facts mention a **corporation**
+fields:
+  - no label: corp
+    datatype: checkboxes
+    choices:
+      - Was there a K or an agreement before any incorporation (regardless of intent to form)?
+      - Was the corporation properly formed?
+      - Does someone seek liability against shareholders behind the corporation? 
+      - Board of directors or officers (D&O) present in the facts?
+---
+question: |
+  Does a corporate shareholder want to do something?
+fields: 
+ - no label: shareholders
+   datatype: checkboxes
+   choices:
+      - Shareholder wants to sue the corporation
+      - Shareholder wants to vote in person or by proxy
+      - Shareholders made a voting agreement or voting trust 
+      - Shareholder is a controlling shareholder and has special statuses
+      - Shareholders are not liable for corporate obligations unless...
+---
+question: |
+  Securities involved?
+subquestion: |
+  A security is an investment where there is an expectation of profits primarily from the efforts of others.
+fields: 
+  - no label: securities
+    datatype: checkboxes
+    choices:
+      - Did transaction involve interstate commerce?
+      - Fraud in connection with purchase or sale of a security? 
+      - Insider trading?
+      - Short-term buying and selling (any order)?
+---
+question: |
+  2+ entities intend to do business without a formal agreement
+subquestion: |
+  There is at least a **partnership** issue 
+fields:
+  - Do the entities share profits (implies intent)?: there_is_sp
+    datatype: yesnowide
+  - There is at least a **partnership** issue: pi_here
+    show if: there_is_sp
+    required: false
+    datatype: area
+---
+question: |
+  Is there a **partnership** issue (based on intent, conduct, oral agreement, or the facts mention a partnership)?
+subquestion: |
+  
+fields:
+  - Check the following: partnership
+    datatype: checkboxes
+    choices:
+      - What indications are there that an entity is a partner or not a partner?
+      - Is someone seeking liability against partnership/partners?
+      - Partners are agents of one another
+      - Did partners try to make a decision?
+---
+mandatory: True
+question: |
+  Here's your script
+subquestion: |
+  % if issues['crossover issues from Professional Responsibility?']:
+  ${ atty_ads_done } 
+  % endif
+
+  % if issues['facts mention a contract (K) or a formal agreement (incl. leases)?']:
+    % if k_type['Agency']:
+      % if agency['Was an agency relationship formed?']:
+  Formation occurs by act of parties (assent) or estoppel
+      % endif
+      % if agency['What type of authority does agent (A) have?']:
+  actual express / actual implied / apparent / ratification
+      % endif
+      % if agency['Who is liable if A entered into K?']:
+  Principal (P) is bound to K and liable to third party (3P) if A had authority; analyze all the types
+  
+  A is liable depending on whether P is a disclosed P, unidentified P or undisclosed P
+      % endif
+      % if agency['Who is liable if A committed a tort?']:
+  Analyze whether A was an employee / independent contractor
+      % endif
+    % endif
+
+    % if k_type['Corporation']:
+      % if corp['Was there a K or an agreement before any incorporation (regardless of intent to form)?']:
+  **Promoter liability**
+      % endif
+      % if corp['Was the corporation properly formed?']:
+  De jure, de facto, by estoppel, [CA] close corporation
+      % endif
+      % if corp['Does someone seek liability against shareholders behind the corporation?']:
+      % endif
+      % if corp['Board of directors or officers (D&O) present in the facts?']:
+  Keep track of how many for quorum purposes
+      % endif
+
+      % if shareholders['Shareholder wants to sue the corporation']:
+      % endif
+      % if shareholders['Shareholder wants to vote in person or by proxy']:
+      % endif
+      % if shareholders['Shareholders made a voting agreement or voting trust']:
+  ${ roo_here }
+      % endif
+      % if shareholders['Shareholder is a controlling shareholder and has special statuses']:
+      % endif
+      % if shareholders['Shareholders are not liable for corporate obligations unless...']:
+      % endif
+
+      % if securities['Did transaction involve interstate commerce?']:
+      % endif
+      % if securities['Fraud in connection with purchase or sale of a security?']:
+      % endif
+      % if securities['Insider trading?']:
+      % endif
+      % if securities['Short-term buying and selling (any order)?']:
+      % endif
+    % endif
+  % endif
+    
+  % if issues['2 or more entities intend to do business *without* a formal agreement?']:
+    % if partnership['What indications are there that an entity is a partner or not a partner?']:
+    % endif
+    % if partnership['Is someone seeking liability against partnership/partners?']:
+  Determine what type of partnership was formed: General partnership/LLP/LP/LLC
+    % endif
+    % if partnership['Partners are agents of one another']:
+    % endif
+    % if partnership['Did partners try to make a decision?']:
+  All vs. majority votes depending on “ordinary course of business”
+    % endif
+  % endif
+section: Conclusion
+action buttons:
+  - label: Continue
+    action: https://ca.barplaybook.com

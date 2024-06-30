@@ -1,0 +1,25 @@
+mandatory: True
+code: |
+  version = DAObject('version')
+  version.ver = 0
+---
+event: new_version
+code: |
+  version.ver +=1
+---
+depends on: version.ver
+question: xxxx
+fields:
+- xxxx: some_variable
+---
+mandatory: True
+event: final_screen
+question: |
+  Well, we're all through here...
+  The variable is ${ some_variable }
+#${author[0].name.first}, 
+#Hope you liked your ${doc.type}![BR]
+action buttons:
+  - label: Try again
+    action: new_version
+    color: primary

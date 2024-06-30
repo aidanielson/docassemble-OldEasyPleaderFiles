@@ -1,0 +1,67 @@
+include:
+  - docassemble.AssemblyLine:assembly_line_unstyled.yml
+---
+objects:
+  - userdata: DAStore
+  - preferences: DAObject
+  - lawsuit: DAObject
+  - author: ALPeopleList.using(object_type=ALIndividual)
+  - parties: ALPeopleList.using(object_type=ALIndividual)
+---
+code: |
+  if userdata.defined("prefsg"):
+    preferences = userdata.get("prefsg")
+---
+question: |
+  What is your favorite fruit?
+fields:
+  - Fruit: preferences.favorite_fruit
+  - Vegetable: preferences.vegetable
+  - Car: preferences.car
+---
+mandatory: True
+code: |
+  menu_items = [ action_menu_item('Review Answers', 'review_answers') ]
+  preferences.favorite_fruit
+  if not userdata.defined("prefsg"):
+    userdata.set("prefsg", preferences)
+  #author.gather()
+  #parties.gather()
+  final_screen
+---
+question: |
+  What is your favorite fruit?
+fields:
+  - Your Age: preferences.age
+  - Number of Kids: preferences.num_of_kids
+  - SSN: preferences.ssn
+---
+question: xxxxx
+fields:
+
+---
+code: |
+  lawsuit.age = preferences.age
+---
+event: review_answers
+question: Revisit your answers
+review:
+  - Edit:
+    - preferences.favorite_fruit
+    - preferences.num_of_kids
+    - recompute:
+       - userdata_recomputed
+    button: |
+      You said your favorite fruit was
+      ${ preferences.favorite_fruit }.
+---
+code: |
+  userdata.set("prefsg", preferences)
+  userdata_recomputed = True
+---
+event: final_screen
+question: All done
+subquestion: |
+  Your favorite fruit is
+  ${ userdata.get("prefsg").favorite_fruit }.[BR]
+  'lawsuit.age' is: ${ lawsuit.age }.

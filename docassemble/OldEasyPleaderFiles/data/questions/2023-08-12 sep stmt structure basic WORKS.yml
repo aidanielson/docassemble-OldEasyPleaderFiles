@@ -1,0 +1,153 @@
+mandatory: True
+code: |
+  intro_screen
+  methods.gather()
+  final_screen
+---
+objects:
+  - methods: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False, complete_attribute='complete')
+  - methods[i].responses: DAList.using(object_type=Thing, there_is_another=False, complete_attribute='complete')
+  - methods[i].challenged_responses: DAList.using(object_type=Thing, there_are_any=True, there_is_another=False, complete_attribute='complete')
+---
+code: |
+  methods[i].name.text
+  set_responses_list
+  if import_dummy_data:
+    dummy_data_imported
+  methods[i].responses.gather()
+  troubleshoot_screen
+  methods[i].pick_challenged_responses
+  set_challenged_responses_list
+  methods[i].challenged_responses.gather()
+  troubleshoot_screen2
+  methods[i].complete = True
+---
+code: |
+  methods[i].responses[j].name.text
+  methods[i].responses[j].answer
+  methods[i].responses[j].complete = True
+---
+code: |
+  methods[i].challenged_responses[j].name.text
+  methods[i].challenged_responses[j].deficiencies
+  methods[i].challenged_responses[j].complete = True
+---
+id: intro screen
+question: Intro Screen
+fields:
+  - Use Dummy Data?: import_dummy_data
+    datatype: yesno
+continue button field: intro_screen
+---
+id: facts about each method served
+question: Discovery Method Propounded
+fields:
+  - What method is this: methods[i].name.text
+    datatype: radio
+    choices:
+      - Form Interrogatories
+      - Special Interrogatories
+  - What set number were they?: methods[i].set_no
+    input type: radio
+    choices: 
+      - One
+      - Two
+      - Three
+      - Four
+      - Supplemental
+  - Beginning number: methods[i].start_range
+    datatype: integer
+  - End number: methods[i].end_range
+    datatype: integer
+---
+code: |
+  methods[i].number_propounded = (methods[i].end_range) - ((methods[i].start_range) - 1)
+---
+code: |
+  for index in range((methods[i].start_range - 1), methods[i].end_range):
+    methods[i].responses.appendObject()
+    methods[i].responses[-1].name.text = f"Response No. {index + 1}"
+  set_responses_list = True
+---
+code: |
+  for response in methods[i].pick_challenged_responses.true_values():
+    methods[i].challenged_responses.appendObject()
+    methods[i].challenged_responses[-1].name.text = f"Response No. { response }"
+  set_challenged_responses_list = True
+---
+id: challenged response number
+question: ${ methods[i] } deficient responses
+subquestion: |
+  Check all responses that you consider deficient.
+fields: 
+  - no label: methods[i].pick_challenged_responses
+    datatype: checkboxes
+    code: |
+      [str(x) for x in range(methods[i].start_range, (methods[i].end_range + 1))]
+    none of the above: false
+---
+id: troubleshooting screen 2
+question: Troubleshooting Screen 2
+subquestion: |
+  'methods[i].pick_challenged_responses.true_values()' is: ${ methods[i].pick_challenged_responses.true_values() }
+  'methods[i].challenged_responses.elements' is: ${ methods[i].challenged_responses.elements }
+  'methods[i].challenged_responses' is: ${ methods[i].challenged_responses }
+continue button field: troubleshoot_screen2
+---
+id: pick deficiencies of each challenged response
+question: Deficiencies of Response No. ${ methods[i].challenged_responses[j] }
+subquestion: |
+  Select all applicable deficiencies in xxxxx's response.[BR][BR]
+fields:
+  - Name: methods[i].challenged_responses[j].name.text
+  - no label: methods[i].challenged_responses[j].deficiencies
+    datatype: checkboxes
+    choices:
+      - An objection based on vagueness or ambiguity does not lie unless the question is so unintelligible that the responder cannot formulate a response.
+      - The scope of discovery is broad, and the information sought is relevant to one of the causes of action or defenses alleged in this suit.
+---
+id: troubleshoot screen
+question: Troubleshoot Screen
+subquestion: |
+  every responses' '.name.text' is:[BR]
+  % for method in methods.elements:
+    % for response in method.responses.complete_elements():
+      Name: **${ response.name.text }**[BR]
+      Question: ${ response.question }[BR]
+      Answer: ${ response.answer }[BR][BR]
+    % endfor
+  % endfor
+continue button field: troubleshoot_screen
+---
+question:  Question & Answer #${ methods[i].responses[j] }
+fields:
+  - Name: methods[i].responses[j].name.text
+  - Interrogatory Text: methods[i].responses[j].question
+  - Response: methods[i].responses[j].answer
+---
+question: Results
+subquestion: |
+  The resulting 'Responses' are:[BR]
+  **${ methods[0] }**[BR]
+  % for response in methods[0].responses:
+    The interrogatory stated:[BR]
+    **${ quote_paragraphs(response.question) }**[BR]
+    ${ response } was as follows:[BR]
+    **${ quote_paragraphs(response.answer) }**[BR]
+  % endfor
+event: final_screen
+---
+########################################################################################
+---
+id: dummy data
+if: import_dummy_data
+code: |
+  methods[0].responses[0].question = 'State ALL facts in support of YOUR contention that YOU were not negligent in the operation of YOUR vehicle in the moments surrounding the collision.'
+  methods[0].responses[0].answer = 'Objection. The interrogatory is vague, ambiguous, and overbroad as to the term "negligence." The interrogatory also improperly calls for a legal conclusion and for Responding Party to admit the ultimate issue in this lawsuit.'
+  methods[0].responses[1].question = 'Identify ALL witnesses having knowledge or information relating to any facts identified in YOUR previous response.'
+  methods[0].responses[1].answer = 'Objection. The interrogatory is compound and overbroad. Responding Party incorporates its objection to the prior interrogatory as if fully set forth herein.'
+  methods[0].responses[2].question = 'Identify ALL documents evidencing or relating to any facts identified in YOUR response to the prior interrogatory.'
+  methods[0].responses[2].answer = 'Objection. The interrogatory is compound and overbroad. Responding Party incorporates its objection to the prior interrogatory as if fully set forth herein.'
+  methods[0].responses[3].question = 'Identify ALL witnesses having knowledge or information relating to any facts identified in YOUR previous response.'
+  methods[0].responses[3].answer = 'Objection. The interrogatory is compound and overbroad. Responding Party incorporates its objection to the prior interrogatory as if fully set forth herein.'
+  dummy_data_imported = True

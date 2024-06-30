@@ -1,0 +1,113 @@
+---
+# location question
+question: Where are you located?
+subquestion: |
+  Please select the location or locations that you are looking for services in.
+  
+  You may select more than one location.
+  
+fields:
+  - no label: CLCSAlocation
+    datatype: checkboxes
+    choices:
+      - <b>City of Adelaide</b>: Central Adelaide CBD
+      - <b>North</b><br><ul class="a"><li>Prospect</li><li>Port Adelaide-Enfield</li><li>Salisbury</li><li>Tea Tree Gully</li><li>Playford</li></ul>: North
+      - <b>South</b><br><ul class="a"><li>Mitcham</li><li>Marion</li><li>Onkaparinga</li></ul>: South
+      - <b>East</b><br><ul class="a"><li>Burnside</li><li>Campbelltown</li><li>Norwood, Payneham & St. Peters</li></ul>: East
+      - <b>West</b><br><ul class="a"><li>West Torrens</li><li>Holdfast Bay</li><li>Charles Sturt</li></ul>: West
+      - <b>Outback</b><br><ul class="a"><li>Yankalilla</li><li>Alexandrina</li><li>Adelaide Hills</li><li>Barossa</li><li>Gawler</li></ul>: Outback
+      - <b>Mid North</b><br><ul class="a"><li>Mount Gambier</li><li>Murray Bridge</li><li>Port Augusta</li><li>Port Lincoln</li><li>Victor Harbor</li><li>Whyalla</li><li>Pirie</li></ul>: Mid North
+    none of the above: False
+right: |
+ [FILE mapfinal.png, 400px]
+progress: 20
+action buttons:
+  - label: Safe Exit
+    action: http://www.bom.gov.au/sa/forecasts/adelaide.shtml
+    color: warning
+    icon: sign-out-alt
+---
+question: What type of legal issue do you have?
+subquestion: |
+  
+  You may select more than one legal issue.
+
+fields:
+  - no label: CLCSAlegalissue
+    datatype: checkboxes
+    choices:
+      - Centrelink: Centrelink
+        image: centrelink
+      - Domestic violence: Domestic Violence
+        image: domestic violence
+      - Elder Abuse: Elder Abuse
+        image: elder
+      - Environmental: Environmental
+        image: enviromental
+      - Financial (personal debt, bankrupcy, mortgage): Financial
+        image: financial
+      - Homelessness: Homelessness
+        image: homelessness
+      - Migration (refugee visa applications): Migration
+        image: migration
+      - Mediation (neighbourhood conflicts, disputes): Mediation
+        image: mediation
+      - Other: Other
+        image: other
+    none of the above: False
+
+progress: 40
+action buttons:
+  - label: Safe Exit
+    action: http://www.bom.gov.au/sa/forecasts/adelaide.shtml
+    color: warning
+    icon: sign-out-alt
+---
+question: What is your gender?
+fields:
+  - no label: CLCSAgender
+    datatype: radio
+    choices:
+      - "Male": Male
+        image: male
+      - "Female": Female
+        image: female
+      - "Other": other
+        image: other
+
+progress: 60
+action buttons:
+  - label: Safe Exit
+    action: http://www.bom.gov.au/sa/forecasts/adelaide.shtml
+    color: warning
+    icon: sign-out-alt
+---
+question: Do you identify as Aboriginal or Torres Strait Islander?
+fields:
+  - no label: CLCSAindigenous
+    datatype: radio
+    choices:
+      - Yes
+      - No
+      - Do not wish to say
+
+progress: 80
+action buttons:
+  - label: Safe Exit
+    action: http://www.bom.gov.au/sa/forecasts/adelaide.shtml
+    color: warning
+    icon: sign-out-alt
+---
+images: 
+  female: female-symbol.png
+  male: male-symbol.png
+  other: questionmark.png
+  financial: financial.png
+  mediation: mediation.png
+  homelessness: homelessness.png
+  migration: migration.png
+  elder: elder.PNG
+  domestic violence: dv.png
+  enviromental: enviro.PNG
+  centrelink: centrelink.PNG
+---

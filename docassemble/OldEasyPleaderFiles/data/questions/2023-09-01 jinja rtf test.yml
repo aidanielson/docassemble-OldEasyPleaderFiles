@@ -1,0 +1,23 @@
+mandatory: True
+question: What is the blah
+fields:
+  - The blah is: the_blah
+    input type: area
+---
+mandatory: True
+code: |
+  the_blah_repr = repr(the_blah)
+---
+mandatory: True
+question: |
+  Here is your document.
+subquestion: |
+  Does it meet your approval?
+yesno: user_approves
+attachment:
+  name: Your letter
+  filename: letter
+  docx template file: letter_template.docx
+  valid formats:
+    - pdf
+    - docx

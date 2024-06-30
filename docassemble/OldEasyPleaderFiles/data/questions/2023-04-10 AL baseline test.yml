@@ -1,0 +1,33 @@
+include:
+  - docassemble.AssemblyLine:assembly_line.yml
+---
+objects:
+  - users: ALIndividual
+---
+template: disclaimer
+content: |
+  Here is the user:[BR]
+  ${ users }[BR]
+  and here is the user's address:[BR]
+  ${ users.address }
+---
+mandatory: True
+field: intro_screen
+question: Welcome to the interview!
+subquestion: |
+  Greetings.  We hope you learn something
+  from this guided interview.
+
+  ${ disclaimer }
+
+  To get started, press **Continue**.
+---
+question: |
+  xxx
+subquestion: |
+  What is your name and bar number?
+fields: 
+  - What is your first name: users.name.first
+  - What is your last name?: users.name.last
+  - What is your bar number?: users.bar_no
+    datatype: integer

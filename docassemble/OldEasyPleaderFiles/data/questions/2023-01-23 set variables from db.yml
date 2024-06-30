@@ -1,0 +1,25 @@
+---
+modules:
+  - .courts_set_variables
+---
+objects:
+  - court: DAObject
+---
+question: |
+  Choose the court you're litigating in.
+fields:
+  - Court: court.short_name
+    code: get_court_names()
+---
+mandatory: True
+code: |
+  print_court_dict()
+---
+mandatory: True
+question: |
+  The printed court dictionary is: ${printed_court_dict}
+continue button field: saw_court_info
+---
+mandatory: True
+question: |
+  You are litigating in ${court.short_name} court, situated in the ${court_info(court.short_name)['court.branch_name']} located at ${court_info(court.short_name)['court.street_address']}.

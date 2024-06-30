@@ -1,0 +1,68 @@
+objects:
+  - siblings: DAList.using(object_type=Individual)
+  - siblings[i].company_hired: DADict.using(object_type=Organization, auto_gather=False, complete_attribute='complete')
+  - siblings[i].company_hired[j].place_of_business: City
+---
+code: |
+  siblings[i].company_hired.new(siblings[i].types_of_companies.true_values())
+  siblings[i].company_hired.gathered = True
+---
+code: |
+  siblings[i].company_hired[j].name.text
+  siblings[i].company_hired[j].place_of_business.city
+  siblings[i].company_hired[j].complete = True
+---
+question: |
+  Do you have a client?
+yesno: siblings.there_are_any
+---
+question: |
+  What is the name of your ${ ordinal(i) } client?
+fields:
+  - First Name: siblings[i].name.first
+---
+question: |
+  Do you have any other sibling besides ${ siblings }?
+yesno: siblings.there_is_another
+---
+question: |
+  Which of the following disco methods did ${ siblings[i] } serve?
+fields:
+  - no label: siblings[i].types_of_companies
+    datatype: checkboxes
+    none of the above: False
+    minlength: 1
+    choices:
+      - General Form Interrogatories
+      - Special Interrogatories
+      - Requests for Admission
+      - Requests for Production
+---
+question: |
+  What is the name of ${ siblings[i].possessive(j) }?
+fields:
+  - Company name: siblings[i].company_hired[j].name.text
+---
+question: |
+  In what city does ${ siblings[i].company_hired[j] }
+  do business?
+fields:
+  - City: siblings[i].company_hired[j].place_of_business.city
+  - State: siblings[i].company_hired[j].place_of_business.state
+    code: states_list()
+---
+mandatory: True
+question: All done
+subquestion: |
+  % for sibling in siblings:
+  Your client ${ siblings }.
+ 
+  % for company_type in siblings.company_hired.keys():
+  ${ siblings } propounded ${ company_type }
+  called ${ siblings.company_hired[company_type] },
+  which has a principal place of business in
+  ${ siblings.company_hired[company_type].place_of_business }.
+ 
+  % endfor
+ 
+  % endfor

@@ -1,0 +1,43 @@
+include:
+  - docassemble.AssemblyLine:al_package.yml
+---
+objects: 
+  - parties: ALPeopleList
+  - parties[i].attorneys: ALPeopleList.using(there_are_any=parties[i].represented)
+---
+code: |
+  if x[i].represented:
+    x[i].attorneys.gather()
+---
+sets:
+  - parties[i].name.first
+  - parties[i].name.last
+question: |
+  Name
+fields:
+  - code: parties[i].name_fields()
+  - Is represented?: parties[i].represented
+    datatype: yesno
+---
+sets:
+  - x[i].address.address
+generic object: ALIndividual
+question: |
+  xxx
+fields:
+  - code: x[i].address_fields()
+---
+mandatory: True
+question: |
+  xxx
+subquestion: |
+  % for party in parties:
+  ${ party } can be served at: ${ party.address.block() }
+
+  % if party.represented:
+  % for attorney in party.attorneys:
+  The attorney is 
+  ${ attorney } at ${ attorney.address.block() }
+  % endfor
+  % endif
+  % endfor
